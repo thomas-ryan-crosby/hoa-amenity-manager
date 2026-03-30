@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Booking {
+  id                    String           @id @default(cuid())
+  residentId            String
+  amenityId             String
+  status                BookingStatus
+  startDatetime         DateTime
+  endDatetime           DateTime
+  guestCount            Int
+  notes                 String?
+  stripePaymentIntentId String?
+  stripeDepositIntentId String?
+  calendarEventId       String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  resident              Resident         @relation(fields: [residentId], references: [id])
+  amenity               Amenity          @relation(fields: [amenityId], references: [id])
+  auditLogs             AuditLog[]
+  inspectionReport      InspectionReport?
+}
+
+model Resident {
+  id               String    @id @default(cuid())
+  clerkUserId      String    @unique
+  name             String
+  email            String    @unique
+  phone            String?
+  unitNumber       String
+  stripeCustomerId String?
+  bookings         Booking[]
+}
+
+model Amenity {
+  id                    String         @id @default(cuid())
+  name                  String
+  description           String?
+  capacity              Int
+  rentalFee             Decimal
+  depositAmount         Decimal
+  calendarId            String
+
+  // Approval rules (per amenity)
+  requiresApproval      Boolean        @default(true)
+  autoApproveThreshold  Int?           // Auto-approve if guest count <= this value; null = always require approval
+  approverStaffId       String?        // Designated PM for this amenity; null = default PM_EMAIL
+  escalationHours       Int            @default(48)
+
+  // Cancellation policy (per amenity)
+  fullRefundHours       Int            @default(72)
+  partialRefundHours    Int            @default(24)
+  partialRefundPercent  Int            @default(50)
+
+  // Booking window
+  maxAdvanceBookingDays Int            @default(90)
+
+  // Janitorial config
+  janitorialAssignment  String         @default("rotation") // "rotation" | "manual"
+
+  bookings              Booking[]
+  blackoutDates         BlackoutDate[]
+  approverStaff         Staff?         @relation(fields: [approverStaffId], references: [id])
+}
+
+model BlackoutDate {
+  id        String   @id @default(cuid())
+  amenityId String
+  startDate DateTime
+  endDate   DateTime
+  reason    String?
+  recurring Boolean  @default(false)
+  amenity   Amenity  @relation(fields: [amenityId], references: [id])
+}
+
+model Staff {
+  id                String    @id @default(cuid())
+  name              String
+  email             String    @unique
+  phone             String?
+  role              StaffRole
+  assignedAmenities Amenity[]
+}
+
+model InspectionReport {
+  id          String           @id @default(cuid())
+  bookingId   String           @unique
+  staffId     String
+  status      InspectionStatus
+  notes       String?
+  photos      String[]         @default([])
+  submittedAt DateTime         @default(now())
+  booking     Booking          @relation(fields: [bookingId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  bookingId String?
+  agent     String
+  event     String
+  payload   Json?
+  timestamp DateTime @default(now())
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+}
+
+enum BookingStatus {
+  INQUIRY_RECEIVED
+  AVAILABILITY_CHECKING
+  PENDING_APPROVAL
+  APPROVED
+  PAYMENT_PENDING
+  CONFIRMED
+  REMINDER_SENT
+  IN_PROGRESS
+  COMPLETED
+  CLOSED
+  DENIED
+  CANCELLED
+  PAYMENT_FAILED
+  DISPUTE
+  ERROR
+}
+
+enum StaffRole {
+  PROPERTY_MANAGER
+  JANITORIAL
+}
+
+enum InspectionStatus {
+  PASS
+  FLAG
+}
