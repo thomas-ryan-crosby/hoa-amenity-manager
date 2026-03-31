@@ -1,11 +1,11 @@
 'use client'
 
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, MouseEvent, useEffect, useMemo, useState } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
-import { formatCurrency, formatDateTime } from '@/lib/format'
+import { formatCurrency, formatDateTime, formatDateRange } from '@/lib/format'
 
 type Amenity = {
   id: string
@@ -54,16 +54,27 @@ const STATUS_LABELS: Record<string, string> = {
   WAITLISTED: 'Waitlisted',
 }
 
+const STATUS_BADGE_STYLES: Record<string, string> = {
+  INQUIRY_RECEIVED: 'bg-stone-200 text-stone-700',
+  AVAILABILITY_CHECKING: 'bg-stone-200 text-stone-700',
+  PENDING_APPROVAL: 'bg-amber-100 text-amber-800',
+  PAYMENT_PENDING: 'bg-violet-100 text-violet-800',
+  CONFIRMED: 'bg-blue-100 text-blue-800',
+  REMINDER_SENT: 'bg-blue-100 text-blue-800',
+  WAITLISTED: 'bg-orange-100 text-orange-800',
+}
+
 export function BookingCalendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [amenities, setAmenities] = useState<Amenity[]>([])
-  const [selectedAmenity, setSelectedAmenity] = useState<string>('')
+  const [selectedAmenities, setSelectedAmenities] = useState<Set<string>>(new Set())
   const [selection, setSelection] = useState<SelectionState | null>(null)
   const [guestCount, setGuestCount] = useState(1)
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
 
   useEffect(() => {
     async function loadCalendar() {
@@ -79,7 +90,7 @@ export function BookingCalendar() {
         setEvents(eventsData.events ?? [])
         setAmenities(amenitiesData.amenities ?? [])
         if (amenitiesData.amenities?.length) {
-          setSelectedAmenity(amenitiesData.amenities[0].id)
+          setSelectedAmenities(new Set([amenitiesData.amenities[0].id]))
         }
       } catch (loadError) {
         console.error('Failed to load booking calendar', loadError)
@@ -97,16 +108,32 @@ export function BookingCalendar() {
     [amenities, selection],
   )
 
-  // Filter events by selected amenity
+  // Filter events by selected amenities
   const filteredEvents = useMemo(
     () =>
-      selectedAmenity
+      selectedAmenities.size > 0
         ? events.filter(
-            (e) => e.extendedProps?.amenityId === selectedAmenity,
+            (e) => e.extendedProps?.amenityId && selectedAmenities.has(e.extendedProps.amenityId),
           )
         : events,
-    [events, selectedAmenity],
+    [events, selectedAmenities],
   )
+
+  function handleAmenityClick(amenityId: string, e: MouseEvent) {
+    if (e.shiftKey) {
+      setSelectedAmenities((prev) => {
+        const next = new Set(prev)
+        if (next.has(amenityId)) {
+          next.delete(amenityId)
+        } else {
+          next.add(amenityId)
+        }
+        return next
+      })
+    } else {
+      setSelectedAmenities(new Set([amenityId]))
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -159,6 +186,12 @@ export function BookingCalendar() {
     }
   }
 
+  // Determine which amenity to use for calendar selection (first selected amenity)
+  const primaryAmenityId = useMemo(() => {
+    const arr = Array.from(selectedAmenities)
+    return arr.length > 0 ? arr[0] : ''
+  }, [selectedAmenities])
+
   if (loading) {
     return <div className="h-[640px] animate-pulse rounded-3xl bg-stone-100" />
   }
@@ -166,23 +199,55 @@ export function BookingCalendar() {
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div>
-        {/* Amenity tabs */}
-        <div className="mb-4 flex flex-wrap gap-2">
-          {amenities.map((amenity) => (
+        {/* Amenity tabs + view toggle */}
+        <div className="mb-1 flex flex-wrap items-center gap-2">
+          <div className="flex flex-1 flex-wrap gap-2">
+            {amenities.map((amenity) => (
+              <button
+                key={amenity.id}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                  selectedAmenities.has(amenity.id)
+                    ? 'bg-stone-900 text-white'
+                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                }`}
+                onClick={(e) => handleAmenityClick(amenity.id, e)}
+                type="button"
+              >
+                {amenity.name}
+              </button>
+            ))}
+          </div>
+
+          {/* View toggle */}
+          <div className="flex overflow-hidden rounded-full border border-stone-200">
             <button
-              key={amenity.id}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                selectedAmenity === amenity.id
+              className={`px-4 py-2 text-sm font-medium transition ${
+                viewMode === 'calendar'
                   ? 'bg-stone-900 text-white'
-                  : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                  : 'bg-white text-stone-600 hover:bg-stone-50'
               }`}
-              onClick={() => setSelectedAmenity(amenity.id)}
+              onClick={() => setViewMode('calendar')}
               type="button"
             >
-              {amenity.name}
+              Calendar
             </button>
-          ))}
+            <button
+              className={`px-4 py-2 text-sm font-medium transition ${
+                viewMode === 'list'
+                  ? 'bg-stone-900 text-white'
+                  : 'bg-white text-stone-600 hover:bg-stone-50'
+              }`}
+              onClick={() => setViewMode('list')}
+              type="button"
+            >
+              List
+            </button>
+          </div>
         </div>
+
+        <p className="mb-3 text-xs text-stone-400">
+          Tip: Shift+click to view multiple amenities together
+        </p>
 
         {/* Legend */}
         <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-stone-600">
@@ -203,44 +268,100 @@ export function BookingCalendar() {
           </span>
         </div>
 
-        <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
-          <FullCalendar
-            plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-            initialView="rolling3Day"
-            views={{
-              rolling3Day: {
-                type: 'timeGrid',
-                duration: { days: 7 },
-                dateIncrement: { days: 3 },
-                buttonText: 'Week',
-              },
-            }}
-            headerToolbar={{
-              left: 'prev,next today',
-              center: 'title',
-              right: 'timeGridDay,rolling3Day,dayGridMonth',
-            }}
-            events={filteredEvents}
-            selectable
-            selectMirror
-            unselectAuto={false}
-            select={(info) => {
-              if (!selectedAmenity) return
-              setSelection({
-                amenityId: selectedAmenity,
-                start: info.startStr,
-                end: info.endStr,
-              })
-              setGuestCount(1)
-              setNotes('')
-            }}
-            eventOverlap
-            selectOverlap
-            slotMinTime="06:00:00"
-            slotMaxTime="23:00:00"
-            height="auto"
-          />
-        </div>
+        {viewMode === 'calendar' ? (
+          <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
+            <FullCalendar
+              plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
+              initialView="rolling3Day"
+              views={{
+                rolling3Day: {
+                  type: 'timeGrid',
+                  duration: { days: 7 },
+                  dateIncrement: { days: 3 },
+                  buttonText: 'Week',
+                },
+              }}
+              headerToolbar={{
+                left: 'prev,next today',
+                center: 'title',
+                right: 'timeGridDay,rolling3Day,dayGridMonth',
+              }}
+              events={filteredEvents}
+              selectable
+              selectMirror
+              unselectAuto={false}
+              select={(info) => {
+                if (!primaryAmenityId) return
+                setSelection({
+                  amenityId: primaryAmenityId,
+                  start: info.startStr,
+                  end: info.endStr,
+                })
+                setGuestCount(1)
+                setNotes('')
+              }}
+              eventOverlap
+              selectOverlap
+              slotMinTime="06:00:00"
+              slotMaxTime="23:00:00"
+              height="auto"
+            />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredEvents.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-4 py-8 text-center text-sm text-stone-500">
+                No bookings for the selected amenities.
+              </div>
+            )}
+            {filteredEvents
+              .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+              .map((event) => {
+                const props = event.extendedProps
+                const status = props?.status ?? ''
+                const badgeStyle = STATUS_BADGE_STYLES[status] ?? 'bg-stone-200 text-stone-700'
+                const label = STATUS_LABELS[status] ?? status.replaceAll('_', ' ')
+
+                return (
+                  <button
+                    key={event.id}
+                    className="w-full text-left rounded-2xl border border-stone-200 bg-white p-4 shadow-sm transition hover:shadow-md"
+                    style={{ borderLeftWidth: '4px', borderLeftColor: event.color ?? '#9CA3AF' }}
+                    onClick={() => {
+                      if (!props?.amenityId) return
+                      setSelection({
+                        amenityId: props.amenityId,
+                        start: event.start,
+                        end: event.end,
+                      })
+                      setGuestCount(props.guestCount ?? 1)
+                      setNotes('')
+                    }}
+                    type="button"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-stone-900">
+                          {props?.amenityName ?? event.title}
+                        </p>
+                        <p className="mt-1 text-sm text-stone-600">
+                          {formatDateRange(event.start, event.end)}
+                        </p>
+                        {props?.guestCount != null && (
+                          <p className="mt-1 text-xs text-stone-500">
+                            {props.guestCount} guest{props.guestCount !== 1 ? 's' : ''}
+                          </p>
+                        )}
+                      </div>
+                      <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeStyle}`}>
+                        {label}
+                      </span>
+                    </div>
+                  </button>
+                )
+              })}
+          </div>
+        )}
       </div>
 
       <aside className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">

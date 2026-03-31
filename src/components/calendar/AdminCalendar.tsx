@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { MouseEvent, useEffect, useMemo, useState } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -32,15 +32,42 @@ type Amenity = {
   name: string
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  INQUIRY_RECEIVED: 'Inquiry',
+  AVAILABILITY_CHECKING: 'Checking',
+  PENDING_APPROVAL: 'Pending Approval',
+  PAYMENT_PENDING: 'Awaiting Payment',
+  CONFIRMED: 'Confirmed',
+  REMINDER_SENT: 'Confirmed',
+  WAITLISTED: 'Waitlisted',
+  PENDING: 'Default',
+  SCHEDULED: 'Confirmed',
+  COMPLETED: 'Done',
+}
+
+const STATUS_BADGE_STYLES: Record<string, string> = {
+  INQUIRY_RECEIVED: 'bg-stone-200 text-stone-700',
+  AVAILABILITY_CHECKING: 'bg-stone-200 text-stone-700',
+  PENDING_APPROVAL: 'bg-amber-100 text-amber-800',
+  PAYMENT_PENDING: 'bg-violet-100 text-violet-800',
+  CONFIRMED: 'bg-blue-100 text-blue-800',
+  REMINDER_SENT: 'bg-blue-100 text-blue-800',
+  WAITLISTED: 'bg-orange-100 text-orange-800',
+  PENDING: 'bg-stone-200 text-stone-600',
+  SCHEDULED: 'bg-stone-800 text-white',
+  COMPLETED: 'bg-emerald-100 text-emerald-800',
+}
+
 export function AdminCalendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [amenities, setAmenities] = useState<Amenity[]>([])
-  const [selectedAmenity, setSelectedAmenity] = useState<string>('')
+  const [selectedAmenities, setSelectedAmenities] = useState<Set<string>>(new Set())
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [denialReason, setDenialReason] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
 
   async function loadEvents() {
     try {
@@ -53,9 +80,12 @@ export function AdminCalendar() {
       setEvents(eventsData.events ?? [])
       const amenityList = amenitiesData.amenities ?? []
       setAmenities(amenityList)
-      if (!selectedAmenity && amenityList.length) {
-        setSelectedAmenity(amenityList[0].id)
-      }
+      setSelectedAmenities((prev) => {
+        if (prev.size === 0 && amenityList.length) {
+          return new Set([amenityList[0].id])
+        }
+        return prev
+      })
     } catch (loadError) {
       console.error('Failed to load admin calendar', loadError)
       setError('Unable to load calendar data right now.')
@@ -69,10 +99,10 @@ export function AdminCalendar() {
   }, [])
 
   const filteredEvents = useMemo(
-    () => selectedAmenity
-      ? events.filter((e) => e.extendedProps.amenityId === selectedAmenity)
+    () => selectedAmenities.size > 0
+      ? events.filter((e) => selectedAmenities.has(e.extendedProps.amenityId))
       : events,
-    [events, selectedAmenity],
+    [events, selectedAmenities],
   )
 
   const selectedEvent = useMemo(
@@ -82,6 +112,26 @@ export function AdminCalendar() {
 
   const isTurnWindow = selectedEvent?.extendedProps.type === 'turn-window'
   const isBooking = selectedEvent?.extendedProps.type === 'booking'
+
+  function handleAmenityClick(amenityId: string, e: MouseEvent) {
+    if (e.shiftKey) {
+      setSelectedAmenities((prev) => {
+        const next = new Set(prev)
+        if (next.has(amenityId)) {
+          next.delete(amenityId)
+        } else {
+          next.add(amenityId)
+        }
+        return next
+      })
+    } else {
+      setSelectedAmenities(new Set([amenityId]))
+    }
+  }
+
+  function handleSelectAll() {
+    setSelectedAmenities(new Set())
+  }
 
   async function approveBooking() {
     if (!selectedEvent) return
@@ -178,82 +228,179 @@ export function AdminCalendar() {
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div>
-        {/* Amenity tabs */}
-        <div className="mb-4 flex flex-wrap gap-2">
-          <button
-            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-              selectedAmenity === ''
-                ? 'bg-stone-900 text-white'
-                : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
-            }`}
-            onClick={() => setSelectedAmenity('')}
-            type="button"
-          >
-            All amenities
-          </button>
-          {amenities.map((a) => (
+        {/* Amenity tabs + view toggle */}
+        <div className="mb-1 flex flex-wrap items-center gap-2">
+          <div className="flex flex-1 flex-wrap gap-2">
             <button
-              key={a.id}
               className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                selectedAmenity === a.id
+                selectedAmenities.size === 0
                   ? 'bg-stone-900 text-white'
                   : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
               }`}
-              onClick={() => setSelectedAmenity(a.id)}
+              onClick={handleSelectAll}
               type="button"
             >
-              {a.name}
+              All amenities
             </button>
-          ))}
+            {amenities.map((a) => (
+              <button
+                key={a.id}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                  selectedAmenities.has(a.id)
+                    ? 'bg-stone-900 text-white'
+                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                }`}
+                onClick={(e) => handleAmenityClick(a.id, e)}
+                type="button"
+              >
+                {a.name}
+              </button>
+            ))}
+          </div>
+
+          {/* View toggle */}
+          <div className="flex overflow-hidden rounded-full border border-stone-200">
+            <button
+              className={`px-4 py-2 text-sm font-medium transition ${
+                viewMode === 'calendar'
+                  ? 'bg-stone-900 text-white'
+                  : 'bg-white text-stone-600 hover:bg-stone-50'
+              }`}
+              onClick={() => setViewMode('calendar')}
+              type="button"
+            >
+              Calendar
+            </button>
+            <button
+              className={`px-4 py-2 text-sm font-medium transition ${
+                viewMode === 'list'
+                  ? 'bg-stone-900 text-white'
+                  : 'bg-white text-stone-600 hover:bg-stone-50'
+              }`}
+              onClick={() => setViewMode('list')}
+              type="button"
+            >
+              List
+            </button>
+          </div>
         </div>
 
-        <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
-          <FullCalendar
-            plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-            initialView="rolling3Day"
-            views={{
-              rolling3Day: {
-                type: 'timeGrid',
-                duration: { days: 7 },
-                dateIncrement: { days: 3 },
-                buttonText: 'Week',
-              },
-            }}
-            headerToolbar={{
-              left: 'prev,next today',
-              center: 'title',
-              right: 'timeGridDay,rolling3Day,dayGridMonth',
-            }}
-            events={filteredEvents}
-            editable={false}
-            eventStartEditable
-            eventDurationEditable
-            eventClick={(info) => {
-              setSelectedId(info.event.id)
-              setDenialReason('')
-              setError(null)
-            }}
-            eventDrop={(info) => {
-              const props = info.event.extendedProps
-              if (props.type === 'turn-window' && props.turnWindowId && props.status !== 'COMPLETED') {
-                updateTurnWindow(props.turnWindowId, info.event.startStr, info.event.endStr)
-              } else {
-                info.revert()
-              }
-            }}
-            eventResize={(info) => {
-              const props = info.event.extendedProps
-              if (props.type === 'turn-window' && props.turnWindowId && props.status !== 'COMPLETED') {
-                updateTurnWindow(props.turnWindowId, info.event.startStr, info.event.endStr)
-              } else {
-                info.revert()
-              }
-            }}
-            slotMinTime="06:00:00"
-            slotMaxTime="23:00:00"
-            height="auto"
-          />
-        </div>
+        <p className="mb-3 text-xs text-stone-400">
+          Tip: Shift+click to view multiple amenities together
+        </p>
+
+        {viewMode === 'calendar' ? (
+          <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
+            <FullCalendar
+              plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
+              initialView="rolling3Day"
+              views={{
+                rolling3Day: {
+                  type: 'timeGrid',
+                  duration: { days: 7 },
+                  dateIncrement: { days: 3 },
+                  buttonText: 'Week',
+                },
+              }}
+              headerToolbar={{
+                left: 'prev,next today',
+                center: 'title',
+                right: 'timeGridDay,rolling3Day,dayGridMonth',
+              }}
+              events={filteredEvents}
+              editable={false}
+              eventStartEditable
+              eventDurationEditable
+              eventClick={(info) => {
+                setSelectedId(info.event.id)
+                setDenialReason('')
+                setError(null)
+              }}
+              eventDrop={(info) => {
+                const props = info.event.extendedProps
+                if (props.type === 'turn-window' && props.turnWindowId && props.status !== 'COMPLETED') {
+                  updateTurnWindow(props.turnWindowId, info.event.startStr, info.event.endStr)
+                } else {
+                  info.revert()
+                }
+              }}
+              eventResize={(info) => {
+                const props = info.event.extendedProps
+                if (props.type === 'turn-window' && props.turnWindowId && props.status !== 'COMPLETED') {
+                  updateTurnWindow(props.turnWindowId, info.event.startStr, info.event.endStr)
+                } else {
+                  info.revert()
+                }
+              }}
+              slotMinTime="06:00:00"
+              slotMaxTime="23:00:00"
+              height="auto"
+            />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredEvents.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-4 py-8 text-center text-sm text-stone-500">
+                No bookings for the selected amenities.
+              </div>
+            )}
+            {filteredEvents
+              .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+              .map((event) => {
+                const props = event.extendedProps
+                const isTW = props.type === 'turn-window'
+                const status = props.status
+                const badgeStyle = STATUS_BADGE_STYLES[status] ?? 'bg-stone-200 text-stone-700'
+                const label = isTW
+                  ? `Cleaning (${STATUS_LABELS[status] ?? status.replaceAll('_', ' ')})`
+                  : STATUS_LABELS[status] ?? status.replaceAll('_', ' ')
+
+                return (
+                  <button
+                    key={event.id}
+                    className={`w-full text-left rounded-2xl border bg-white p-4 shadow-sm transition hover:shadow-md ${
+                      selectedId === event.id
+                        ? 'border-emerald-400 ring-1 ring-emerald-400'
+                        : 'border-stone-200'
+                    }`}
+                    style={{ borderLeftWidth: '4px', borderLeftColor: event.color ?? '#9CA3AF' }}
+                    onClick={() => {
+                      setSelectedId(event.id)
+                      setDenialReason('')
+                      setError(null)
+                    }}
+                    type="button"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-stone-900">
+                          {props.amenityName}
+                          {isTW && (
+                            <span className="ml-2 text-xs font-normal text-stone-500">
+                              (Turn Window)
+                            </span>
+                          )}
+                        </p>
+                        <p className="mt-1 text-sm text-stone-600">
+                          {formatDateRange(event.start, event.end)}
+                        </p>
+                        {!isTW && props.residentName && (
+                          <p className="mt-1 text-sm text-stone-500">
+                            {props.residentName}
+                            {props.unitNumber ? ` - Unit ${props.unitNumber}` : ''}
+                            {props.guestCount != null ? ` - ${props.guestCount} guest${props.guestCount !== 1 ? 's' : ''}` : ''}
+                          </p>
+                        )}
+                      </div>
+                      <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeStyle}`}>
+                        {label}
+                      </span>
+                    </div>
+                  </button>
+                )
+              })}
+          </div>
+        )}
       </div>
 
       <aside className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
