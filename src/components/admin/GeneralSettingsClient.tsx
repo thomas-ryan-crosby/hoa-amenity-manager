@@ -31,58 +31,99 @@ export function GeneralSettingsClient({ initialStaff, initialSettings }: Props) 
     phone: '',
     role: 'JANITORIAL',
   })
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
   async function loadStaff() {
-    const staffRes = await fetch('/api/admin/staff')
-    const staffData = await staffRes.json()
-    setStaff(staffData.staff ?? [])
+    const res = await fetch('/api/admin/staff')
+    const data = await res.json()
+    setStaff(data.staff ?? [])
   }
 
   async function saveSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-
-    const response = await fetch('/api/admin/settings', {
+    const res = await fetch('/api/admin/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settingsForm),
     })
-
-    if (!response.ok) {
-      const data = await response.json()
+    if (!res.ok) {
+      const data = await res.json()
       setNotice(data.error ?? 'Unable to save settings.')
       return
     }
     setNotice('System settings saved.')
   }
 
+  function startEditStaff(member: Staff) {
+    setEditingStaffId(member.id)
+    setStaffForm({
+      name: member.name,
+      email: member.email,
+      phone: member.phone ?? '',
+      role: member.role,
+    })
+  }
+
+  function cancelEditStaff() {
+    setEditingStaffId(null)
+    setStaffForm({ name: '', email: '', phone: '', role: 'JANITORIAL' })
+  }
+
   async function saveStaff(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const response = await fetch('/api/admin/staff', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...staffForm,
-        phone: staffForm.phone || null,
-      }),
-    })
-
-    const data = await response.json()
-    if (!response.ok) {
-      setNotice(data.error ?? 'Unable to create staff member.')
-      return
+    const payload = {
+      name: staffForm.name,
+      email: staffForm.email,
+      phone: staffForm.phone || null,
+      role: staffForm.role,
     }
 
-    setStaffForm({
-      name: '',
-      email: '',
-      phone: '',
-      role: 'JANITORIAL',
-    })
-    setNotice('Staff member added.')
+    if (editingStaffId) {
+      // Update existing
+      const res = await fetch(`/api/admin/staff/${editingStaffId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        setNotice(data.error ?? 'Unable to update staff member.')
+        return
+      }
+      setNotice('Staff member updated.')
+      setEditingStaffId(null)
+    } else {
+      // Create new
+      const res = await fetch('/api/admin/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        setNotice(data.error ?? 'Unable to create staff member.')
+        return
+      }
+      setNotice('Staff member added.')
+    }
+
+    setStaffForm({ name: '', email: '', phone: '', role: 'JANITORIAL' })
+    await loadStaff()
+  }
+
+  async function deleteStaffMember(member: Staff) {
+    if (!confirm(`Remove "${member.name}" from staff? This cannot be undone.`)) return
+
+    const res = await fetch(`/api/admin/staff/${member.id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const data = await res.json()
+      setNotice(data.error ?? 'Unable to delete staff member.')
+      return
+    }
+    setNotice(`"${member.name}" removed.`)
+    if (editingStaffId === member.id) cancelEditStaff()
     await loadStaff()
   }
 
@@ -96,17 +137,13 @@ export function GeneralSettingsClient({ initialStaff, initialSettings }: Props) 
           <h1 className="mt-2 text-4xl font-semibold text-stone-900">
             System settings and staff management
           </h1>
-          <p className="mt-3 max-w-4xl text-base leading-7 text-stone-600">
-            Configure organization details, notification settings, and manage
-            staff members.
-          </p>
         </div>
 
-        {notice ? (
+        {notice && (
           <div className="mb-6 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700">
             {notice}
           </div>
-        ) : null}
+        )}
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* System Settings */}
@@ -147,60 +184,86 @@ export function GeneralSettingsClient({ initialStaff, initialSettings }: Props) 
               {staff.map((member) => (
                 <div
                   key={member.id}
-                  className="rounded-2xl bg-stone-50 px-4 py-3 text-sm text-stone-700"
+                  className="flex items-start justify-between rounded-2xl bg-stone-50 px-4 py-3 text-sm text-stone-700"
                 >
-                  <div className="font-medium text-stone-900">{member.name}</div>
-                  <div>{member.email}</div>
-                  <div>{member.role}</div>
+                  <div>
+                    <div className="font-medium text-stone-900">{member.name}</div>
+                    <div>{member.email}</div>
+                    <div className="text-xs text-stone-500">{member.role.replaceAll('_', ' ')}</div>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <button
+                      className="rounded-lg px-2 py-1 text-xs font-medium text-stone-500 hover:bg-stone-200 hover:text-stone-700"
+                      onClick={() => startEditStaff(member)}
+                      type="button"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="rounded-lg px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-50 hover:text-red-700"
+                      onClick={() => deleteStaffMember(member)}
+                      type="button"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
 
             <form className="mt-5 space-y-3" onSubmit={saveStaff}>
+              <p className="text-sm font-medium text-stone-700">
+                {editingStaffId ? 'Edit staff member' : 'Add staff member'}
+              </p>
               <input
                 className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
                 placeholder="Name"
                 value={staffForm.name}
-                onChange={(event) =>
-                  setStaffForm((current) => ({ ...current, name: event.target.value }))
-                }
+                onChange={(e) => setStaffForm((c) => ({ ...c, name: e.target.value }))}
               />
               <input
                 className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
                 placeholder="Email"
                 type="email"
                 value={staffForm.email}
-                onChange={(event) =>
-                  setStaffForm((current) => ({ ...current, email: event.target.value }))
-                }
+                onChange={(e) => setStaffForm((c) => ({ ...c, email: e.target.value }))}
               />
               <input
                 className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
-                placeholder="Phone"
+                placeholder="Phone (optional)"
                 value={staffForm.phone}
-                onChange={(event) =>
-                  setStaffForm((current) => ({ ...current, phone: event.target.value }))
-                }
+                onChange={(e) => setStaffForm((c) => ({ ...c, phone: e.target.value }))}
               />
               <select
                 className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
                 value={staffForm.role}
-                onChange={(event) =>
-                  setStaffForm((current) => ({
-                    ...current,
-                    role: event.target.value as 'PROPERTY_MANAGER' | 'JANITORIAL',
+                onChange={(e) =>
+                  setStaffForm((c) => ({
+                    ...c,
+                    role: e.target.value as 'PROPERTY_MANAGER' | 'JANITORIAL',
                   }))
                 }
               >
                 <option value="JANITORIAL">Janitorial</option>
                 <option value="PROPERTY_MANAGER">Property manager</option>
               </select>
-              <button
-                className="w-full rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white"
-                type="submit"
-              >
-                Add staff member
-              </button>
+              <div className="flex gap-3">
+                <button
+                  className="flex-1 rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white"
+                  type="submit"
+                >
+                  {editingStaffId ? 'Save changes' : 'Add staff member'}
+                </button>
+                {editingStaffId && (
+                  <button
+                    className="rounded-full border border-stone-300 px-5 py-3 text-sm font-semibold text-stone-600"
+                    type="button"
+                    onClick={cancelEditStaff}
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
             </form>
           </section>
         </div>

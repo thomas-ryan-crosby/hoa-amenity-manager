@@ -237,6 +237,22 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
     if (!selectedAmenity) setAmenityForm({ ...emptyAmenityForm })
   }
 
+  async function deleteSelectedAmenity() {
+    if (!selectedAmenity) return
+    if (!confirm(`Delete "${selectedAmenity.name}"? This cannot be undone.`)) return
+
+    const res = await fetch(`/api/admin/amenities/${selectedAmenity.id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const data = await res.json()
+      setNotice(data.error ?? 'Unable to delete amenity.')
+      return
+    }
+    setNotice(`"${selectedAmenity.name}" deleted.`)
+    setSelectedAmenityId(null)
+    setAmenityForm({ ...emptyAmenityForm })
+    await loadData()
+  }
+
   async function addBlackoutDate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!selectedAmenity) { setNotice('Choose an amenity first.'); return }
@@ -433,9 +449,20 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
                 </label>
               </div>
 
-              <button className="rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white" type="submit">
-                {selectedAmenity ? 'Save changes' : 'Create amenity'}
-              </button>
+              <div className="flex gap-3">
+                <button className="rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white" type="submit">
+                  {selectedAmenity ? 'Save changes' : 'Create amenity'}
+                </button>
+                {selectedAmenity && (
+                  <button
+                    className="rounded-full border border-red-300 px-5 py-3 text-sm font-semibold text-red-600 hover:bg-red-50"
+                    type="button"
+                    onClick={deleteSelectedAmenity}
+                  >
+                    Delete amenity
+                  </button>
+                )}
+              </div>
             </form>
 
             {/* ---- Blackout dates ---- */}
