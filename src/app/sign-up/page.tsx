@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
 import { getClientAuth } from '@/lib/firebase/client'
+import { markSessionHandled } from '@/components/providers/AuthProvider'
 import { useRouter } from 'next/navigation'
 
 export default function SignUpPage() {
@@ -19,11 +20,15 @@ export default function SignUpPage() {
     setLoading(true)
     setError('')
     try {
+      // Tell AuthProvider we'll handle the session ourselves
+      markSessionHandled()
       const { user } = await createUserWithEmailAndPassword(getClientAuth(), email, password)
       await updateProfile(user, { displayName: name })
 
-      // Create resident record + send welcome email
+      // Get initial token
       const idToken = await user.getIdToken()
+
+      // Create resident record + send welcome email + set role claim
       const res = await fetch('/api/auth/sign-up', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -34,11 +39,14 @@ export default function SignUpPage() {
         console.error('Failed to create resident record:', await res.text())
       }
 
-      // Create session cookie
+      // Force token refresh to pick up the new custom claims
+      const freshToken = await user.getIdToken(true)
+
+      // Create session cookie with the fresh token that includes the role
       await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
+        body: JSON.stringify({ idToken: freshToken }),
       })
 
       router.push('/')

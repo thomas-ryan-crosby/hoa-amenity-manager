@@ -22,6 +22,16 @@ export function useAuth() {
   return useContext(AuthContext)
 }
 
+/**
+ * Call this from sign-up/sign-in pages BEFORE the AuthProvider fires,
+ * so the provider knows a session is already being handled.
+ */
+export function markSessionHandled() {
+  if (typeof window !== 'undefined') {
+    (window as unknown as Record<string, unknown>).__sessionHandled = true
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [role, setRole] = useState<string | null>(null)
@@ -31,23 +41,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(getClientAuth(), async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser)
-        // Get custom claims for role
+
         const tokenResult = await firebaseUser.getIdTokenResult()
         setRole((tokenResult.claims.role as string) ?? null)
-        // Create session cookie
-        const idToken = await firebaseUser.getIdToken()
-        const sessionRes = await fetch('/api/auth/session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken }),
-        })
-        if (!sessionRes.ok) {
-          console.error('[AuthProvider] Failed to create session cookie:', sessionRes.status)
+
+        // Only create session if the page didn't already handle it
+        const alreadyHandled = (window as unknown as Record<string, unknown>).__sessionHandled
+        if (!alreadyHandled) {
+          const idToken = await firebaseUser.getIdToken()
+          await fetch('/api/auth/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken }),
+          })
         }
+        // Reset for next auth state change
+        ;(window as unknown as Record<string, unknown>).__sessionHandled = false
       } else {
         setUser(null)
         setRole(null)
-        // Clear session cookie
         await fetch('/api/auth/session', { method: 'DELETE' })
       }
       setLoading(false)

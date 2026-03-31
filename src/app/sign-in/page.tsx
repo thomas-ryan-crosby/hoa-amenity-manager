@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { getClientAuth } from '@/lib/firebase/client'
+import { markSessionHandled } from '@/components/providers/AuthProvider'
 import { useRouter } from 'next/navigation'
 
 export default function SignInPage() {
@@ -17,7 +18,17 @@ export default function SignInPage() {
     setLoading(true)
     setError('')
     try {
-      await signInWithEmailAndPassword(getClientAuth(), email, password)
+      markSessionHandled()
+      const { user } = await signInWithEmailAndPassword(getClientAuth(), email, password)
+
+      // Create session cookie explicitly
+      const idToken = await user.getIdToken()
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      })
+
       router.push('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign in failed')
@@ -46,7 +57,7 @@ export default function SignInPage() {
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-stone-500">
-          Don&apos;t have an account? <a className="text-emerald-700 font-medium" href="/sign-up">Sign up</a>
+          Don't have an account? <a className="text-emerald-700 font-medium" href="/sign-up">Sign up</a>
         </p>
       </div>
     </main>
