@@ -232,6 +232,11 @@ export function JanitorialCalendar() {
           ref={calendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
+          views={{
+            timeGridWeek: {
+              dateIncrement: { days: 3 },
+            },
+          }}
           headerToolbar={{
             left: 'prev,next today',
             center: 'title',

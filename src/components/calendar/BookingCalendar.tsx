@@ -207,6 +207,11 @@ export function BookingCalendar() {
           <FullCalendar
             plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
             initialView="timeGridWeek"
+            views={{
+              timeGridWeek: {
+                dateIncrement: { days: 3 },
+              },
+            }}
             headerToolbar={{
               left: 'prev,next today',
               center: 'title',
