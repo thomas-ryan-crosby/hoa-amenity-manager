@@ -85,7 +85,6 @@ const tools: Anthropic.Tool[] = [
         capacity: { type: 'number' },
         rentalFee: { type: 'number' },
         depositAmount: { type: 'number' },
-        calendarId: { type: 'string' },
       },
       required: ['name', 'capacity', 'rentalFee', 'depositAmount'],
     },
@@ -199,7 +198,6 @@ async function executeTool(
         capacity: input.capacity as number,
         rentalFee: input.rentalFee as number,
         depositAmount: input.depositAmount as number,
-        calendarId: (input.calendarId as string) ?? 'pending-setup',
       })
       await addAuditLog(null, 'config-agent', 'AMENITY_CREATED', {
         amenityId: amenity.id,

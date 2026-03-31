@@ -3,16 +3,9 @@ import {
   getBookingWithRelations,
   updateBooking,
   transitionBookingStatus,
-  addAuditLog,
   hasBlackoutConflict,
 } from '@/lib/firebase/db'
-import type { BookingStatus } from '@/lib/firebase/db'
-import {
-  checkAvailability,
-  createHold,
-  confirmEvent,
-  deleteEvent,
-} from '@/lib/integrations/google-calendar'
+import { checkAvailability } from '@/lib/integrations/google-calendar'
 import {
   createPaymentLink,
   getOrCreateCustomer,
@@ -33,7 +26,6 @@ export async function handleNewBooking(bookingId: string): Promise<void> {
 
   const { booking, amenity, resident } = await getBookingWithRelations(bookingId)
 
-  // Transition to AVAILABILITY_CHECKING
   await transitionBookingStatus(bookingId, 'AVAILABILITY_CHECKING', 'orchestrator', {
     from: 'INQUIRY_RECEIVED',
     to: 'AVAILABILITY_CHECKING',
@@ -74,52 +66,22 @@ export async function handleNewBooking(bookingId: string): Promise<void> {
     return
   }
 
-  // 3. Check Google Calendar availability
-  let isAvailable: boolean
-  try {
-    isAvailable = await checkAvailability(
-      amenity.calendarId,
-      booking.startDatetime,
-      booking.endDatetime,
-    )
-  } catch (err) {
-    console.error(`[Orchestrator] Calendar check failed for ${bookingId}:`, err)
-    await transitionBookingStatus(bookingId, 'ERROR', 'orchestrator', {
-      event: 'CALENDAR_CHECK_FAILED',
-      error: err instanceof Error ? err.message : String(err),
-    })
-    return
-  }
+  // 3. Check availability against existing bookings in Firestore
+  const isAvailable = await checkAvailability(
+    amenity.id,
+    booking.startDatetime,
+    booking.endDatetime,
+  )
 
   if (!isAvailable) {
     await transitionBookingStatus(bookingId, 'DENIED', 'orchestrator', {
-      event: 'CALENDAR_CONFLICT',
+      event: 'SLOT_CONFLICT',
     })
     await residentAgent.notifyUnavailable(bookingId)
     return
   }
 
-  // 4. Create a tentative hold on the calendar
-  let eventId: string
-  try {
-    eventId = await createHold(
-      amenity.calendarId,
-      bookingId,
-      booking.startDatetime,
-      booking.endDatetime,
-    )
-  } catch (err) {
-    console.error(`[Orchestrator] Failed to create hold for ${bookingId}:`, err)
-    await transitionBookingStatus(bookingId, 'ERROR', 'orchestrator', {
-      event: 'HOLD_CREATION_FAILED',
-      error: err instanceof Error ? err.message : String(err),
-    })
-    return
-  }
-
-  await updateBooking(bookingId, { calendarEventId: eventId })
-
-  // 5. Determine approval routing
+  // 4. Determine approval routing
   const needsApproval =
     amenity.requiresApproval &&
     (amenity.autoApproveThreshold === null ||
@@ -190,22 +152,13 @@ export async function handleDenial(
 ): Promise<void> {
   console.log(`[Orchestrator] Handling denial: ${bookingId}`)
 
-  const { booking, amenity } = await getBookingWithRelations(bookingId)
+  const { booking } = await getBookingWithRelations(bookingId)
 
   await transitionBookingStatus(bookingId, 'DENIED', 'orchestrator', {
     event: 'DENIED_BY_PM',
     reason,
     from: booking.status,
   })
-
-  if (booking.calendarEventId) {
-    try {
-      await deleteEvent(amenity.calendarId, booking.calendarEventId)
-    } catch (err) {
-      console.error(`[Orchestrator] Failed to delete calendar hold for ${bookingId}:`, err)
-    }
-    await updateBooking(bookingId, { calendarEventId: null })
-  }
 
   await residentAgent.notifyDenied(bookingId, reason)
 }
@@ -216,20 +169,12 @@ export async function handleDenial(
 export async function handlePaymentSuccess(bookingId: string): Promise<void> {
   console.log(`[Orchestrator] Payment success: ${bookingId}`)
 
-  const { booking, amenity, resident } = await getBookingWithRelations(bookingId)
+  const { booking } = await getBookingWithRelations(bookingId)
 
   await transitionBookingStatus(bookingId, 'CONFIRMED', 'orchestrator', {
     event: 'PAYMENT_RECEIVED',
     from: booking.status,
   })
-
-  if (booking.calendarEventId) {
-    try {
-      await confirmEvent(amenity.calendarId, booking.calendarEventId, [resident.email])
-    } catch (err) {
-      console.error(`[Orchestrator] Failed to confirm calendar event for ${bookingId}:`, err)
-    }
-  }
 
   await scheduleReminder(bookingId, booking.startDatetime)
   await schedulePostEventFollowup(bookingId, booking.endDatetime)
@@ -281,15 +226,6 @@ export async function handleCancellation(bookingId: string): Promise<void> {
     } catch (err) {
       console.error(`[Orchestrator] Failed to issue refund for ${bookingId}:`, err)
     }
-  }
-
-  if (booking.calendarEventId) {
-    try {
-      await deleteEvent(amenity.calendarId, booking.calendarEventId)
-    } catch (err) {
-      console.error(`[Orchestrator] Failed to delete calendar event for ${bookingId}:`, err)
-    }
-    await updateBooking(bookingId, { calendarEventId: null })
   }
 
   await transitionBookingStatus(bookingId, 'CANCELLED', 'orchestrator', {

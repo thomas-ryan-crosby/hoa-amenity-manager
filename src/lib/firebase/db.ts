@@ -42,7 +42,6 @@ export interface Amenity {
   capacity: number
   rentalFee: number
   depositAmount: number
-  calendarId: string
   requiresApproval: boolean
   autoApproveThreshold: number | null
   approverStaffId: string | null
@@ -73,7 +72,6 @@ export interface Booking {
   notes: string | null
   stripePaymentIntentId: string | null
   stripeDepositIntentId: string | null
-  calendarEventId: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -181,7 +179,6 @@ export async function createAmenity(
     capacity: data.capacity,
     rentalFee: data.rentalFee,
     depositAmount: data.depositAmount,
-    calendarId: data.calendarId ?? 'pending-setup',
     requiresApproval: data.requiresApproval ?? true,
     autoApproveThreshold: data.autoApproveThreshold ?? null,
     approverStaffId: data.approverStaffId ?? null,
@@ -306,7 +303,6 @@ function bookingFromDoc(doc: FirebaseFirestore.DocumentSnapshot): Booking | null
     notes: data.notes ?? null,
     stripePaymentIntentId: data.stripePaymentIntentId ?? null,
     stripeDepositIntentId: data.stripeDepositIntentId ?? null,
-    calendarEventId: data.calendarEventId ?? null,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   }
@@ -325,7 +321,6 @@ function bookingFromQueryDoc(doc: FirebaseFirestore.QueryDocumentSnapshot): Book
     notes: data.notes ?? null,
     stripePaymentIntentId: data.stripePaymentIntentId ?? null,
     stripeDepositIntentId: data.stripeDepositIntentId ?? null,
-    calendarEventId: data.calendarEventId ?? null,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   }
@@ -562,7 +557,7 @@ export async function countRecentInspectionsByStaff(
 // ---------------------------------------------------------------------------
 
 export async function createBookingWithAuditLog(
-  bookingData: Omit<Booking, 'id' | 'createdAt' | 'updatedAt' | 'stripePaymentIntentId' | 'stripeDepositIntentId' | 'calendarEventId'> & Partial<Pick<Booking, 'stripePaymentIntentId' | 'stripeDepositIntentId' | 'calendarEventId'>>,
+  bookingData: Omit<Booking, 'id' | 'createdAt' | 'updatedAt' | 'stripePaymentIntentId' | 'stripeDepositIntentId'> & Partial<Pick<Booking, 'stripePaymentIntentId' | 'stripeDepositIntentId'>>,
   agent: string,
   event: string,
 ): Promise<Booking> {
@@ -575,7 +570,6 @@ export async function createBookingWithAuditLog(
     ...bookingData,
     stripePaymentIntentId: bookingData.stripePaymentIntentId ?? null,
     stripeDepositIntentId: bookingData.stripeDepositIntentId ?? null,
-    calendarEventId: bookingData.calendarEventId ?? null,
     startDatetime: Timestamp.fromDate(bookingData.startDatetime),
     endDatetime: Timestamp.fromDate(bookingData.endDatetime),
     createdAt: nowTs,
@@ -599,7 +593,6 @@ export async function createBookingWithAuditLog(
     ...bookingData,
     stripePaymentIntentId: bookingData.stripePaymentIntentId ?? null,
     stripeDepositIntentId: bookingData.stripeDepositIntentId ?? null,
-    calendarEventId: bookingData.calendarEventId ?? null,
     createdAt: now,
     updatedAt: now,
   }

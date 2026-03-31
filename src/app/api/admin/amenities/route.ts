@@ -14,7 +14,6 @@ const AmenitySchema = z.object({
   capacity: z.number().int().positive(),
   rentalFee: z.number().min(0),
   depositAmount: z.number().min(0),
-  calendarId: z.string().min(1),
   requiresApproval: z.boolean(),
   autoApproveThreshold: z.number().int().positive().nullable().optional(),
   approverStaffId: z.string().nullable().optional(),

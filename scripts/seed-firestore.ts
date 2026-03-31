@@ -44,7 +44,7 @@ async function main() {
       capacity: 80,
       rentalFee: 150,
       depositAmount: 200,
-      calendarId: 'clubhouse-calendar-id',
+
       requiresApproval: true,
       autoApproveThreshold: null,
       approverStaffId: pmRef.id,
@@ -61,7 +61,7 @@ async function main() {
       capacity: 40,
       rentalFee: 100,
       depositAmount: 150,
-      calendarId: 'pool-calendar-id',
+
       requiresApproval: true,
       autoApproveThreshold: 10,
       approverStaffId: pmRef.id,
@@ -78,7 +78,7 @@ async function main() {
       capacity: 20,
       rentalFee: 75,
       depositAmount: 100,
-      calendarId: 'tennis-calendar-id',
+
       requiresApproval: false,
       autoApproveThreshold: null,
       approverStaffId: null,
@@ -95,7 +95,7 @@ async function main() {
       capacity: 50,
       rentalFee: 100,
       depositAmount: 150,
-      calendarId: 'bbq-calendar-id',
+
       requiresApproval: true,
       autoApproveThreshold: 15,
       approverStaffId: pmRef.id,

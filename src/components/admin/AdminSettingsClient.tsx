@@ -25,7 +25,6 @@ type Amenity = {
   capacity: number
   rentalFee: number
   depositAmount: number
-  calendarId: string
   requiresApproval: boolean
   autoApproveThreshold: number | null
   approverStaffId: string | null
@@ -44,7 +43,6 @@ const emptyAmenityForm = {
   capacity: 1,
   rentalFee: 0,
   depositAmount: 0,
-  calendarId: '',
   requiresApproval: true,
   autoApproveThreshold: '',
   approverStaffId: '',
@@ -62,7 +60,6 @@ type AmenityForm = {
   capacity: number
   rentalFee: number
   depositAmount: number
-  calendarId: string
   requiresApproval: boolean
   autoApproveThreshold: string
   approverStaffId: string
@@ -85,7 +82,6 @@ function toAmenityForm(amenity: Amenity | null): AmenityForm {
     capacity: amenity.capacity,
     rentalFee: amenity.rentalFee,
     depositAmount: amenity.depositAmount,
-    calendarId: amenity.calendarId,
     requiresApproval: amenity.requiresApproval,
     autoApproveThreshold: amenity.autoApproveThreshold?.toString() ?? '',
     approverStaffId: amenity.approverStaffId ?? '',
@@ -166,7 +162,6 @@ export function AdminSettingsClient({ initialAmenities, initialStaff, initialSet
       capacity: Number(amenityForm.capacity),
       rentalFee: Number(amenityForm.rentalFee),
       depositAmount: Number(amenityForm.depositAmount),
-      calendarId: amenityForm.calendarId,
       requiresApproval: amenityForm.requiresApproval,
       autoApproveThreshold: amenityForm.autoApproveThreshold
         ? Number(amenityForm.autoApproveThreshold)
@@ -425,20 +420,6 @@ export function AdminSettingsClient({ initialAmenities, initialStaff, initialSet
                   />
                 </label>
               ))}
-
-              <label className="text-sm font-medium text-stone-700 md:col-span-2">
-                Google Calendar ID
-                <input
-                  className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3"
-                  value={amenityForm.calendarId}
-                  onChange={(event) =>
-                    setAmenityForm((current) => ({
-                      ...current,
-                      calendarId: event.target.value,
-                    }))
-                  }
-                />
-              </label>
 
               <label className="text-sm font-medium text-stone-700">
                 Auto-approve threshold

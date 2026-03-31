@@ -40,7 +40,6 @@ export async function GET(
       endDatetime: booking.endDatetime instanceof Date ? booking.endDatetime.toISOString() : booking.endDatetime,
       guestCount: booking.guestCount,
       notes: booking.notes,
-      calendarEventId: booking.calendarEventId,
       createdAt: booking.createdAt instanceof Date ? booking.createdAt.toISOString() : booking.createdAt,
       updatedAt: booking.updatedAt instanceof Date ? booking.updatedAt.toISOString() : booking.updatedAt,
       amenity: amenity
