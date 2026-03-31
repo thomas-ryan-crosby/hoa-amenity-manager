@@ -10,7 +10,6 @@ import {
 } from '@/lib/firebase/db'
 import { formatDateRange } from '@/lib/format'
 import { sendEmail } from '@/lib/integrations/gmail'
-import { sendSMS } from '@/lib/integrations/twilio'
 
 /**
  * Round-robin assignment: pick the janitorial staff member with the fewest
@@ -82,13 +81,6 @@ export async function notifyJobAssigned(bookingId: string): Promise<void> {
     `,
   })
 
-  if (staff.phone) {
-    await sendSMS(
-      staff.phone,
-      `New job: ${amenity.name} on ${new Date(booking.startDatetime).toLocaleDateString()}. Inspection: ${inspectionUrl}`,
-    )
-  }
-
   // Record the assignment in audit log
   await addAuditLog(bookingId, 'janitorial-agent', 'JOB_ASSIGNED', {
     staffId: staff.id,
@@ -125,8 +117,12 @@ export async function sendInspectionReminder(
     process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
   }/janitorial/inspect/${bookingId}`
 
-  await sendSMS(
-    staff.phone,
-    `Reminder: complete inspection for ${amenity.name}. ${inspectionUrl}`,
-  )
+  await sendEmail({
+    to: staff.email,
+    subject: `Reminder: complete inspection for ${amenity.name}`,
+    html: `
+      <p>Please complete the post-event inspection for <strong>${amenity.name}</strong>.</p>
+      <p><a href="${inspectionUrl}" style="background: #059669; color: white; padding: 10px 24px; border-radius: 9999px; text-decoration: none; display: inline-block; font-weight: 600;">Open inspection form</a></p>
+    `,
+  })
 }

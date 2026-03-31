@@ -653,14 +653,12 @@ export async function transitionBookingStatus(
 export interface SystemSettings {
   pmEmail: string
   approvalJwtSecret: string
-  twilioPhoneNumber: string
   orgName: string
 }
 
 const DEFAULT_SETTINGS: SystemSettings = {
   pmEmail: '',
   approvalJwtSecret: '',
-  twilioPhoneNumber: '',
   orgName: 'Sanctuary HOA',
 }
 

@@ -20,7 +20,6 @@ export default async function GeneralSettingsPage() {
       initialSettings={{
         pmEmail: settings.pmEmail,
         orgName: settings.orgName,
-        twilioPhoneNumber: settings.twilioPhoneNumber,
       }}
     />
   )

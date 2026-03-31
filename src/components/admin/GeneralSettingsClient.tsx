@@ -13,7 +13,6 @@ type Staff = {
 type SystemSettingsForm = {
   pmEmail: string
   orgName: string
-  twilioPhoneNumber: string
 }
 
 type Props = {
@@ -24,7 +23,7 @@ type Props = {
 export function GeneralSettingsClient({ initialStaff, initialSettings }: Props) {
   const [staff, setStaff] = useState<Staff[]>(initialStaff)
   const [settingsForm, setSettingsForm] = useState<SystemSettingsForm>(
-    initialSettings ?? { pmEmail: '', orgName: 'Sanctuary HOA', twilioPhoneNumber: '' },
+    initialSettings ?? { pmEmail: '', orgName: 'Sanctuary HOA' },
   )
   const [staffForm, setStaffForm] = useState({
     name: '',
@@ -130,15 +129,6 @@ export function GeneralSettingsClient({ initialStaff, initialSettings }: Props) 
                   placeholder="pm@yourhoa.org"
                   value={settingsForm.pmEmail}
                   onChange={(e) => setSettingsForm((c) => ({ ...c, pmEmail: e.target.value }))}
-                />
-              </label>
-              <label className="block text-sm font-medium text-stone-700">
-                Twilio phone number
-                <input
-                  className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
-                  placeholder="+15551234567"
-                  value={settingsForm.twilioPhoneNumber}
-                  onChange={(e) => setSettingsForm((c) => ({ ...c, twilioPhoneNumber: e.target.value }))}
                 />
               </label>
               <button

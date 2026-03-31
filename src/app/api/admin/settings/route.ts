@@ -6,7 +6,6 @@ import { getSettings, updateSettings } from '@/lib/firebase/db'
 const SettingsSchema = z.object({
   pmEmail: z.string().email().optional(),
   orgName: z.string().min(1).optional(),
-  twilioPhoneNumber: z.string().optional(),
 })
 
 export async function GET() {
@@ -14,12 +13,10 @@ export async function GET() {
   if (!authState.ok) return authState.response
 
   const settings = await getSettings()
-  // Don't expose the JWT secret to the client
   return NextResponse.json({
     settings: {
       pmEmail: settings.pmEmail,
       orgName: settings.orgName,
-      twilioPhoneNumber: settings.twilioPhoneNumber,
     },
   })
 }
