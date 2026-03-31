@@ -71,6 +71,7 @@ export async function handleNewBooking(bookingId: string): Promise<void> {
     amenity.id,
     booking.startDatetime,
     booking.endDatetime,
+    bookingId,
   )
 
   if (!isAvailable) {
