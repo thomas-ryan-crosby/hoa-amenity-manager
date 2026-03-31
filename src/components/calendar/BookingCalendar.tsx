@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, MouseEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -75,6 +75,13 @@ export function BookingCalendar() {
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
+  const calendarRef = useRef<FullCalendar>(null)
+
+  function clearSelection() {
+    setSelection(null)
+    setError(null)
+    calendarRef.current?.getApi().unselect()
+  }
 
   useEffect(() => {
     async function loadCalendar() {
@@ -274,6 +281,7 @@ export function BookingCalendar() {
         {viewMode === 'calendar' ? (
           <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
             <FullCalendar
+              ref={calendarRef}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
               initialView="rolling3Day"
               views={{
@@ -401,7 +409,7 @@ export function BookingCalendar() {
               </div>
               <button
                 type="button"
-                onClick={() => { setSelection(null); setError(null) }}
+                onClick={clearSelection}
                 className="ml-2 shrink-0 rounded-full p-1 text-stone-400 hover:bg-stone-200 hover:text-stone-600"
                 aria-label="Cancel booking"
               >
