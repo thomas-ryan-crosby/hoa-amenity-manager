@@ -1,17 +1,18 @@
 export const dynamic = 'force-dynamic'
 
-import { getAllAmenities, getAllStaff, getBlackoutDates } from '@/lib/firebase/db'
+import { getAllAmenities, getAllStaff, getBlackoutDates, getAllAreas } from '@/lib/firebase/db'
 import { AmenitySetupClient } from '@/components/admin/AmenitySetupClient'
 
 export default async function AmenitySetupPage() {
-  const [amenities, staff] = await Promise.all([
+  const [amenities, staff, areas] = await Promise.all([
     getAllAmenities(),
     getAllStaff(),
+    getAllAreas(),
   ])
 
   const amenitiesWithBlackouts = await Promise.all(
     amenities
-      .sort((a, b) => a.name.localeCompare(b.name))
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
       .map(async (amenity) => {
         const blackoutDates = await getBlackoutDates(amenity.id)
         return {
@@ -37,6 +38,7 @@ export default async function AmenitySetupPage() {
     <AmenitySetupClient
       initialAmenities={amenitiesWithBlackouts}
       initialStaff={sortedStaff}
+      initialAreas={areas}
     />
   )
 }

@@ -18,6 +18,12 @@ type BlackoutDate = {
   recurring: boolean
 }
 
+type Area = {
+  id: string
+  name: string
+  sortOrder: number
+}
+
 type Amenity = {
   id: string
   name: string
@@ -38,6 +44,8 @@ type Amenity = {
   parentAmenityId: string | null
   childAmenityIds: string[]
   blackoutDates: BlackoutDate[]
+  areaId: string | null
+  sortOrder: number
 }
 
 type AmenityForm = {
@@ -59,6 +67,8 @@ type AmenityForm = {
   janitorialAssignment: 'rotation' | 'manual' | 'none'
   defaultTurnTimeHours: number
   parentAmenityId: string
+  areaId: string
+  sortOrder: number
 }
 
 const emptyAmenityForm: AmenityForm = {
@@ -80,6 +90,8 @@ const emptyAmenityForm: AmenityForm = {
   janitorialAssignment: 'rotation' as const,
   defaultTurnTimeHours: 0,
   parentAmenityId: '',
+  areaId: '',
+  sortOrder: 0,
 }
 
 function toAmenityForm(amenity: Amenity | null): AmenityForm {
@@ -103,6 +115,8 @@ function toAmenityForm(amenity: Amenity | null): AmenityForm {
     janitorialAssignment: amenity.janitorialAssignment,
     defaultTurnTimeHours: amenity.defaultTurnTimeHours ?? 0,
     parentAmenityId: amenity.parentAmenityId ?? '',
+    areaId: amenity.areaId ?? '',
+    sortOrder: amenity.sortOrder ?? 0,
   }
 }
 
@@ -176,11 +190,13 @@ function Toggle({
 type Props = {
   initialAmenities: Amenity[]
   initialStaff: Staff[]
+  initialAreas?: Area[]
 }
 
-export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
+export function AmenitySetupClient({ initialAmenities, initialStaff, initialAreas = [] }: Props) {
   const [amenities, setAmenities] = useState<Amenity[]>(initialAmenities)
   const [staff, setStaff] = useState<Staff[]>(initialStaff)
+  const [areas, setAreas] = useState<Area[]>(initialAreas)
   const [selectedAmenityId, setSelectedAmenityId] = useState<string | null>(null)
   const [amenityForm, setAmenityForm] = useState<AmenityForm>({ ...emptyAmenityForm })
   const [blackoutForm, setBlackoutForm] = useState({
@@ -193,20 +209,51 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
   const [chatReply, setChatReply] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
 
+  // Area management state
+  const [areaFormName, setAreaFormName] = useState('')
+  const [editingAreaId, setEditingAreaId] = useState<string | null>(null)
+  const [editingAreaName, setEditingAreaName] = useState('')
+
   const selectedAmenity = amenities.find((a) => a.id === selectedAmenityId) ?? null
   const f = amenityForm
   const set = (patch: Partial<AmenityForm>) =>
     setAmenityForm((c) => ({ ...c, ...patch }))
 
+  // Group amenities by area
+  function getGroupedAmenities() {
+    const grouped: { area: Area | null; amenities: Amenity[] }[] = []
+
+    // Add area groups
+    for (const area of areas) {
+      const areaAmenities = amenities
+        .filter((a) => a.areaId === area.id)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      grouped.push({ area, amenities: areaAmenities })
+    }
+
+    // Add ungrouped amenities
+    const ungrouped = amenities
+      .filter((a) => !a.areaId)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    if (ungrouped.length > 0) {
+      grouped.push({ area: null, amenities: ungrouped })
+    }
+
+    return grouped
+  }
+
   async function loadData() {
-    const [aRes, sRes] = await Promise.all([
+    const [aRes, sRes, areasRes] = await Promise.all([
       fetch('/api/admin/amenities'),
       fetch('/api/admin/staff'),
+      fetch('/api/admin/areas'),
     ])
     const aData = await aRes.json()
     const sData = await sRes.json()
+    const areasData = await areasRes.json()
     setAmenities(aData.amenities ?? [])
     setStaff(sData.staff ?? [])
+    setAreas(areasData.areas ?? [])
   }
 
   function selectAmenity(amenity: Amenity | null) {
@@ -235,6 +282,8 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
       janitorialAssignment: f.requiresJanitorial ? f.janitorialAssignment : 'none',
       defaultTurnTimeHours: f.requiresJanitorial ? Number(f.defaultTurnTimeHours) : 0,
       parentAmenityId: f.parentAmenityId || null,
+      areaId: f.areaId || null,
+      sortOrder: f.sortOrder,
     }
 
     const url = selectedAmenity ? `/api/admin/amenities/${selectedAmenity.id}` : '/api/admin/amenities'
@@ -298,6 +347,86 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
     setChatReply(!res.ok ? (data.error ?? 'Unable to reach configuration agent.') : data.message)
   }
 
+  // --- Area CRUD ---
+  async function createArea(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!areaFormName.trim()) return
+    const res = await fetch('/api/admin/areas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: areaFormName.trim() }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setNotice(data.error ?? 'Unable to create area.'); return }
+    setAreaFormName('')
+    setNotice('Area created.')
+    await loadData()
+  }
+
+  async function saveAreaRename(areaId: string) {
+    if (!editingAreaName.trim()) return
+    const res = await fetch(`/api/admin/areas/${areaId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: editingAreaName.trim() }),
+    })
+    if (!res.ok) {
+      const data = await res.json()
+      setNotice(data.error ?? 'Unable to rename area.')
+      return
+    }
+    setEditingAreaId(null)
+    setEditingAreaName('')
+    setNotice('Area renamed.')
+    await loadData()
+  }
+
+  async function deleteAreaById(areaId: string) {
+    const area = areas.find((a) => a.id === areaId)
+    if (!confirm(`Delete area "${area?.name}"? Amenities in this area will become ungrouped.`)) return
+    const res = await fetch(`/api/admin/areas/${areaId}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const data = await res.json()
+      setNotice(data.error ?? 'Unable to delete area.')
+      return
+    }
+    setNotice('Area deleted.')
+    await loadData()
+  }
+
+  // --- Reorder amenity within its group ---
+  async function moveAmenity(amenityId: string, direction: 'up' | 'down') {
+    const amenity = amenities.find((a) => a.id === amenityId)
+    if (!amenity) return
+
+    // Get siblings in same area
+    const siblings = amenities
+      .filter((a) => (a.areaId ?? null) === (amenity.areaId ?? null))
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+
+    const idx = siblings.findIndex((a) => a.id === amenityId)
+    if (direction === 'up' && idx <= 0) return
+    if (direction === 'down' && idx >= siblings.length - 1) return
+
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+    const swapWith = siblings[swapIdx]
+
+    // Swap sortOrders
+    const items = [
+      { id: amenity.id, sortOrder: swapWith.sortOrder ?? 0 },
+      { id: swapWith.id, sortOrder: amenity.sortOrder ?? 0 },
+    ]
+
+    const res = await fetch('/api/admin/amenities/reorder', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items }),
+    })
+    if (res.ok) await loadData()
+  }
+
+  const groupedAmenities = getGroupedAmenities()
+
   return (
     <main className="min-h-screen bg-stone-50 px-6 py-8">
       <div className="mx-auto max-w-7xl">
@@ -313,7 +442,7 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
         )}
 
         <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
-          {/* ---- LEFT: amenity list ---- */}
+          {/* ---- LEFT: amenity list grouped by area ---- */}
           <section className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-stone-900">Amenities</h2>
@@ -325,23 +454,60 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
                 New
               </button>
             </div>
-            <div className="mt-4 space-y-2">
-              {amenities.map((a) => (
-                <button
-                  key={a.id}
-                  className={`w-full rounded-2xl px-4 py-3 text-left ${
-                    selectedAmenityId === a.id ? 'bg-stone-900 text-white' : 'bg-stone-50 text-stone-700'
-                  }`}
-                  onClick={() => selectAmenity(a)}
-                  type="button"
-                >
-                  <div className="font-medium">{a.name}</div>
-                  <div className="text-xs opacity-80">
-                    {a.rentalFee > 0 ? `$${a.rentalFee} + $${a.depositAmount} deposit` : 'Free'}
-                    {a.requiresApproval ? ' • Approval required' : ' • Auto-approved'}
+            <div className="mt-4 space-y-4">
+              {groupedAmenities.map((group) => (
+                <div key={group.area?.id ?? '_ungrouped'}>
+                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-stone-400">
+                    {group.area?.name ?? 'Other'}
+                  </p>
+                  <div className="space-y-1.5">
+                    {group.amenities.map((a, idx) => (
+                      <div key={a.id} className="flex items-center gap-1">
+                        {/* Reorder arrows */}
+                        <div className="flex shrink-0 flex-col">
+                          <button
+                            type="button"
+                            className="px-0.5 text-stone-300 hover:text-stone-600 disabled:opacity-30"
+                            disabled={idx === 0}
+                            onClick={() => moveAmenity(a.id, 'up')}
+                            aria-label="Move up"
+                          >
+                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M5 15l7-7 7 7" /></svg>
+                          </button>
+                          <button
+                            type="button"
+                            className="px-0.5 text-stone-300 hover:text-stone-600 disabled:opacity-30"
+                            disabled={idx === group.amenities.length - 1}
+                            onClick={() => moveAmenity(a.id, 'down')}
+                            aria-label="Move down"
+                          >
+                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M19 9l-7 7-7-7" /></svg>
+                          </button>
+                        </div>
+                        <button
+                          className={`min-w-0 flex-1 rounded-2xl px-3 py-2.5 text-left ${
+                            selectedAmenityId === a.id ? 'bg-stone-900 text-white' : 'bg-stone-50 text-stone-700'
+                          }`}
+                          onClick={() => selectAmenity(a)}
+                          type="button"
+                        >
+                          <div className="truncate font-medium">{a.name}</div>
+                          <div className="truncate text-xs opacity-80">
+                            {a.rentalFee > 0 ? `$${a.rentalFee} + $${a.depositAmount} deposit` : 'Free'}
+                            {a.requiresApproval ? ' \u00b7 Approval required' : ' \u00b7 Auto-approved'}
+                          </div>
+                        </button>
+                      </div>
+                    ))}
+                    {group.amenities.length === 0 && (
+                      <p className="px-3 py-2 text-xs italic text-stone-400">No amenities</p>
+                    )}
                   </div>
-                </button>
+                </div>
               ))}
+              {groupedAmenities.length === 0 && (
+                <p className="text-sm text-stone-500">No amenities yet.</p>
+              )}
             </div>
           </section>
 
@@ -374,6 +540,21 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
                   <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900" type="number" min={1} value={f.maxAdvanceBookingDays} onChange={(e) => set({ maxAdvanceBookingDays: Number(e.target.value) })} />
                 </label>
               </div>
+
+              {/* -- Area dropdown -- */}
+              <label className="block text-sm font-medium text-stone-700">
+                Area <Info tip="Group this amenity into an area for organized navigation. Areas help residents find amenities quickly." />
+                <select
+                  className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900"
+                  value={f.areaId}
+                  onChange={(e) => set({ areaId: e.target.value })}
+                >
+                  <option value="">No area (ungrouped)</option>
+                  {areas.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              </label>
 
               {/* -- Paid toggle -- */}
               <div className="border-t border-stone-200 pt-5">
@@ -579,7 +760,7 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
                 {(selectedAmenity?.blackoutDates ?? []).map((b) => (
                   <div key={b.id} className="rounded-2xl bg-stone-50 px-4 py-3 text-sm text-stone-700">
                     {new Date(b.startDate).toLocaleString()} - {new Date(b.endDate).toLocaleString()}
-                    {b.reason ? ` — ${b.reason}` : ''}
+                    {b.reason ? ` \u2014 ${b.reason}` : ''}
                     {b.recurring ? ' (recurring)' : ''}
                   </div>
                 ))}
@@ -587,8 +768,95 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
             </div>
           </section>
 
-          {/* ---- RIGHT: config agent ---- */}
+          {/* ---- RIGHT: areas + config agent ---- */}
           <section className="space-y-6">
+            {/* Area management */}
+            <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-stone-900">Areas</h2>
+              </div>
+              <p className="mt-1 text-xs leading-5 text-stone-500">
+                Group amenities into areas for organized navigation.
+              </p>
+
+              {/* Add area form */}
+              <form className="mt-3 flex gap-2" onSubmit={createArea}>
+                <input
+                  className="min-w-0 flex-1 rounded-2xl border border-stone-300 px-3 py-2 text-sm text-stone-900"
+                  placeholder="New area name"
+                  value={areaFormName}
+                  onChange={(e) => setAreaFormName(e.target.value)}
+                />
+                <button
+                  className="shrink-0 rounded-full border border-stone-300 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-stone-700 hover:bg-stone-50"
+                  type="submit"
+                >
+                  Add
+                </button>
+              </form>
+
+              {/* Area list */}
+              <div className="mt-3 space-y-1.5">
+                {areas.map((area) => (
+                  <div
+                    key={area.id}
+                    className="flex items-center gap-2 rounded-2xl bg-stone-50 px-3 py-2"
+                  >
+                    {editingAreaId === area.id ? (
+                      <>
+                        <input
+                          className="min-w-0 flex-1 rounded-xl border border-stone-300 px-2 py-1 text-sm text-stone-900"
+                          value={editingAreaName}
+                          onChange={(e) => setEditingAreaName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { e.preventDefault(); saveAreaRename(area.id) }
+                            if (e.key === 'Escape') { setEditingAreaId(null) }
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          className="text-xs font-medium text-emerald-600 hover:text-emerald-800"
+                          onClick={() => saveAreaRename(area.id)}
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs text-stone-400 hover:text-stone-600"
+                          onClick={() => setEditingAreaId(null)}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-stone-700">{area.name}</span>
+                        <button
+                          type="button"
+                          className="text-xs text-stone-400 hover:text-stone-600"
+                          onClick={() => { setEditingAreaId(area.id); setEditingAreaName(area.name) }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs text-red-400 hover:text-red-600"
+                          onClick={() => deleteAreaById(area.id)}
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))}
+                {areas.length === 0 && (
+                  <p className="py-2 text-xs italic text-stone-400">No areas yet. Create one above.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Config agent */}
             <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-stone-900">Configuration agent</h2>
               <p className="mt-2 text-sm leading-6 text-stone-600">

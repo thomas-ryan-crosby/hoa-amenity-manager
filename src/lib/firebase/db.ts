@@ -36,6 +36,12 @@ export interface Resident {
   stripeCustomerId: string | null
 }
 
+export interface Area {
+  id: string
+  name: string
+  sortOrder: number
+}
+
 export interface Amenity {
   id: string
   name: string
@@ -53,8 +59,10 @@ export interface Amenity {
   maxAdvanceBookingDays: number
   janitorialAssignment: string
   defaultTurnTimeHours: number
-  parentAmenityId: string | null   // this amenity is a sub-area of the parent
-  childAmenityIds: string[]        // amenities that are sub-areas of this one
+  parentAmenityId: string | null
+  childAmenityIds: string[]
+  areaId: string | null            // which area this amenity belongs to
+  sortOrder: number                // display order within its area
 }
 
 export interface TurnWindow {
@@ -143,6 +151,7 @@ function snapshotToDoc<T extends { id: string }>(
 // ---------------------------------------------------------------------------
 
 const residentsCol = () => adminDb.collection('residents')
+const areasCol = () => adminDb.collection('areas')
 const amenitiesCol = () => adminDb.collection('amenities')
 const bookingsCol = () => adminDb.collection('bookings')
 const staffCol = () => adminDb.collection('staff')
@@ -210,6 +219,8 @@ export async function createAmenity(
     defaultTurnTimeHours: data.defaultTurnTimeHours ?? 0,
     parentAmenityId: data.parentAmenityId ?? null,
     childAmenityIds: data.childAmenityIds ?? [],
+    areaId: data.areaId ?? null,
+    sortOrder: data.sortOrder ?? 0,
   }
   const ref = await amenitiesCol().add(fullData)
   return { id: ref.id, ...fullData }
@@ -293,6 +304,89 @@ export async function deleteAmenity(id: string): Promise<void> {
     }
   }
   await amenitiesCol().doc(id).delete()
+}
+
+// ---------------------------------------------------------------------------
+// AREAS
+// ---------------------------------------------------------------------------
+
+export async function getAllAreas(): Promise<Area[]> {
+  const snap = await areasCol().get()
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as Area))
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+}
+
+export async function getAreaById(id: string): Promise<Area | null> {
+  return snapshotToDoc<Area>(await areasCol().doc(id).get())
+}
+
+export async function createArea(data: Omit<Area, 'id'>): Promise<Area> {
+  const ref = await areasCol().add(data)
+  return { id: ref.id, ...data }
+}
+
+export async function updateArea(id: string, data: Partial<Area>): Promise<void> {
+  await areasCol().doc(id).update(data)
+}
+
+export async function deleteArea(id: string): Promise<void> {
+  // Unset areaId on all amenities in this area
+  const amenities = await getAllAmenities()
+  await Promise.all(
+    amenities
+      .filter((a) => a.areaId === id)
+      .map((a) => updateAmenity(a.id, { areaId: null })),
+  )
+  await areasCol().doc(id).delete()
+}
+
+/**
+ * Get all amenities sorted by area order then amenity order.
+ * Returns { areas, amenities, ungrouped } for easy rendering.
+ */
+export async function getAmenitiesGroupedByArea(): Promise<{
+  areas: (Area & { amenities: Amenity[] })[]
+  ungrouped: Amenity[]
+}> {
+  const [areas, amenities] = await Promise.all([getAllAreas(), getAllAmenities()])
+
+  const areaMap = new Map<string, Amenity[]>()
+  const ungrouped: Amenity[] = []
+
+  for (const amenity of amenities) {
+    if (amenity.areaId) {
+      const list = areaMap.get(amenity.areaId) ?? []
+      list.push(amenity)
+      areaMap.set(amenity.areaId, list)
+    } else {
+      ungrouped.push(amenity)
+    }
+  }
+
+  const groupedAreas = areas.map((area) => ({
+    ...area,
+    amenities: (areaMap.get(area.id) ?? []).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
+  }))
+
+  ungrouped.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+
+  return { areas: groupedAreas, ungrouped }
+}
+
+/**
+ * Reorder amenities — accepts an array of { id, sortOrder, areaId? }.
+ */
+export async function reorderAmenities(
+  items: Array<{ id: string; sortOrder: number; areaId?: string | null }>,
+): Promise<void> {
+  await Promise.all(
+    items.map((item) => {
+      const update: Partial<Amenity> = { sortOrder: item.sortOrder }
+      if (item.areaId !== undefined) update.areaId = item.areaId
+      return updateAmenity(item.id, update)
+    }),
+  )
 }
 
 // ---------------------------------------------------------------------------

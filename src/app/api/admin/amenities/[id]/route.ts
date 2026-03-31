@@ -28,6 +28,8 @@ const AmenityUpdateSchema = z.object({
   janitorialAssignment: z.enum(['rotation', 'manual', 'none']),
   defaultTurnTimeHours: z.number().int().min(0),
   parentAmenityId: z.string().nullable().optional(),
+  areaId: z.string().nullable().optional(),
+  sortOrder: z.number().int().min(0).optional(),
 })
 
 export async function PUT(
@@ -74,6 +76,8 @@ export async function PUT(
     autoApproveThreshold: parsed.data.autoApproveThreshold ?? null,
     approverStaffId: parsed.data.approverStaffId ?? null,
     parentAmenityId: newParentId,
+    areaId: parsed.data.areaId ?? null,
+    sortOrder: parsed.data.sortOrder ?? 0,
   })
 
   await addAuditLog(id, 'admin', 'AMENITY_UPDATED', {

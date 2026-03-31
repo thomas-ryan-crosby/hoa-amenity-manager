@@ -7,6 +7,12 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import { formatCurrency, formatDateTime, formatDateRange } from '@/lib/format'
 
+type Area = {
+  id: string
+  name: string
+  sortOrder: number
+}
+
 type Amenity = {
   id: string
   name: string
@@ -15,6 +21,8 @@ type Amenity = {
   rentalFee: number
   depositAmount: number
   maxAdvanceBookingDays: number
+  areaId: string | null
+  sortOrder: number
 }
 
 type CalendarEventExtendedProps = {
@@ -67,6 +75,7 @@ const STATUS_BADGE_STYLES: Record<string, string> = {
 export function BookingCalendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [amenities, setAmenities] = useState<Amenity[]>([])
+  const [areas, setAreas] = useState<Area[]>([])
   const [selectedAmenities, setSelectedAmenities] = useState<Set<string>>(new Set())
   const [selection, setSelection] = useState<SelectionState | null>(null)
   const [guestCount, setGuestCount] = useState(1)
@@ -96,6 +105,7 @@ export function BookingCalendar() {
 
         setEvents(eventsData.events ?? [])
         setAmenities(amenitiesData.amenities ?? [])
+        setAreas(amenitiesData.areas ?? [])
         if (amenitiesData.amenities?.length) {
           setSelectedAmenities(new Set([amenitiesData.amenities[0].id]))
         }
@@ -109,6 +119,31 @@ export function BookingCalendar() {
 
     loadCalendar()
   }, [])
+
+  // Group amenities by area for tab rendering
+  const amenityGroups = useMemo(() => {
+    const groups: { area: Area | null; amenities: Amenity[] }[] = []
+
+    // Areas sorted by sortOrder (already sorted from API)
+    for (const area of areas) {
+      const areaAmenities = amenities
+        .filter((a) => a.areaId === area.id)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      if (areaAmenities.length > 0) {
+        groups.push({ area, amenities: areaAmenities })
+      }
+    }
+
+    // Ungrouped amenities
+    const ungrouped = amenities
+      .filter((a) => !a.areaId)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    if (ungrouped.length > 0) {
+      groups.push({ area: null, amenities: ungrouped })
+    }
+
+    return groups
+  }, [amenities, areas])
 
   const amenityInfo = useMemo(
     () => amenities.find((a) => a.id === selection?.amenityId) ?? null,
@@ -207,22 +242,29 @@ export function BookingCalendar() {
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div>
-        {/* Amenity tabs + view toggle */}
+        {/* Amenity tabs grouped by area + view toggle */}
         <div className="mb-1 flex flex-wrap items-center gap-2">
-          <div className="flex flex-1 flex-wrap gap-2">
-            {amenities.map((amenity) => (
-              <button
-                key={amenity.id}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                  selectedAmenities.has(amenity.id)
-                    ? 'bg-stone-900 text-white'
-                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
-                }`}
-                onClick={(e) => handleAmenityClick(amenity.id, e)}
-                type="button"
-              >
-                {amenity.name}
-              </button>
+          <div className="flex flex-1 flex-wrap items-center gap-x-4 gap-y-2">
+            {amenityGroups.map((group) => (
+              <div key={group.area?.id ?? '_ungrouped'} className="flex flex-wrap items-center gap-1.5">
+                <span className="mr-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-400">
+                  {group.area?.name ?? 'Other'}
+                </span>
+                {group.amenities.map((amenity) => (
+                  <button
+                    key={amenity.id}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                      selectedAmenities.has(amenity.id)
+                        ? 'bg-stone-900 text-white'
+                        : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                    }`}
+                    onClick={(e) => handleAmenityClick(amenity.id, e)}
+                    type="button"
+                  >
+                    {amenity.name}
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
 
