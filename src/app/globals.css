@@ -25,38 +25,31 @@ body {
   font-family: var(--font-sans);
 }
 
-/* FullCalendar text contrast fixes */
+/* FullCalendar — readable but light */
 .fc .fc-col-header-cell-cushion,
-.fc .fc-daygrid-day-number,
-.fc .fc-timegrid-slot-label-cushion,
-.fc .fc-list-day-text,
-.fc .fc-list-day-side-text {
-  color: #1c1917 !important;
-  font-weight: 600;
-}
-
-.fc .fc-toolbar-title {
-  color: #1c1917 !important;
-  font-weight: 700;
-}
-
-.fc .fc-timegrid-axis-cushion,
-.fc .fc-timegrid-slot-label {
-  color: #44403c !important;
+.fc .fc-daygrid-day-number {
+  color: #57534e;
   font-weight: 500;
 }
 
-.fc .fc-button {
-  color: #1c1917 !important;
+.fc .fc-toolbar-title {
+  color: #292524;
   font-weight: 600;
+  font-size: 1.1rem;
 }
 
-.fc .fc-button-active {
-  color: #fff !important;
+.fc .fc-timegrid-slot-label-cushion,
+.fc .fc-timegrid-axis-cushion {
+  color: #78716c;
+  font-size: 0.75rem;
+}
+
+.fc .fc-button {
+  font-weight: 500;
+  font-size: 0.8rem;
 }
 
 .fc .fc-event-title,
 .fc .fc-event-time {
-  color: #fff !important;
   font-weight: 500;
 }
