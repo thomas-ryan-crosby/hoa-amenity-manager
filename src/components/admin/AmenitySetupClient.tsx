@@ -399,7 +399,7 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
     const amenity = amenities.find((a) => a.id === amenityId)
     if (!amenity) return
 
-    // Get siblings in same area
+    // Get siblings in same area, sorted
     const siblings = amenities
       .filter((a) => (a.areaId ?? null) === (amenity.areaId ?? null))
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
@@ -408,14 +408,15 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
     if (direction === 'up' && idx <= 0) return
     if (direction === 'down' && idx >= siblings.length - 1) return
 
+    // Move the item in the array
+    const reordered = [...siblings]
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1
-    const swapWith = siblings[swapIdx]
+    const temp = reordered[idx]
+    reordered[idx] = reordered[swapIdx]
+    reordered[swapIdx] = temp
 
-    // Swap sortOrders
-    const items = [
-      { id: amenity.id, sortOrder: swapWith.sortOrder ?? 0 },
-      { id: swapWith.id, sortOrder: amenity.sortOrder ?? 0 },
-    ]
+    // Reassign sequential sortOrders to all siblings
+    const items = reordered.map((a, i) => ({ id: a.id, sortOrder: i }))
 
     const res = await fetch('/api/admin/amenities/reorder', {
       method: 'PUT',
