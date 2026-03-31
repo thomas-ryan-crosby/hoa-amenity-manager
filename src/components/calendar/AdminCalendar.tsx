@@ -311,6 +311,9 @@ export function AdminCalendar() {
           <span className="flex items-center gap-1.5">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#A1A1AA]" /> Cleaning done
           </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#E7E5E4]" /> Blocked (linked)
+          </span>
         </div>
 
         {viewMode === 'calendar' ? (

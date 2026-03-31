@@ -6,6 +6,7 @@ import {
   getAmenityById,
   getInspectionReport,
   getTurnWindowsForAmenity,
+  type Amenity,
   type BookingStatus,
   type TurnWindow,
 } from '@/lib/firebase/db'
@@ -49,6 +50,29 @@ export async function GET(req: NextRequest) {
   amenities.forEach((amenity, index) => {
     colorMap.set(amenity.id, AMENITY_COLORS[index % AMENITY_COLORS.length])
   })
+
+  // Build a map of amenityId → all linked amenity IDs (parent + children + siblings)
+  const amenityMap = new Map<string, Amenity>()
+  amenities.forEach((a) => amenityMap.set(a.id, a))
+
+  function getLinkedIds(amenityId: string): string[] {
+    const amenity = amenityMap.get(amenityId)
+    if (!amenity) return []
+    const linked: string[] = []
+    if (amenity.parentAmenityId) {
+      linked.push(amenity.parentAmenityId)
+      const parent = amenityMap.get(amenity.parentAmenityId)
+      if (parent?.childAmenityIds) {
+        for (const cid of parent.childAmenityIds) {
+          if (cid !== amenityId) linked.push(cid)
+        }
+      }
+    }
+    if (amenity.childAmenityIds?.length) {
+      linked.push(...amenity.childAmenityIds)
+    }
+    return [...new Set(linked)]
+  }
 
   const resources = amenities.map((amenity) => ({
     id: amenity.id,
@@ -113,6 +137,30 @@ export async function GET(req: NextRequest) {
     }),
   )
 
+  // Add "blocked by linked amenity" events so bookings show on related calendars
+  const linkedEvents: typeof bookingEvents = []
+  for (const event of bookingEvents) {
+    const linkedIds = getLinkedIds(event.extendedProps.amenityId)
+    for (const linkedId of linkedIds) {
+      const linkedAmenity = amenityMap.get(linkedId)
+      if (!linkedAmenity) continue
+      linkedEvents.push({
+        ...event,
+        id: `linked-${event.id}-${linkedId}`,
+        resourceId: linkedId,
+        title: `Blocked: ${event.extendedProps.amenityName}`,
+        color: '#E7E5E4', // stone-200 — clearly a "blocked" indicator
+        editable: false,
+        extendedProps: {
+          ...event.extendedProps,
+          amenityId: linkedId,
+          amenityName: linkedAmenity.name,
+          type: 'booking' as const,
+        },
+      })
+    }
+  }
+
   // For janitorial view, also include turn windows as calendar events
   let turnWindowEvents: Array<{
     id: string
@@ -176,7 +224,30 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  const events = [...bookingEvents, ...turnWindowEvents]
+  // Add linked turn window events too
+  const linkedTurnEvents: typeof turnWindowEvents = []
+  for (const twEvent of turnWindowEvents) {
+    const linkedIds = getLinkedIds(twEvent.extendedProps.amenityId)
+    for (const linkedId of linkedIds) {
+      const linkedAmenity = amenityMap.get(linkedId)
+      if (!linkedAmenity) continue
+      linkedTurnEvents.push({
+        ...twEvent,
+        id: `linked-${twEvent.id}-${linkedId}`,
+        resourceId: linkedId,
+        title: `Blocked: Cleaning (${twEvent.extendedProps.amenityName})`,
+        color: '#E7E5E4',
+        editable: false,
+        extendedProps: {
+          ...twEvent.extendedProps,
+          amenityId: linkedId,
+          amenityName: linkedAmenity.name,
+        },
+      })
+    }
+  }
+
+  const events = [...bookingEvents, ...linkedEvents, ...turnWindowEvents, ...linkedTurnEvents]
 
   return NextResponse.json({ events, resources })
 }
