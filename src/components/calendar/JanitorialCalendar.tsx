@@ -250,8 +250,9 @@ export function JanitorialCalendar() {
           eventDrop={handleEventDrop}
           eventResize={handleEventResize}
           eventClick={handleEventClick}
-          slotMinTime="06:00:00"
-          slotMaxTime="23:00:00"
+          slotMinTime="00:00:00"
+          slotMaxTime="24:00:00"
+          scrollTime="08:00:00"
           allDaySlot={false}
           height="auto"
           nowIndicator={true}

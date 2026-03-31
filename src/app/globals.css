@@ -12,46 +12,39 @@
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
 }
 
-/* === FullCalendar Global Styles === */
+/* === FullCalendar === */
 
-/* Toolbar title (the date range header) */
+/* Toolbar title */
 .fc .fc-toolbar-title {
   color: #292524;
   font-weight: 600;
   font-size: 1.1rem;
 }
 
-/* Day/date column headers */
+/* Column headers (Mon, Tue, etc.) */
 .fc .fc-col-header-cell-cushion {
-  color: #44403c;
+  color: #57534e;
   font-weight: 600;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  font-size: 0.78rem;
+  text-decoration: none;
 }
 
 /* Day numbers in month view */
 .fc .fc-daygrid-day-number {
   color: #44403c;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.85rem;
-  padding: 6px 8px;
+  padding: 4px 8px;
+  text-decoration: none;
 }
 
-/* Time labels on the left gutter */
+/* Time gutter labels */
 .fc .fc-timegrid-slot-label-cushion,
 .fc .fc-timegrid-axis-cushion {
   color: #78716c;
@@ -64,87 +57,52 @@ body {
   font-size: 0.8rem;
 }
 
-/* === Event Styles (all views) === */
+/* --- Events --- */
 
-/* Make events bold and high-contrast */
+/* Shared event styling */
 .fc .fc-event {
   border: none !important;
-  border-radius: 6px !important;
-  padding: 2px 6px !important;
+  border-radius: 5px !important;
 }
 
+/* Event text — inherit color from the background for contrast */
 .fc .fc-event-title {
   font-weight: 600;
-  font-size: 0.8rem;
-  color: #fff !important;
+  font-size: 0.78rem;
   line-height: 1.3;
 }
 
 .fc .fc-event-time {
-  font-weight: 600;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 500;
+  font-size: 0.72rem;
 }
 
-/* === Month View Specifics === */
-
-/* Make month view events taller and more readable */
+/* Month view: make events pill-shaped and readable */
 .fc-daygrid-event {
-  padding: 3px 6px !important;
-  margin-bottom: 2px !important;
-  border-radius: 6px !important;
-  min-height: 22px;
+  padding: 1px 5px !important;
+  margin-bottom: 1px !important;
 }
 
-.fc-daygrid-event .fc-event-title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  white-space: normal;
-  overflow: visible;
-}
-
-/* Remove the tiny dot indicator in month view — use the full pill */
+/* Hide the dot in month view — the colored pill is enough */
 .fc-daygrid-event-dot {
   display: none !important;
 }
 
-/* Show "+N more" link clearly */
+/* "+N more" link */
 .fc .fc-daygrid-more-link {
   color: #059669;
   font-weight: 600;
   font-size: 0.75rem;
 }
 
-/* === Time Grid Event Styles === */
-
-.fc-timegrid-event .fc-event-main {
-  padding: 2px 4px;
-}
-
-/* === Today highlight === */
+/* Today column */
 .fc .fc-day-today {
-  background: #f0fdf4 !important;
+  background: #fafaf9 !important;
 }
 
-/* === Selection highlight (drag to book) === */
+/* Selection highlight (drag to book) */
 .fc .fc-highlight {
-  background: rgba(5, 150, 105, 0.12) !important;
-  border: 2px dashed #059669 !important;
-  border-radius: 6px;
-}
-
-/* === Light gray events need dark text === */
-.fc .fc-event[style*="background-color: rgb(212, 212, 216)"] .fc-event-title,
-.fc .fc-event[style*="background-color: rgb(212, 212, 216)"] .fc-event-time,
-.fc .fc-event[style*="background-color: #D4D4D8"] .fc-event-title,
-.fc .fc-event[style*="background-color: #D4D4D8"] .fc-event-time {
-  color: #44403c !important;
-}
-
-/* Cleaning block (dark gray) — ensure white text */
-.fc .fc-event[style*="background-color: rgb(120, 113, 108)"] .fc-event-title,
-.fc .fc-event[style*="background-color: rgb(120, 113, 108)"] .fc-event-time,
-.fc .fc-event[style*="background-color: #78716C"] .fc-event-title,
-.fc .fc-event[style*="background-color: #78716C"] .fc-event-time {
-  color: #fff !important;
+  background: rgba(5, 150, 105, 0.1) !important;
+  border: 2px dashed rgba(5, 150, 105, 0.4) !important;
+  border-radius: 4px;
 }
