@@ -201,6 +201,25 @@ export function AdminCalendar() {
     }
   }
 
+  async function confirmTurnWindow() {
+    if (!selectedEvent?.extendedProps.turnWindowId) return
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/turn-windows/${selectedEvent.extendedProps.turnWindowId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'confirm' }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Unable to confirm.')
+      await loadEvents()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to confirm turn window.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function completeTurnWindow() {
     if (!selectedEvent?.extendedProps.turnWindowId) return
     setBusy(true)
@@ -461,17 +480,28 @@ export function AdminCalendar() {
 
             <p className="text-sm text-stone-600">
               {selectedEvent.extendedProps.status === 'PENDING'
-                ? 'This is a default cleaning block. Drag or resize to confirm the actual window.'
+                ? 'Default cleaning block. Drag or resize to adjust, then confirm the window.'
                 : selectedEvent.extendedProps.status === 'SCHEDULED'
-                  ? 'This cleaning window has been confirmed. You can still adjust it by dragging.'
-                  : 'This cleaning window is complete.'}
+                  ? 'Cleaning window confirmed. Mark complete when finished.'
+                  : 'Cleaning complete.'}
             </p>
 
             {error && (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
             )}
 
-            {selectedEvent.extendedProps.status !== 'COMPLETED' && (
+            {selectedEvent.extendedProps.status === 'PENDING' && (
+              <button
+                className="w-full rounded-full bg-stone-900 px-4 py-3 text-sm font-semibold text-white disabled:bg-stone-400"
+                disabled={busy}
+                onClick={confirmTurnWindow}
+                type="button"
+              >
+                {busy ? 'Working...' : 'Confirm cleaning window'}
+              </button>
+            )}
+
+            {selectedEvent.extendedProps.status === 'SCHEDULED' && (
               <button
                 className="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:bg-emerald-300"
                 disabled={busy}

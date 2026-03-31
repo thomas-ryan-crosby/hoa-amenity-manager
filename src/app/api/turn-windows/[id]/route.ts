@@ -15,8 +15,8 @@ const UpdateTurnWindowSchema = z.object({
   path: ['actualEnd'],
 })
 
-const CompleteTurnWindowSchema = z.object({
-  action: z.literal('complete'),
+const ActionSchema = z.object({
+  action: z.enum(['confirm', 'complete']),
 })
 
 export async function PUT(
@@ -57,10 +57,10 @@ export async function PUT(
     )
   }
 
+  // Save times without changing status — user must explicitly confirm
   await updateTurnWindow(id, {
     actualStart: parsed.data.actualStart,
     actualEnd: parsed.data.actualEnd,
-    status: 'SCHEDULED',
   })
 
   const updated = await getTurnWindowById(id)
@@ -102,17 +102,25 @@ export async function POST(
   }
 
   const body = await req.json().catch(() => null)
-  const parsed = CompleteTurnWindowSchema.safeParse(body)
+  const parsed = ActionSchema.safeParse(body)
 
   if (!parsed.success) {
     return NextResponse.json(
       {
-        error: 'Invalid action. Expected { action: "complete" }',
+        error: 'Invalid action. Expected { action: "confirm" | "complete" }',
         code: 'VALIDATION_ERROR',
         details: parsed.error.flatten(),
       },
       { status: 400 },
     )
+  }
+
+  if (parsed.data.action === 'confirm') {
+    if (existing.status === 'COMPLETED') {
+      return NextResponse.json({ error: 'Cannot confirm a completed turn window' }, { status: 400 })
+    }
+    await updateTurnWindow(id, { status: 'SCHEDULED' })
+    return NextResponse.json({ success: true, id, status: 'SCHEDULED' })
   }
 
   if (existing.status === 'COMPLETED') {

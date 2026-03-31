@@ -25,11 +25,13 @@ export function NavBar() {
               <Link href="/resident/bookings" className="hover:text-stone-900">
                 My Bookings
               </Link>
+              {(role === 'property_manager' || role === 'board' || role === 'janitorial') && (
+                <Link href="/admin/dashboard" className="hover:text-stone-900">
+                  Dashboard
+                </Link>
+              )}
               {(role === 'property_manager' || role === 'board') && (
                 <>
-                  <Link href="/admin/dashboard" className="hover:text-stone-900">
-                    Dashboard
-                  </Link>
                   <Link href="/admin/amenities" className="hover:text-stone-900">
                     Amenities
                   </Link>
@@ -40,11 +42,6 @@ export function NavBar() {
                     Settings
                   </Link>
                 </>
-              )}
-              {(role === 'janitorial' || role === 'property_manager') && (
-                <Link href="/janitorial" className="hover:text-stone-900">
-                  Jobs
-                </Link>
               )}
             </div>
           )}
