@@ -35,6 +35,8 @@ type Amenity = {
   maxAdvanceBookingDays: number
   janitorialAssignment: 'rotation' | 'manual' | 'none'
   defaultTurnTimeHours: number
+  parentAmenityId: string | null
+  childAmenityIds: string[]
   blackoutDates: BlackoutDate[]
 }
 
@@ -56,6 +58,7 @@ type AmenityForm = {
   maxAdvanceBookingDays: number
   janitorialAssignment: 'rotation' | 'manual' | 'none'
   defaultTurnTimeHours: number
+  parentAmenityId: string
 }
 
 const emptyAmenityForm: AmenityForm = {
@@ -76,6 +79,7 @@ const emptyAmenityForm: AmenityForm = {
   maxAdvanceBookingDays: 90,
   janitorialAssignment: 'rotation' as const,
   defaultTurnTimeHours: 0,
+  parentAmenityId: '',
 }
 
 function toAmenityForm(amenity: Amenity | null): AmenityForm {
@@ -98,6 +102,7 @@ function toAmenityForm(amenity: Amenity | null): AmenityForm {
     maxAdvanceBookingDays: amenity.maxAdvanceBookingDays,
     janitorialAssignment: amenity.janitorialAssignment,
     defaultTurnTimeHours: amenity.defaultTurnTimeHours ?? 0,
+    parentAmenityId: amenity.parentAmenityId ?? '',
   }
 }
 
@@ -229,6 +234,7 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
       maxAdvanceBookingDays: Number(f.maxAdvanceBookingDays),
       janitorialAssignment: f.requiresJanitorial ? f.janitorialAssignment : 'none',
       defaultTurnTimeHours: f.requiresJanitorial ? Number(f.defaultTurnTimeHours) : 0,
+      parentAmenityId: f.parentAmenityId || null,
     }
 
     const url = selectedAmenity ? `/api/admin/amenities/${selectedAmenity.id}` : '/api/admin/amenities'
@@ -480,6 +486,48 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
                   </label>
                 </div>
               )}
+
+              {/* -- Linked amenities -- */}
+              <div className="border-t border-stone-200 pt-5">
+                <label className="text-sm font-medium text-stone-700">
+                  Parent amenity <Info tip="If this amenity is a sub-area of another (e.g. Pickleball Court is inside Tennis Court 3), select the parent. Booking either one blocks the other automatically." />
+                  <select
+                    className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900"
+                    value={f.parentAmenityId}
+                    onChange={(e) => set({ parentAmenityId: e.target.value })}
+                  >
+                    <option value="">None (standalone amenity)</option>
+                    {amenities
+                      .filter((a) => a.id !== selectedAmenity?.id)
+                      .map((a) => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                  </select>
+                </label>
+
+                {selectedAmenity && selectedAmenity.childAmenityIds?.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-sm font-medium text-stone-700">Sub-areas of this amenity:</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {selectedAmenity.childAmenityIds.map((childId) => {
+                        const child = amenities.find((a) => a.id === childId)
+                        return child ? (
+                          <span key={childId} className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-700">
+                            {child.name}
+                          </span>
+                        ) : null
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {selectedAmenity?.parentAmenityId && (
+                  <p className="mt-2 text-xs text-stone-500">
+                    Linked to: {amenities.find((a) => a.id === selectedAmenity.parentAmenityId)?.name ?? 'Unknown'}.
+                    Booking either one blocks the other.
+                  </p>
+                )}
+              </div>
 
               <div className="flex gap-3">
                 <button className="rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white" type="submit">

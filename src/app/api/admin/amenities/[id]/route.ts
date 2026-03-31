@@ -5,6 +5,9 @@ import {
   updateAmenity,
   deleteAmenity,
   getBlackoutDates,
+  getAmenityById,
+  linkAmenities,
+  unlinkAmenity,
   addAuditLog,
 } from '@/lib/firebase/db'
 
@@ -24,6 +27,7 @@ const AmenityUpdateSchema = z.object({
   maxAdvanceBookingDays: z.number().int().positive(),
   janitorialAssignment: z.enum(['rotation', 'manual', 'none']),
   defaultTurnTimeHours: z.number().int().min(0),
+  parentAmenityId: z.string().nullable().optional(),
 })
 
 export async function PUT(
@@ -50,11 +54,28 @@ export async function PUT(
     )
   }
 
+  // Handle parent-child relationship changes
+  const existing = await getAmenityById(id)
+  const newParentId = parsed.data.parentAmenityId ?? null
+  const oldParentId = existing?.parentAmenityId ?? null
+
+  if (newParentId !== oldParentId) {
+    // Unlink from old parent
+    if (oldParentId) {
+      await unlinkAmenity(id)
+    }
+    // Link to new parent
+    if (newParentId) {
+      await linkAmenities(newParentId, id)
+    }
+  }
+
   await updateAmenity(id, {
     ...parsed.data,
     description: parsed.data.description ?? null,
     autoApproveThreshold: parsed.data.autoApproveThreshold ?? null,
     approverStaffId: parsed.data.approverStaffId ?? null,
+    parentAmenityId: newParentId,
   })
 
   await addAuditLog(id, 'admin', 'AMENITY_UPDATED', {

@@ -1,7 +1,7 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { Timestamp } from 'firebase-admin/firestore'
 import type { Booking, TurnWindow } from '@/lib/firebase/db'
-import { getActiveTurnWindows } from '@/lib/firebase/db'
+import { getActiveTurnWindows, getLinkedAmenityIds } from '@/lib/firebase/db'
 
 /** Statuses considered "active" — these bookings occupy a time slot. */
 const ACTIVE_STATUSES = [
@@ -27,15 +27,25 @@ export async function getConflictingBookings(
   end: Date,
   excludeBookingId?: string,
 ): Promise<Booking[]> {
-  const snap = await adminDb
-    .collection('bookings')
-    .where('amenityId', '==', amenityId)
-    .where('status', 'in', ACTIVE_STATUSES)
-    .get()
+  // Check this amenity + all linked amenities (parent, children, siblings)
+  const linkedIds = await getLinkedAmenityIds(amenityId)
+  const allAmenityIds = [amenityId, ...linkedIds]
+
+  // Firestore doesn't allow two 'in' operators, so query per amenity
+  const snapshots = await Promise.all(
+    allAmenityIds.map((aid) =>
+      adminDb
+        .collection('bookings')
+        .where('amenityId', '==', aid)
+        .where('status', 'in', ACTIVE_STATUSES)
+        .get()
+    ),
+  )
+  const allDocs = snapshots.flatMap((s) => s.docs)
 
   const conflicts: Booking[] = []
 
-  for (const doc of snap.docs) {
+  for (const doc of allDocs) {
     if (excludeBookingId && doc.id === excludeBookingId) continue
 
     const data = doc.data()
@@ -78,10 +88,14 @@ export async function getBlockedPeriods(
   end: Date,
   excludeBookingId?: string,
 ): Promise<{ bookingConflicts: Booking[]; turnWindowConflicts: TurnWindow[] }> {
-  const [bookingConflicts, activeTurnWindows] = await Promise.all([
+  const linkedIds = await getLinkedAmenityIds(amenityId)
+  const allAmenityIds = [amenityId, ...linkedIds]
+
+  const [bookingConflicts, ...turnWindowArrays] = await Promise.all([
     getConflictingBookings(amenityId, start, end, excludeBookingId),
-    getActiveTurnWindows(amenityId),
+    ...allAmenityIds.map((aid) => getActiveTurnWindows(aid)),
   ])
+  const activeTurnWindows = turnWindowArrays.flat()
 
   const turnWindowConflicts: TurnWindow[] = []
 

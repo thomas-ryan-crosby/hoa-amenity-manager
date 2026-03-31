@@ -53,6 +53,8 @@ export interface Amenity {
   maxAdvanceBookingDays: number
   janitorialAssignment: string
   defaultTurnTimeHours: number
+  parentAmenityId: string | null   // this amenity is a sub-area of the parent
+  childAmenityIds: string[]        // amenities that are sub-areas of this one
 }
 
 export interface TurnWindow {
@@ -206,6 +208,8 @@ export async function createAmenity(
     maxAdvanceBookingDays: data.maxAdvanceBookingDays ?? 90,
     janitorialAssignment: data.janitorialAssignment ?? 'rotation',
     defaultTurnTimeHours: data.defaultTurnTimeHours ?? 0,
+    parentAmenityId: data.parentAmenityId ?? null,
+    childAmenityIds: data.childAmenityIds ?? [],
   }
   const ref = await amenitiesCol().add(fullData)
   return { id: ref.id, ...fullData }
@@ -215,7 +219,79 @@ export async function updateAmenity(id: string, data: Partial<Amenity>): Promise
   await amenitiesCol().doc(id).update(data)
 }
 
+/**
+ * Get all amenity IDs that are linked to the given amenity (parent + children).
+ * If "Pickleball Court" is a child of "Tennis Court 3", booking either one
+ * should block the other.
+ */
+export async function getLinkedAmenityIds(amenityId: string): Promise<string[]> {
+  const amenity = await getAmenityById(amenityId)
+  if (!amenity) return []
+
+  const linked: string[] = []
+
+  // Add parent
+  if (amenity.parentAmenityId) {
+    linked.push(amenity.parentAmenityId)
+    // Also add siblings (other children of the same parent)
+    const parent = await getAmenityById(amenity.parentAmenityId)
+    if (parent?.childAmenityIds) {
+      for (const childId of parent.childAmenityIds) {
+        if (childId !== amenityId) linked.push(childId)
+      }
+    }
+  }
+
+  // Add children
+  if (amenity.childAmenityIds?.length) {
+    linked.push(...amenity.childAmenityIds)
+  }
+
+  return [...new Set(linked)]
+}
+
+/**
+ * Set a parent-child relationship between two amenities.
+ * Updates both sides: parent gets child in childAmenityIds, child gets parentAmenityId.
+ */
+export async function linkAmenities(parentId: string, childId: string): Promise<void> {
+  const parent = await getAmenityById(parentId)
+  if (!parent) throw new Error(`Parent amenity ${parentId} not found`)
+
+  const childIds = new Set(parent.childAmenityIds ?? [])
+  childIds.add(childId)
+
+  await updateAmenity(parentId, { childAmenityIds: [...childIds] })
+  await updateAmenity(childId, { parentAmenityId: parentId })
+}
+
+/**
+ * Remove a parent-child relationship.
+ */
+export async function unlinkAmenity(childId: string): Promise<void> {
+  const child = await getAmenityById(childId)
+  if (!child?.parentAmenityId) return
+
+  const parent = await getAmenityById(child.parentAmenityId)
+  if (parent) {
+    const childIds = (parent.childAmenityIds ?? []).filter((id) => id !== childId)
+    await updateAmenity(parent.id, { childAmenityIds: childIds })
+  }
+
+  await updateAmenity(childId, { parentAmenityId: null })
+}
+
 export async function deleteAmenity(id: string): Promise<void> {
+  // Clean up relationships before deleting
+  const amenity = await getAmenityById(id)
+  if (amenity?.parentAmenityId) {
+    await unlinkAmenity(id)
+  }
+  if (amenity?.childAmenityIds?.length) {
+    for (const childId of amenity.childAmenityIds) {
+      await updateAmenity(childId, { parentAmenityId: null })
+    }
+  }
   await amenitiesCol().doc(id).delete()
 }
 

@@ -24,6 +24,7 @@ const AmenitySchema = z.object({
   maxAdvanceBookingDays: z.number().int().positive(),
   janitorialAssignment: z.enum(['rotation', 'manual', 'none']),
   defaultTurnTimeHours: z.number().int().min(0),
+  parentAmenityId: z.string().nullable().optional(),
 })
 
 export async function GET() {
