@@ -24,3 +24,39 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/* FullCalendar text contrast fixes */
+.fc .fc-col-header-cell-cushion,
+.fc .fc-daygrid-day-number,
+.fc .fc-timegrid-slot-label-cushion,
+.fc .fc-list-day-text,
+.fc .fc-list-day-side-text {
+  color: #1c1917 !important;
+  font-weight: 600;
+}
+
+.fc .fc-toolbar-title {
+  color: #1c1917 !important;
+  font-weight: 700;
+}
+
+.fc .fc-timegrid-axis-cushion,
+.fc .fc-timegrid-slot-label {
+  color: #44403c !important;
+  font-weight: 500;
+}
+
+.fc .fc-button {
+  color: #1c1917 !important;
+  font-weight: 600;
+}
+
+.fc .fc-button-active {
+  color: #fff !important;
+}
+
+.fc .fc-event-title,
+.fc .fc-event-time {
+  color: #fff !important;
+  font-weight: 500;
+}
