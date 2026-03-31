@@ -210,22 +210,29 @@ export function AdminCalendar() {
         {selectedEvent && isTurnWindow ? (
           <div className="mt-5 space-y-4">
             <div className="rounded-2xl bg-stone-50 p-4 text-sm leading-6 text-stone-700">
-              <p><strong>Type:</strong> Cleaning / Turn Window</p>
               <p><strong>Amenity:</strong> {selectedEvent.extendedProps.amenityName}</p>
               <p><strong>Window:</strong> {formatDateRange(selectedEvent.start, selectedEvent.end)}</p>
               <p>
-                <strong>Status:</strong>{' '}
-                <span className={`font-medium ${
-                  selectedEvent.extendedProps.status === 'COMPLETED' ? 'text-emerald-700' :
-                  selectedEvent.extendedProps.status === 'SCHEDULED' ? 'text-cyan-700' : 'text-amber-700'
+                <strong>Cleaning status:</strong>{' '}
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                  selectedEvent.extendedProps.status === 'COMPLETED'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : selectedEvent.extendedProps.status === 'SCHEDULED'
+                      ? 'bg-stone-800 text-white'
+                      : 'bg-stone-200 text-stone-600'
                 }`}>
-                  {selectedEvent.extendedProps.status}
+                  {selectedEvent.extendedProps.status === 'COMPLETED' ? 'Done' :
+                   selectedEvent.extendedProps.status === 'SCHEDULED' ? 'Confirmed' : 'Default (unconfirmed)'}
                 </span>
               </p>
             </div>
 
             <p className="text-sm text-stone-600">
-              Drag or resize the cleaning block on the calendar to adjust the window.
+              {selectedEvent.extendedProps.status === 'PENDING'
+                ? 'This is a default cleaning block. Drag or resize to confirm the actual window.'
+                : selectedEvent.extendedProps.status === 'SCHEDULED'
+                  ? 'This cleaning window has been confirmed. You can still adjust it by dragging.'
+                  : 'This cleaning window is complete.'}
             </p>
 
             {error && (

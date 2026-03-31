@@ -26,11 +26,7 @@ const AMENITY_COLORS = [
 const PENDING_COLOR = '#F59E0B'
 const WAITLISTED_COLOR = '#FB923C' // orange-400
 
-const TURN_WINDOW_COLORS: Record<string, string> = {
-  PENDING: '#F59E0B',    // amber
-  SCHEDULED: '#06B6D4',  // cyan
-  COMPLETED: '#22C55E',  // green
-}
+// Turn windows are always gray — status shown in title text
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -155,15 +151,17 @@ export async function GET(req: NextRequest) {
       const start = tw.actualStart ?? tw.defaultStart
       const end = tw.actualEnd ?? tw.defaultEnd
 
+      const statusLabel = tw.status === 'COMPLETED' ? 'Done'
+        : tw.status === 'SCHEDULED' ? 'Confirmed'
+        : 'Default'
+
       return {
         id: `tw-${tw.id}`,
         resourceId: tw.amenityId,
-        title: (isJanitorial || isAdmin) ? `Turn: ${tw.amenityName}` : `Cleaning - ${tw.amenityName}`,
+        title: `Cleaning (${statusLabel}) - ${tw.amenityName}`,
         start: start instanceof Date ? start.toISOString() : String(start),
         end: end instanceof Date ? end.toISOString() : String(end),
-        color: (isJanitorial || isAdmin)
-          ? (TURN_WINDOW_COLORS[tw.status] ?? TURN_WINDOW_COLORS.PENDING)
-          : tw.status === 'COMPLETED' ? '#D4D4D8' : '#A1A1AA',
+        color: tw.status === 'COMPLETED' ? '#A1A1AA' : '#78716C',
         editable: (isJanitorial || isAdmin) && tw.status !== 'COMPLETED',
         extendedProps: {
           type: 'turn-window' as const,

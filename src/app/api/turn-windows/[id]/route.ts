@@ -8,8 +8,8 @@ import {
 } from '@/lib/firebase/db'
 
 const UpdateTurnWindowSchema = z.object({
-  actualStart: z.string().datetime().transform((s) => new Date(s)),
-  actualEnd: z.string().datetime().transform((s) => new Date(s)),
+  actualStart: z.string().refine((s) => !isNaN(Date.parse(s)), 'Invalid date').transform((s) => new Date(s)),
+  actualEnd: z.string().refine((s) => !isNaN(Date.parse(s)), 'Invalid date').transform((s) => new Date(s)),
 }).refine((data) => data.actualEnd > data.actualStart, {
   message: 'actualEnd must be after actualStart',
   path: ['actualEnd'],
