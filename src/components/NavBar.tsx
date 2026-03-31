@@ -56,7 +56,7 @@ export function NavBar() {
             <div className="h-4 w-24 animate-pulse rounded bg-stone-200" />
           ) : user ? (
             <>
-              <div className="text-right">
+              <Link href="/account" className="text-right hover:opacity-80">
                 <p className="text-sm font-medium text-stone-900">
                   {user.displayName ?? user.email}
                 </p>
@@ -65,7 +65,7 @@ export function NavBar() {
                     {role.replaceAll('_', ' ')}
                   </p>
                 )}
-              </div>
+              </Link>
               <button
                 onClick={signOut}
                 className="rounded-full border border-stone-300 px-3 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-50"
