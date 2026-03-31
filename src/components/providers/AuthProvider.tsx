@@ -36,11 +36,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRole((tokenResult.claims.role as string) ?? null)
         // Create session cookie
         const idToken = await firebaseUser.getIdToken()
-        await fetch('/api/auth/session', {
+        const sessionRes = await fetch('/api/auth/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idToken }),
         })
+        if (!sessionRes.ok) {
+          console.error('[AuthProvider] Failed to create session cookie:', sessionRes.status)
+        }
       } else {
         setUser(null)
         setRole(null)

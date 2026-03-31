@@ -5,6 +5,7 @@ const publicPaths = ['/', '/sign-in', '/sign-up']
 function isPublic(pathname: string) {
   if (publicPaths.includes(pathname)) return true
   if (pathname.startsWith('/api/webhooks/')) return true
+  if (pathname.startsWith('/api/auth/')) return true
   return false
 }
 
