@@ -10,8 +10,8 @@ import * as orchestrator from '@/lib/agents/orchestrator'
 
 const CreateBookingSchema = z.object({
   amenityId: z.string().min(1),
-  startDatetime: z.string().datetime(),
-  endDatetime: z.string().datetime(),
+  startDatetime: z.string().refine((s) => !isNaN(Date.parse(s)), 'Invalid date'),
+  endDatetime: z.string().refine((s) => !isNaN(Date.parse(s)), 'Invalid date'),
   guestCount: z.number().int().positive(),
   notes: z.string().optional(),
 })
