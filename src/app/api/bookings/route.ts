@@ -32,6 +32,20 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  if (resident.status === 'pending') {
+    return NextResponse.json(
+      { error: 'Your account is pending approval. You will be notified once a property manager reviews your registration.' },
+      { status: 403 },
+    )
+  }
+
+  if (resident.status === 'denied') {
+    return NextResponse.json(
+      { error: 'Your account has not been approved. Please contact the property management office.' },
+      { status: 403 },
+    )
+  }
+
   let body: unknown
   try {
     body = await req.json()

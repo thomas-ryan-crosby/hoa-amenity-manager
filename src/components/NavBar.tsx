@@ -37,6 +37,9 @@ export function NavBar() {
                   <Link href="/admin/amenities" className="hover:text-stone-900">
                     Amenities
                   </Link>
+                  <Link href="/admin/residents" className="hover:text-stone-900">
+                    Residents
+                  </Link>
                   <Link href="/admin/settings" className="hover:text-stone-900">
                     Settings
                   </Link>

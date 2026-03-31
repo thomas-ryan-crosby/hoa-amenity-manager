@@ -26,6 +26,8 @@ export type BookingStatus =
 export type StaffRole = 'PROPERTY_MANAGER' | 'JANITORIAL'
 export type InspectionStatus = 'PASS' | 'FLAG'
 
+export type ResidentStatus = 'pending' | 'approved' | 'denied'
+
 export interface Resident {
   id: string
   firebaseUid: string
@@ -34,6 +36,8 @@ export interface Resident {
   phone: string | null
   unitNumber: string
   stripeCustomerId: string | null
+  status: ResidentStatus
+  createdAt: Date
 }
 
 export interface Area {
@@ -178,6 +182,19 @@ export async function getResidentById(id: string): Promise<Resident | null> {
 export async function createResident(data: Omit<Resident, 'id'>): Promise<Resident> {
   const ref = await residentsCol().add(data)
   return { id: ref.id, ...data }
+}
+
+export async function getAllResidents(): Promise<Resident[]> {
+  const snap = await residentsCol().get()
+  return snap.docs.map((d) => {
+    const data = d.data()
+    return {
+      id: d.id,
+      ...data,
+      status: data.status ?? 'approved',
+      createdAt: data.createdAt ? toDate(data.createdAt) : new Date(),
+    } as Resident
+  })
 }
 
 export async function updateResident(id: string, data: Partial<Resident>): Promise<void> {

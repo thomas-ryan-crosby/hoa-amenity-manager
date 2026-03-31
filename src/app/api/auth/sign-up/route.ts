@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   // Set default role
   await adminAuth.setCustomUserClaims(decoded.uid, { role: 'resident' })
 
-  // Create resident record
+  // Create resident record — pending approval
   const resident = await createResident({
     firebaseUid: decoded.uid,
     name: parsed.data.name,
@@ -42,6 +42,8 @@ export async function POST(req: NextRequest) {
     phone: null,
     unitNumber: parsed.data.unitNumber ?? '',
     stripeCustomerId: null,
+    status: 'pending',
+    createdAt: new Date(),
   })
 
   // Send welcome email
