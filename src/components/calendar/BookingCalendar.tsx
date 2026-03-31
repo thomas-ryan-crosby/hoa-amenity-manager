@@ -17,19 +17,41 @@ type Amenity = {
   maxAdvanceBookingDays: number
 }
 
+type CalendarEventExtendedProps = {
+  amenityId: string
+  amenityName: string
+  residentName: string
+  residentEmail: string
+  unitNumber: string
+  guestCount: number
+  status: string
+  inspectionStatus: string | null
+  inspectionNeeded: boolean
+}
+
 type CalendarEvent = {
   id: string
   title: string
   start: string
   end: string
   color?: string
-  extendedProps?: Record<string, unknown>
+  extendedProps?: CalendarEventExtendedProps
 }
 
 type SelectionState = {
   amenityId: string
   start: string
   end: string
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  INQUIRY_RECEIVED: 'Inquiry',
+  AVAILABILITY_CHECKING: 'Checking',
+  PENDING_APPROVAL: 'Pending Approval',
+  PAYMENT_PENDING: 'Awaiting Payment',
+  CONFIRMED: 'Confirmed',
+  REMINDER_SENT: 'Confirmed',
+  WAITLISTED: 'Waitlisted',
 }
 
 export function BookingCalendar() {
@@ -80,8 +102,7 @@ export function BookingCalendar() {
     () =>
       selectedAmenity
         ? events.filter(
-            (e) =>
-              (e.extendedProps?.amenityId as string) === selectedAmenity,
+            (e) => e.extendedProps?.amenityId === selectedAmenity,
           )
         : events,
     [events, selectedAmenity],
@@ -114,10 +135,19 @@ export function BookingCalendar() {
         throw new Error(data.error ?? 'Unable to submit booking request.')
       }
 
+      // Reload events to reflect the new booking (or waitlist entry)
+      const eventsRes = await fetch('/api/calendar/events')
+      const eventsData = await eventsRes.json()
+      setEvents(eventsData.events ?? [])
+
       setSelection(null)
       setGuestCount(1)
       setNotes('')
-      alert(`Booking request submitted! Status: ${data.status}`)
+
+      const statusMsg = data.status === 'WAITLISTED'
+        ? 'Your booking has been waitlisted because the slot already has an active booking. You will be notified if it opens up.'
+        : `Booking request submitted! Status: ${data.status}`
+      alert(statusMsg)
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -154,6 +184,25 @@ export function BookingCalendar() {
           ))}
         </div>
 
+        {/* Legend */}
+        <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-stone-600">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-3 w-3 rounded-sm bg-[#9CA3AF]" /> Inquiry
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-3 w-3 rounded-sm bg-[#F59E0B]" /> Pending Approval
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-3 w-3 rounded-sm bg-[#8B5CF6]" /> Awaiting Payment
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-3 w-3 rounded-sm bg-[#3B82F6]" /> Confirmed
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-3 w-3 rounded-sm bg-[#FB923C]" /> Waitlisted
+          </span>
+        </div>
+
         <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
           <FullCalendar
             plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
@@ -176,8 +225,8 @@ export function BookingCalendar() {
               setGuestCount(1)
               setNotes('')
             }}
-            eventOverlap={false}
-            selectOverlap={false}
+            eventOverlap
+            selectOverlap
             slotMinTime="06:00:00"
             slotMaxTime="23:00:00"
             height="auto"
@@ -195,7 +244,8 @@ export function BookingCalendar() {
           </h2>
           <p className="mt-2 text-sm leading-6 text-stone-600">
             Select an amenity tab, then click and drag a time slot on the
-            calendar to start a booking request.
+            calendar to start a booking request. If the slot is taken you will
+            be placed on the waitlist automatically.
           </p>
         </div>
 
@@ -215,6 +265,19 @@ export function BookingCalendar() {
                 {formatCurrency(amenityInfo.depositAmount)}
               </p>
             </div>
+
+            {/* Show if selected slot already has bookings */}
+            {filteredEvents.some(
+              (e) =>
+                new Date(e.start) < new Date(selection.end) &&
+                new Date(e.end) > new Date(selection.start),
+            ) && (
+              <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+                This time slot already has one or more bookings. Your request
+                will be <strong>waitlisted</strong> and you will be notified if
+                the slot opens up.
+              </div>
+            )}
 
             <label className="block text-sm font-medium text-stone-700">
               Guest count

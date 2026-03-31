@@ -1,11 +1,11 @@
 import {
   getBookingById,
   getBookingWithRelations,
-  updateBooking,
   transitionBookingStatus,
   hasBlackoutConflict,
+  getWaitlistedBookingsForSlot,
 } from '@/lib/firebase/db'
-import { checkAvailability } from '@/lib/integrations/google-calendar'
+import { getConflictingBookings } from '@/lib/integrations/google-calendar'
 import {
   createPaymentLink,
   getOrCreateCustomer,
@@ -66,19 +66,24 @@ export async function handleNewBooking(bookingId: string): Promise<void> {
     return
   }
 
-  // 3. Check availability against existing bookings in Firestore
-  const isAvailable = await checkAvailability(
+  // 3. Check for conflicting bookings — waitlist if slot is taken
+  const conflicts = await getConflictingBookings(
     amenity.id,
     booking.startDatetime,
     booking.endDatetime,
     bookingId,
   )
 
-  if (!isAvailable) {
-    await transitionBookingStatus(bookingId, 'DENIED', 'orchestrator', {
-      event: 'SLOT_CONFLICT',
+  if (conflicts.length > 0) {
+    await transitionBookingStatus(bookingId, 'WAITLISTED', 'orchestrator', {
+      event: 'SLOT_OCCUPIED_WAITLISTED',
+      conflictCount: conflicts.length,
+      conflictIds: conflicts.map((c) => c.id),
     })
-    await residentAgent.notifyUnavailable(bookingId)
+    // Notify resident they're on the waitlist
+    residentAgent.notifyWaitlisted(bookingId).catch((err) => {
+      console.error(`[Orchestrator] Failed to notify waitlist for ${bookingId}:`, err)
+    })
     return
   }
 
@@ -244,6 +249,43 @@ export async function handleCancellation(bookingId: string): Promise<void> {
     event: 'BOOKING_CANCELLED',
     refundPercent,
     refundReason,
+  })
+
+  // Promote the next waitlisted booking for this slot
+  await promoteNextWaitlisted(
+    booking.amenityId,
+    booking.startDatetime,
+    booking.endDatetime,
+  )
+}
+
+// ---------------------------------------------------------------------------
+// promoteNextWaitlisted — after a cancellation, check if a waitlisted booking
+// can be promoted
+// ---------------------------------------------------------------------------
+async function promoteNextWaitlisted(
+  amenityId: string,
+  start: Date,
+  end: Date,
+): Promise<void> {
+  const waitlisted = await getWaitlistedBookingsForSlot(amenityId, start, end)
+  if (waitlisted.length === 0) return
+
+  const next = waitlisted[0]
+  console.log(`[Orchestrator] Promoting waitlisted booking ${next.id}`)
+
+  await transitionBookingStatus(next.id, 'INQUIRY_RECEIVED', 'orchestrator', {
+    event: 'PROMOTED_FROM_WAITLIST',
+  })
+
+  // Notify the resident their waitlisted booking has been promoted
+  residentAgent.notifyPromotedFromWaitlist(next.id).catch((err) => {
+    console.error(`[Orchestrator] Failed to notify promotion for ${next.id}:`, err)
+  })
+
+  // Re-run the orchestrator for the promoted booking
+  handleNewBooking(next.id).catch((err) => {
+    console.error(`[Orchestrator] Error handling promoted booking ${next.id}:`, err)
   })
 }
 

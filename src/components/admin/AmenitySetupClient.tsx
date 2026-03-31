@@ -37,23 +37,6 @@ type Amenity = {
   blackoutDates: BlackoutDate[]
 }
 
-const emptyAmenityForm = {
-  name: '',
-  description: '',
-  capacity: 1,
-  rentalFee: 0,
-  depositAmount: 0,
-  requiresApproval: true,
-  autoApproveThreshold: '',
-  approverStaffId: '',
-  escalationHours: 48,
-  fullRefundHours: 72,
-  partialRefundHours: 24,
-  partialRefundPercent: 50,
-  maxAdvanceBookingDays: 90,
-  janitorialAssignment: 'rotation' as const,
-}
-
 type AmenityForm = {
   name: string
   description: string
@@ -69,6 +52,23 @@ type AmenityForm = {
   partialRefundPercent: number
   maxAdvanceBookingDays: number
   janitorialAssignment: 'rotation' | 'manual'
+}
+
+const emptyAmenityForm: AmenityForm = {
+  name: '',
+  description: '',
+  capacity: 1,
+  rentalFee: 0,
+  depositAmount: 0,
+  requiresApproval: true,
+  autoApproveThreshold: '',
+  approverStaffId: '',
+  escalationHours: 48,
+  fullRefundHours: 72,
+  partialRefundHours: 24,
+  partialRefundPercent: 50,
+  maxAdvanceBookingDays: 90,
+  janitorialAssignment: 'rotation' as const,
 }
 
 function toAmenityForm(amenity: Amenity | null): AmenityForm {
@@ -94,33 +94,17 @@ function toAmenityForm(amenity: Amenity | null): AmenityForm {
   }
 }
 
-type SystemSettingsForm = {
-  pmEmail: string
-  orgName: string
-  twilioPhoneNumber: string
-}
-
 type Props = {
   initialAmenities: Amenity[]
   initialStaff: Staff[]
-  initialSettings?: SystemSettingsForm
 }
 
-export function AdminSettingsClient({ initialAmenities, initialStaff, initialSettings }: Props) {
+export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
   const [amenities, setAmenities] = useState<Amenity[]>(initialAmenities)
   const [staff, setStaff] = useState<Staff[]>(initialStaff)
-  const [settingsForm, setSettingsForm] = useState<SystemSettingsForm>(
-    initialSettings ?? { pmEmail: '', orgName: 'Sanctuary HOA', twilioPhoneNumber: '' },
-  )
   const [selectedAmenityId, setSelectedAmenityId] = useState<string | null>(null)
   const [amenityForm, setAmenityForm] = useState<AmenityForm>({
     ...emptyAmenityForm,
-  })
-  const [staffForm, setStaffForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    role: 'JANITORIAL',
   })
   const [blackoutForm, setBlackoutForm] = useState({
     startDate: '',
@@ -201,36 +185,6 @@ export function AdminSettingsClient({ initialAmenities, initialStaff, initialSet
     }
   }
 
-  async function saveStaff(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-
-    const response = await fetch('/api/admin/staff', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...staffForm,
-        phone: staffForm.phone || null,
-      }),
-    })
-
-    const data = await response.json()
-    if (!response.ok) {
-      setNotice(data.error ?? 'Unable to create staff member.')
-      return
-    }
-
-    setStaffForm({
-      name: '',
-      email: '',
-      phone: '',
-      role: 'JANITORIAL',
-    })
-    setNotice('Staff member added.')
-    await loadData()
-  }
-
   async function addBlackoutDate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -291,36 +245,19 @@ export function AdminSettingsClient({ initialAmenities, initialStaff, initialSet
     setChatReply(data.message)
   }
 
-  async function saveSettings(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-
-    const response = await fetch('/api/admin/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(settingsForm),
-    })
-
-    if (!response.ok) {
-      const data = await response.json()
-      setNotice(data.error ?? 'Unable to save settings.')
-      return
-    }
-    setNotice('System settings saved.')
-  }
-
   return (
     <main className="min-h-screen bg-stone-50 px-6 py-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-6">
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-amber-700">
-            Admin Settings
+            Amenity Setup
           </p>
           <h1 className="mt-2 text-4xl font-semibold text-stone-900">
-            Amenities, staff, blackout dates, and configuration help
+            Amenities, blackout dates, and configuration help
           </h1>
           <p className="mt-3 max-w-4xl text-base leading-7 text-stone-600">
-            This screen now covers the main PRD-managed settings for amenities and
-            staff, along with a lightweight configuration chat helper.
+            Create and edit amenities, manage blackout dates, and use the
+            configuration chat helper.
           </p>
         </div>
 
@@ -331,6 +268,7 @@ export function AdminSettingsClient({ initialAmenities, initialStaff, initialSet
         ) : null}
 
         <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
+          {/* Left sidebar - amenity list */}
           <section className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-stone-900">Amenities</h2>
@@ -364,6 +302,7 @@ export function AdminSettingsClient({ initialAmenities, initialStaff, initialSet
             </div>
           </section>
 
+          {/* Center - amenity form + blackout dates */}
           <section className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
             <h2 className="text-lg font-semibold text-stone-900">
               {selectedAmenity ? `Edit ${selectedAmenity.name}` : 'Create amenity'}
@@ -500,6 +439,7 @@ export function AdminSettingsClient({ initialAmenities, initialStaff, initialSet
               </div>
             </form>
 
+            {/* Blackout dates */}
             <div className="mt-8 border-t border-stone-200 pt-6">
               <h3 className="text-lg font-semibold text-stone-900">Blackout dates</h3>
 
@@ -588,109 +528,8 @@ export function AdminSettingsClient({ initialAmenities, initialStaff, initialSet
             </div>
           </section>
 
+          {/* Right sidebar - config agent chat */}
           <section className="space-y-6">
-            <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-semibold text-stone-900">System Settings</h2>
-              <form className="mt-4 space-y-3" onSubmit={saveSettings}>
-                <label className="block text-sm font-medium text-stone-700">
-                  Organization name
-                  <input
-                    className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
-                    value={settingsForm.orgName}
-                    onChange={(e) => setSettingsForm((c) => ({ ...c, orgName: e.target.value }))}
-                  />
-                </label>
-                <label className="block text-sm font-medium text-stone-700">
-                  PM notification email
-                  <input
-                    className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
-                    type="email"
-                    placeholder="pm@yourhoa.org"
-                    value={settingsForm.pmEmail}
-                    onChange={(e) => setSettingsForm((c) => ({ ...c, pmEmail: e.target.value }))}
-                  />
-                </label>
-                <label className="block text-sm font-medium text-stone-700">
-                  Twilio phone number
-                  <input
-                    className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
-                    placeholder="+15551234567"
-                    value={settingsForm.twilioPhoneNumber}
-                    onChange={(e) => setSettingsForm((c) => ({ ...c, twilioPhoneNumber: e.target.value }))}
-                  />
-                </label>
-                <button
-                  className="w-full rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white"
-                  type="submit"
-                >
-                  Save settings
-                </button>
-              </form>
-            </div>
-
-            <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-semibold text-stone-900">Staff</h2>
-              <div className="mt-4 space-y-2">
-                {staff.map((member) => (
-                  <div
-                    key={member.id}
-                    className="rounded-2xl bg-stone-50 px-4 py-3 text-sm text-stone-700"
-                  >
-                    <div className="font-medium text-stone-900">{member.name}</div>
-                    <div>{member.email}</div>
-                    <div>{member.role}</div>
-                  </div>
-                ))}
-              </div>
-
-              <form className="mt-5 space-y-3" onSubmit={saveStaff}>
-                <input
-                  className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
-                  placeholder="Name"
-                  value={staffForm.name}
-                  onChange={(event) =>
-                    setStaffForm((current) => ({ ...current, name: event.target.value }))
-                  }
-                />
-                <input
-                  className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
-                  placeholder="Email"
-                  type="email"
-                  value={staffForm.email}
-                  onChange={(event) =>
-                    setStaffForm((current) => ({ ...current, email: event.target.value }))
-                  }
-                />
-                <input
-                  className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
-                  placeholder="Phone"
-                  value={staffForm.phone}
-                  onChange={(event) =>
-                    setStaffForm((current) => ({ ...current, phone: event.target.value }))
-                  }
-                />
-                <select
-                  className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
-                  value={staffForm.role}
-                  onChange={(event) =>
-                    setStaffForm((current) => ({
-                      ...current,
-                      role: event.target.value as 'PROPERTY_MANAGER' | 'JANITORIAL',
-                    }))
-                  }
-                >
-                  <option value="JANITORIAL">Janitorial</option>
-                  <option value="PROPERTY_MANAGER">Property manager</option>
-                </select>
-                <button
-                  className="w-full rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white"
-                  type="submit"
-                >
-                  Add staff member
-                </button>
-              </form>
-            </div>
-
             <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-stone-900">Configuration agent</h2>
               <p className="mt-2 text-sm leading-6 text-stone-600">

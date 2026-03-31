@@ -21,6 +21,7 @@ export type BookingStatus =
   | 'PAYMENT_FAILED'
   | 'DISPUTE'
   | 'ERROR'
+  | 'WAITLISTED'
 
 export type StaffRole = 'PROPERTY_MANAGER' | 'JANITORIAL'
 export type InspectionStatus = 'PASS' | 'FLAG'
@@ -377,6 +378,26 @@ export async function getBookingsByResident(
 export async function getBookingsByStatus(statuses: BookingStatus[]): Promise<Booking[]> {
   const snap = await bookingsCol().where('status', 'in', statuses).get()
   return snap.docs.map(bookingFromQueryDoc)
+}
+
+/**
+ * Get waitlisted bookings for a specific amenity + time range, ordered by
+ * createdAt ascending (earliest waitlisted booking first).
+ */
+export async function getWaitlistedBookingsForSlot(
+  amenityId: string,
+  start: Date,
+  end: Date,
+): Promise<Booking[]> {
+  const snap = await bookingsCol()
+    .where('amenityId', '==', amenityId)
+    .where('status', '==', 'WAITLISTED')
+    .get()
+
+  return snap.docs
+    .map(bookingFromQueryDoc)
+    .filter((b) => b.startDatetime < end && b.endDatetime > start)
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
 }
 
 export async function createBooking(

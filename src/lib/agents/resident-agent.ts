@@ -73,6 +73,38 @@ export async function notifyDenied(
   )
 }
 
+export async function notifyWaitlisted(bookingId: string): Promise<void> {
+  const booking = await getBooking(bookingId)
+  await sendResidentMessage(
+    bookingId,
+    `You're on the waitlist for ${booking.amenity.name}`,
+    `
+      <p>Hi ${booking.resident.name},</p>
+      <p>The time slot you requested for ${booking.amenity.name} already has an active booking.
+         Your request has been placed on the <strong>waitlist</strong>.</p>
+      <p>If the earlier booking is cancelled, you will be automatically promoted and notified.</p>
+      ${bookingSummaryHtml(booking)}
+    `,
+    `Your ${booking.amenity.name} request is waitlisted. You'll be notified if the slot opens up.`,
+  )
+}
+
+export async function notifyPromotedFromWaitlist(bookingId: string): Promise<void> {
+  const booking = await getBooking(bookingId)
+  await sendResidentMessage(
+    bookingId,
+    `Great news! Your waitlisted booking for ${booking.amenity.name} is now active`,
+    `
+      <p>Hi ${booking.resident.name},</p>
+      <p>A slot opened up for ${booking.amenity.name} and your waitlisted booking has been
+         promoted. Your request is now being processed.</p>
+      ${bookingSummaryHtml(booking)}
+      <p>You will receive further instructions shortly.</p>
+    `,
+    `Good news! Your waitlisted ${booking.amenity.name} booking has been promoted. We'll follow up soon.`,
+  )
+}
+
 export async function sendPaymentLink(
   bookingId: string,
   paymentUrl: string,
