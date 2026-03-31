@@ -43,13 +43,18 @@ export default function SignUpPage() {
       const freshToken = await user.getIdToken(true)
 
       // Create session cookie with the fresh token that includes the role
-      await fetch('/api/auth/session', {
+      const sessionRes = await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken: freshToken }),
       })
 
-      router.push('/')
+      if (!sessionRes.ok) {
+        console.error('Session creation failed:', sessionRes.status)
+      }
+
+      // Hard redirect so the browser sends the new cookie on the next request
+      window.location.href = '/'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign up failed')
     } finally {

@@ -23,13 +23,19 @@ export function useAuth() {
 }
 
 /**
- * Call this from sign-up/sign-in pages BEFORE the AuthProvider fires,
- * so the provider knows a session is already being handled.
+ * Call from sign-up/sign-in pages to prevent the AuthProvider from
+ * creating a session cookie (the page handles it explicitly).
+ * Stays set until the page navigates away.
  */
 export function markSessionHandled() {
   if (typeof window !== 'undefined') {
     (window as unknown as Record<string, unknown>).__sessionHandled = true
   }
+}
+
+function isSessionHandled(): boolean {
+  if (typeof window === 'undefined') return false
+  return !!(window as unknown as Record<string, unknown>).__sessionHandled
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -46,8 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRole((tokenResult.claims.role as string) ?? null)
 
         // Only create session if the page didn't already handle it
-        const alreadyHandled = (window as unknown as Record<string, unknown>).__sessionHandled
-        if (!alreadyHandled) {
+        if (!isSessionHandled()) {
           const idToken = await firebaseUser.getIdToken()
           await fetch('/api/auth/session', {
             method: 'POST',
@@ -55,12 +60,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             body: JSON.stringify({ idToken }),
           })
         }
-        // Reset for next auth state change
-        ;(window as unknown as Record<string, unknown>).__sessionHandled = false
+        // Don't reset the flag here — let page navigation clear it
       } else {
         setUser(null)
         setRole(null)
-        await fetch('/api/auth/session', { method: 'DELETE' })
+        if (!isSessionHandled()) {
+          await fetch('/api/auth/session', { method: 'DELETE' })
+        }
       }
       setLoading(false)
     })

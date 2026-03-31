@@ -29,7 +29,8 @@ export default function SignInPage() {
         body: JSON.stringify({ idToken }),
       })
 
-      router.push('/')
+      // Hard redirect so the browser sends the new cookie on the next request
+      window.location.href = '/'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign in failed')
     } finally {
