@@ -98,14 +98,24 @@ function toAmenityForm(amenity: Amenity | null): AmenityForm {
   }
 }
 
+type SystemSettingsForm = {
+  pmEmail: string
+  orgName: string
+  twilioPhoneNumber: string
+}
+
 type Props = {
   initialAmenities: Amenity[]
   initialStaff: Staff[]
+  initialSettings?: SystemSettingsForm
 }
 
-export function AdminSettingsClient({ initialAmenities, initialStaff }: Props) {
+export function AdminSettingsClient({ initialAmenities, initialStaff, initialSettings }: Props) {
   const [amenities, setAmenities] = useState<Amenity[]>(initialAmenities)
   const [staff, setStaff] = useState<Staff[]>(initialStaff)
+  const [settingsForm, setSettingsForm] = useState<SystemSettingsForm>(
+    initialSettings ?? { pmEmail: '', orgName: 'Sanctuary HOA', twilioPhoneNumber: '' },
+  )
   const [selectedAmenityId, setSelectedAmenityId] = useState<string | null>(null)
   const [amenityForm, setAmenityForm] = useState<AmenityForm>({
     ...emptyAmenityForm,
@@ -284,6 +294,23 @@ export function AdminSettingsClient({ initialAmenities, initialStaff }: Props) {
     }
 
     setChatReply(data.message)
+  }
+
+  async function saveSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const response = await fetch('/api/admin/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settingsForm),
+    })
+
+    if (!response.ok) {
+      const data = await response.json()
+      setNotice(data.error ?? 'Unable to save settings.')
+      return
+    }
+    setNotice('System settings saved.')
   }
 
   return (
@@ -581,6 +608,45 @@ export function AdminSettingsClient({ initialAmenities, initialStaff }: Props) {
           </section>
 
           <section className="space-y-6">
+            <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+              <h2 className="text-lg font-semibold text-stone-900">System Settings</h2>
+              <form className="mt-4 space-y-3" onSubmit={saveSettings}>
+                <label className="block text-sm font-medium text-stone-700">
+                  Organization name
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
+                    value={settingsForm.orgName}
+                    onChange={(e) => setSettingsForm((c) => ({ ...c, orgName: e.target.value }))}
+                  />
+                </label>
+                <label className="block text-sm font-medium text-stone-700">
+                  PM notification email
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
+                    type="email"
+                    placeholder="pm@yourhoa.org"
+                    value={settingsForm.pmEmail}
+                    onChange={(e) => setSettingsForm((c) => ({ ...c, pmEmail: e.target.value }))}
+                  />
+                </label>
+                <label className="block text-sm font-medium text-stone-700">
+                  Twilio phone number
+                  <input
+                    className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
+                    placeholder="+15551234567"
+                    value={settingsForm.twilioPhoneNumber}
+                    onChange={(e) => setSettingsForm((c) => ({ ...c, twilioPhoneNumber: e.target.value }))}
+                  />
+                </label>
+                <button
+                  className="w-full rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white"
+                  type="submit"
+                >
+                  Save settings
+                </button>
+              </form>
+            </div>
+
             <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-stone-900">Staff</h2>
               <div className="mt-4 space-y-2">

@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import jwt from 'jsonwebtoken'
+import { verifyActionToken } from '@/lib/agents/pm-agent'
 import * as orchestrator from '@/lib/agents/orchestrator'
-
-type ApprovalTokenPayload = {
-  bookingId: string
-  action: 'approve' | 'deny'
-}
 
 export async function GET(
   req: NextRequest,
@@ -17,10 +12,7 @@ export async function GET(
     'Denied from email approval link.'
 
   try {
-    const payload = jwt.verify(
-      token,
-      process.env.PM_APPROVAL_JWT_SECRET!,
-    ) as ApprovalTokenPayload
+    const payload = await verifyActionToken(token)
 
     if (payload.action !== 'deny') {
       throw new Error('Invalid denial token action')

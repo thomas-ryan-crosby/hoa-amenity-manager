@@ -630,3 +630,31 @@ export async function transitionBookingStatus(
 
   await batch.commit()
 }
+
+// ---------------------------------------------------------------------------
+// SYSTEM SETTINGS (singleton document at /settings/global)
+// ---------------------------------------------------------------------------
+
+export interface SystemSettings {
+  pmEmail: string
+  approvalJwtSecret: string
+  twilioPhoneNumber: string
+  orgName: string
+}
+
+const DEFAULT_SETTINGS: SystemSettings = {
+  pmEmail: '',
+  approvalJwtSecret: '',
+  twilioPhoneNumber: '',
+  orgName: 'Sanctuary HOA',
+}
+
+export async function getSettings(): Promise<SystemSettings> {
+  const doc = await adminDb.collection('settings').doc('global').get()
+  if (!doc.exists) return { ...DEFAULT_SETTINGS }
+  return { ...DEFAULT_SETTINGS, ...doc.data() } as SystemSettings
+}
+
+export async function updateSettings(data: Partial<SystemSettings>): Promise<void> {
+  await adminDb.collection('settings').doc('global').set(data, { merge: true })
+}

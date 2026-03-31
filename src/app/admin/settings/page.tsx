@@ -1,15 +1,15 @@
 export const dynamic = 'force-dynamic'
 
-import { getAllAmenities, getAllStaff, getBlackoutDates } from '@/lib/firebase/db'
+import { getAllAmenities, getAllStaff, getBlackoutDates, getSettings } from '@/lib/firebase/db'
 import { AdminSettingsClient } from '@/components/admin/AdminSettingsClient'
 
 export default async function AdminSettingsPage() {
-  const [amenities, staff] = await Promise.all([
+  const [amenities, staff, settings] = await Promise.all([
     getAllAmenities(),
     getAllStaff(),
+    getSettings(),
   ])
 
-  // Fetch blackout dates for each amenity in parallel
   const amenitiesWithBlackouts = await Promise.all(
     amenities
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -38,6 +38,11 @@ export default async function AdminSettingsPage() {
     <AdminSettingsClient
       initialAmenities={amenitiesWithBlackouts}
       initialStaff={sortedStaff}
+      initialSettings={{
+        pmEmail: settings.pmEmail,
+        orgName: settings.orgName,
+        twilioPhoneNumber: settings.twilioPhoneNumber,
+      }}
     />
   )
 }
