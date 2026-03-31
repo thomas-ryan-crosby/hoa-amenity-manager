@@ -69,8 +69,8 @@ export async function createPaymentLink(
       },
     ],
     metadata: { bookingId },
-    success_url: `${appUrl}/bookings?success=true`,
-    cancel_url: `${appUrl}/bookings?cancelled=true`,
+    success_url: `${appUrl}/resident/bookings?success=true`,
+    cancel_url: `${appUrl}/resident/bookings?cancelled=true`,
   })
 
   return session.url!
