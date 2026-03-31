@@ -5,6 +5,7 @@ import {
   hasBlackoutConflict,
   getWaitlistedBookingsForSlot,
   createTurnWindow,
+  deleteTurnWindowByBookingId,
 } from '@/lib/firebase/db'
 import { getConflictingBookings } from '@/lib/integrations/google-calendar'
 import {
@@ -219,6 +220,9 @@ export async function handleDenial(
     from: booking.status,
   })
 
+  // Remove associated turn window
+  await deleteTurnWindowByBookingId(bookingId)
+
   await residentAgent.notifyDenied(bookingId, reason)
 }
 
@@ -292,6 +296,9 @@ export async function handleCancellation(bookingId: string): Promise<void> {
     refundPercent,
     refundReason,
   })
+
+  // Remove associated turn window
+  await deleteTurnWindowByBookingId(bookingId)
 
   // Notify resident of cancellation
   residentAgent.notifyCancelled(bookingId, refundReason).catch((err) => {

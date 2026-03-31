@@ -944,6 +944,13 @@ export async function updateTurnWindow(id: string, data: Partial<TurnWindow>): P
   await turnWindowsCol().doc(id).update(updateData)
 }
 
+export async function deleteTurnWindowByBookingId(bookingId: string): Promise<void> {
+  const tw = await getTurnWindowByBookingId(bookingId)
+  if (tw) {
+    await turnWindowsCol().doc(tw.id).delete()
+  }
+}
+
 export async function completeTurnWindow(id: string): Promise<void> {
   await turnWindowsCol().doc(id).update({
     status: 'COMPLETED',
