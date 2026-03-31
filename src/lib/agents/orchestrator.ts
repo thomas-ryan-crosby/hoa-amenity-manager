@@ -92,26 +92,33 @@ export async function handleNewBooking(bookingId: string): Promise<void> {
       event: 'APPROVAL_REQUIRED',
       guestCount: booking.guestCount,
     })
-    await pmAgent.sendApprovalRequest(bookingId)
+    pmAgent.sendApprovalRequest(bookingId).catch((err) => {
+      console.error(`[Orchestrator] Failed to send approval request for ${bookingId}:`, err)
+    })
   } else {
     await transitionBookingStatus(bookingId, 'PAYMENT_PENDING', 'orchestrator', {
       event: 'AUTO_APPROVED',
       guestCount: booking.guestCount,
     })
 
-    const customerId = await getOrCreateCustomer({
-      id: resident.id,
-      email: resident.email,
-      name: resident.name,
-      stripeCustomerId: resident.stripeCustomerId,
-    })
-    const paymentUrl = await createPaymentLink(
-      bookingId,
-      amenity.rentalFee,
-      amenity.depositAmount,
-      customerId,
-    )
-    await residentAgent.sendPaymentLink(bookingId, paymentUrl)
+    try {
+      const customerId = await getOrCreateCustomer({
+        id: resident.id,
+        email: resident.email,
+        name: resident.name,
+        stripeCustomerId: resident.stripeCustomerId,
+      })
+      const paymentUrl = await createPaymentLink(
+        bookingId,
+        amenity.rentalFee,
+        amenity.depositAmount,
+        customerId,
+      )
+      await residentAgent.sendPaymentLink(bookingId, paymentUrl)
+    } catch (err) {
+      console.error(`[Orchestrator] Stripe/payment link failed for ${bookingId}:`, err)
+      // Booking stays at PAYMENT_PENDING — admin can see it on the dashboard
+    }
   }
 }
 
@@ -128,19 +135,23 @@ export async function handleApproval(bookingId: string): Promise<void> {
     from: booking.status,
   })
 
-  const customerId = await getOrCreateCustomer({
-    id: resident.id,
-    email: resident.email,
-    name: resident.name,
-    stripeCustomerId: resident.stripeCustomerId,
-  })
-  const paymentUrl = await createPaymentLink(
-    bookingId,
-    amenity.rentalFee,
-    amenity.depositAmount,
-    customerId,
-  )
-  await residentAgent.sendPaymentLink(bookingId, paymentUrl)
+  try {
+    const customerId = await getOrCreateCustomer({
+      id: resident.id,
+      email: resident.email,
+      name: resident.name,
+      stripeCustomerId: resident.stripeCustomerId,
+    })
+    const paymentUrl = await createPaymentLink(
+      bookingId,
+      amenity.rentalFee,
+      amenity.depositAmount,
+      customerId,
+    )
+    await residentAgent.sendPaymentLink(bookingId, paymentUrl)
+  } catch (err) {
+    console.error(`[Orchestrator] Stripe/payment failed for ${bookingId}:`, err)
+  }
 }
 
 // ---------------------------------------------------------------------------
