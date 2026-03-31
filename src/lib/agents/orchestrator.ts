@@ -93,6 +93,8 @@ export async function handleNewBooking(bookingId: string): Promise<void> {
     (amenity.autoApproveThreshold === null ||
       booking.guestCount > amenity.autoApproveThreshold)
 
+  const isFreeAmenity = amenity.rentalFee === 0 && amenity.depositAmount === 0
+
   if (needsApproval) {
     await transitionBookingStatus(bookingId, 'PENDING_APPROVAL', 'orchestrator', {
       event: 'APPROVAL_REQUIRED',
@@ -100,6 +102,17 @@ export async function handleNewBooking(bookingId: string): Promise<void> {
     })
     pmAgent.sendApprovalRequest(bookingId).catch((err) => {
       console.error(`[Orchestrator] Failed to send approval request for ${bookingId}:`, err)
+    })
+  } else if (isFreeAmenity) {
+    // Free amenity, no approval needed — confirm immediately
+    await transitionBookingStatus(bookingId, 'CONFIRMED', 'orchestrator', {
+      event: 'AUTO_CONFIRMED_FREE',
+      guestCount: booking.guestCount,
+    })
+    await scheduleReminder(bookingId, booking.startDatetime)
+    await schedulePostEventFollowup(bookingId, booking.endDatetime)
+    residentAgent.sendConfirmation(bookingId).catch((err) => {
+      console.error(`[Orchestrator] Failed to send confirmation for ${bookingId}:`, err)
     })
   } else {
     await transitionBookingStatus(bookingId, 'PAYMENT_PENDING', 'orchestrator', {
@@ -123,7 +136,6 @@ export async function handleNewBooking(bookingId: string): Promise<void> {
       await residentAgent.sendPaymentLink(bookingId, paymentUrl)
     } catch (err) {
       console.error(`[Orchestrator] Stripe/payment link failed for ${bookingId}:`, err)
-      // Booking stays at PAYMENT_PENDING — admin can see it on the dashboard
     }
   }
 }
@@ -135,28 +147,42 @@ export async function handleApproval(bookingId: string): Promise<void> {
   console.log(`[Orchestrator] Handling approval: ${bookingId}`)
 
   const { booking, amenity, resident } = await getBookingWithRelations(bookingId)
+  const isFreeAmenity = amenity.rentalFee === 0 && amenity.depositAmount === 0
 
-  await transitionBookingStatus(bookingId, 'PAYMENT_PENDING', 'orchestrator', {
-    event: 'APPROVED_BY_PM',
-    from: booking.status,
-  })
-
-  try {
-    const customerId = await getOrCreateCustomer({
-      id: resident.id,
-      email: resident.email,
-      name: resident.name,
-      stripeCustomerId: resident.stripeCustomerId,
+  if (isFreeAmenity) {
+    // Free amenity — confirm immediately after approval
+    await transitionBookingStatus(bookingId, 'CONFIRMED', 'orchestrator', {
+      event: 'APPROVED_AND_CONFIRMED_FREE',
+      from: booking.status,
     })
-    const paymentUrl = await createPaymentLink(
-      bookingId,
-      amenity.rentalFee,
-      amenity.depositAmount,
-      customerId,
-    )
-    await residentAgent.sendPaymentLink(bookingId, paymentUrl)
-  } catch (err) {
-    console.error(`[Orchestrator] Stripe/payment failed for ${bookingId}:`, err)
+    await scheduleReminder(bookingId, booking.startDatetime)
+    await schedulePostEventFollowup(bookingId, booking.endDatetime)
+    residentAgent.sendConfirmation(bookingId).catch((err) => {
+      console.error(`[Orchestrator] Failed to send confirmation for ${bookingId}:`, err)
+    })
+  } else {
+    await transitionBookingStatus(bookingId, 'PAYMENT_PENDING', 'orchestrator', {
+      event: 'APPROVED_BY_PM',
+      from: booking.status,
+    })
+
+    try {
+      const customerId = await getOrCreateCustomer({
+        id: resident.id,
+        email: resident.email,
+        name: resident.name,
+        stripeCustomerId: resident.stripeCustomerId,
+      })
+      const paymentUrl = await createPaymentLink(
+        bookingId,
+        amenity.rentalFee,
+        amenity.depositAmount,
+        customerId,
+      )
+      await residentAgent.sendPaymentLink(bookingId, paymentUrl)
+    } catch (err) {
+      console.error(`[Orchestrator] Stripe/payment failed for ${bookingId}:`, err)
+    }
   }
 }
 
