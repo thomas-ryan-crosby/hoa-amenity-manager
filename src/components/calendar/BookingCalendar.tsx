@@ -127,6 +127,7 @@ export function BookingCalendar() {
   )
 
   function handleAmenityClick(amenityId: string, e: MouseEvent) {
+    clearSelection()
     if (e.shiftKey) {
       setSelectedAmenities((prev) => {
         const next = new Set(prev)
@@ -174,7 +175,7 @@ export function BookingCalendar() {
       const eventsData = await eventsRes.json()
       setEvents(eventsData.events ?? [])
 
-      setSelection(null)
+      clearSelection()
       setGuestCount(1)
       setNotes('')
 
