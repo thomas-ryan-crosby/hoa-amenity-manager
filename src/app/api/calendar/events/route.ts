@@ -5,7 +5,9 @@ import {
   getResidentById,
   getAmenityById,
   getInspectionReport,
+  getTurnWindowsForAmenity,
   type BookingStatus,
+  type TurnWindow,
 } from '@/lib/firebase/db'
 
 const AMENITY_COLORS = [
@@ -23,6 +25,12 @@ const AMENITY_COLORS = [
 
 const PENDING_COLOR = '#F59E0B'
 const WAITLISTED_COLOR = '#FB923C' // orange-400
+
+const TURN_WINDOW_COLORS: Record<string, string> = {
+  PENDING: '#F59E0B',    // amber
+  SCHEDULED: '#06B6D4',  // cyan
+  COMPLETED: '#22C55E',  // green
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -53,7 +61,7 @@ export async function GET(req: NextRequest) {
   }))
 
   // Resolve related data for each booking
-  const events = await Promise.all(
+  const bookingEvents = await Promise.all(
     bookings.map(async (booking) => {
       const [amenity, resident, inspection] = await Promise.all([
         getAmenityById(booking.amenityId),
@@ -92,7 +100,9 @@ export async function GET(req: NextRequest) {
               : isPaymentPending
                 ? '#8B5CF6'
                 : colorMap.get(booking.amenityId)!,
+        editable: false,
         extendedProps: {
+          type: 'booking' as const,
           amenityId: booking.amenityId,
           amenityName: amenity?.name ?? 'Unknown',
           residentName: resident?.name ?? 'Unknown',
@@ -106,6 +116,67 @@ export async function GET(req: NextRequest) {
       }
     }),
   )
+
+  // For janitorial view, also include turn windows as calendar events
+  let turnWindowEvents: Array<{
+    id: string
+    resourceId: string
+    title: string
+    start: string
+    end: string
+    color: string
+    editable: boolean
+    extendedProps: {
+      type: 'turn-window'
+      amenityId: string
+      amenityName: string
+      status: string
+      turnWindowId: string
+      inspectionNeeded: boolean
+      inspectionStatus: null
+    }
+  }> = []
+
+  if (isJanitorial) {
+    // Fetch turn windows for all amenities
+    const allTurnWindows: Array<TurnWindow & { amenityName: string }> = []
+
+    await Promise.all(
+      amenities.map(async (amenity) => {
+        const turnWindows = await getTurnWindowsForAmenity(amenity.id)
+        for (const tw of turnWindows) {
+          allTurnWindows.push({ ...tw, amenityName: amenity.name })
+        }
+      }),
+    )
+
+    turnWindowEvents = allTurnWindows.map((tw) => {
+      // Use actual times if janitor has overridden them, otherwise use defaults
+      const start = tw.actualStart ?? tw.defaultStart
+      const end = tw.actualEnd ?? tw.defaultEnd
+
+      return {
+        id: `tw-${tw.id}`,
+        resourceId: tw.amenityId,
+        title: `Turn: ${tw.amenityName}`,
+        start: start instanceof Date ? start.toISOString() : String(start),
+        end: end instanceof Date ? end.toISOString() : String(end),
+        color: TURN_WINDOW_COLORS[tw.status] ?? TURN_WINDOW_COLORS.PENDING,
+        editable: tw.status !== 'COMPLETED',
+        extendedProps: {
+          type: 'turn-window' as const,
+          amenityId: tw.amenityId,
+          amenityName: tw.amenityName,
+          status: tw.status,
+          turnWindowId: tw.id,
+          inspectionNeeded: false,
+          inspectionStatus: null,
+        },
+      }
+    })
+  }
+
+  const events = [...bookingEvents, ...turnWindowEvents]
 
   return NextResponse.json({ events, resources })
 }

@@ -52,6 +52,21 @@ export interface Amenity {
   partialRefundPercent: number
   maxAdvanceBookingDays: number
   janitorialAssignment: string
+  defaultTurnTimeHours: number
+}
+
+export interface TurnWindow {
+  id: string
+  bookingId: string
+  amenityId: string
+  staffId: string | null       // assigned janitorial staff
+  defaultStart: Date           // booking end time
+  defaultEnd: Date             // booking end + defaultTurnTimeHours
+  actualStart: Date | null     // janitorial-set start (drag override)
+  actualEnd: Date | null       // janitorial-set end (drag override)
+  status: 'PENDING' | 'SCHEDULED' | 'COMPLETED'  // PENDING = default block, SCHEDULED = janitor set their window, COMPLETED = done
+  completedAt: Date | null
+  createdAt: Date
 }
 
 export interface BlackoutDate {
@@ -131,6 +146,7 @@ const bookingsCol = () => adminDb.collection('bookings')
 const staffCol = () => adminDb.collection('staff')
 const auditLogsCol = () => adminDb.collection('auditLogs')
 const inspectionReportsCol = () => adminDb.collection('inspectionReports')
+const turnWindowsCol = () => adminDb.collection('turnWindows')
 
 // ---------------------------------------------------------------------------
 // RESIDENTS
@@ -189,6 +205,7 @@ export async function createAmenity(
     partialRefundPercent: data.partialRefundPercent ?? 50,
     maxAdvanceBookingDays: data.maxAdvanceBookingDays ?? 90,
     janitorialAssignment: data.janitorialAssignment ?? 'rotation',
+    defaultTurnTimeHours: data.defaultTurnTimeHours ?? 0,
   }
   const ref = await amenitiesCol().add(fullData)
   return { id: ref.id, ...fullData }
@@ -644,6 +661,107 @@ export async function transitionBookingStatus(
   })
 
   await batch.commit()
+}
+
+// ---------------------------------------------------------------------------
+// TURN WINDOWS
+// ---------------------------------------------------------------------------
+
+function turnWindowFromDoc(doc: FirebaseFirestore.DocumentSnapshot): TurnWindow | null {
+  if (!doc.exists) return null
+  const data = doc.data()!
+  return {
+    id: doc.id,
+    bookingId: data.bookingId,
+    amenityId: data.amenityId,
+    staffId: data.staffId ?? null,
+    defaultStart: toDate(data.defaultStart),
+    defaultEnd: toDate(data.defaultEnd),
+    actualStart: data.actualStart ? toDate(data.actualStart) : null,
+    actualEnd: data.actualEnd ? toDate(data.actualEnd) : null,
+    status: data.status,
+    completedAt: data.completedAt ? toDate(data.completedAt) : null,
+    createdAt: toDate(data.createdAt),
+  }
+}
+
+function turnWindowFromQueryDoc(doc: FirebaseFirestore.QueryDocumentSnapshot): TurnWindow {
+  const data = doc.data()
+  return {
+    id: doc.id,
+    bookingId: data.bookingId,
+    amenityId: data.amenityId,
+    staffId: data.staffId ?? null,
+    defaultStart: toDate(data.defaultStart),
+    defaultEnd: toDate(data.defaultEnd),
+    actualStart: data.actualStart ? toDate(data.actualStart) : null,
+    actualEnd: data.actualEnd ? toDate(data.actualEnd) : null,
+    status: data.status,
+    completedAt: data.completedAt ? toDate(data.completedAt) : null,
+    createdAt: toDate(data.createdAt),
+  }
+}
+
+export async function createTurnWindow(
+  data: Omit<TurnWindow, 'id' | 'createdAt'>,
+): Promise<TurnWindow> {
+  const now = new Date()
+  const docData = {
+    ...data,
+    defaultStart: Timestamp.fromDate(data.defaultStart),
+    defaultEnd: Timestamp.fromDate(data.defaultEnd),
+    actualStart: data.actualStart ? Timestamp.fromDate(data.actualStart) : null,
+    actualEnd: data.actualEnd ? Timestamp.fromDate(data.actualEnd) : null,
+    completedAt: data.completedAt ? Timestamp.fromDate(data.completedAt) : null,
+    createdAt: Timestamp.fromDate(now),
+  }
+  const ref = await turnWindowsCol().add(docData)
+  return { id: ref.id, ...data, createdAt: now }
+}
+
+export async function getTurnWindowByBookingId(bookingId: string): Promise<TurnWindow | null> {
+  const snap = await turnWindowsCol().where('bookingId', '==', bookingId).limit(1).get()
+  if (snap.empty) return null
+  return turnWindowFromQueryDoc(snap.docs[0])
+}
+
+export async function getTurnWindowById(id: string): Promise<TurnWindow | null> {
+  const snap = await turnWindowsCol().doc(id).get()
+  return turnWindowFromDoc(snap)
+}
+
+export async function getTurnWindowsForAmenity(amenityId: string): Promise<TurnWindow[]> {
+  const snap = await turnWindowsCol().where('amenityId', '==', amenityId).get()
+  return snap.docs.map(turnWindowFromQueryDoc)
+}
+
+export async function getActiveTurnWindows(amenityId: string): Promise<TurnWindow[]> {
+  const snap = await turnWindowsCol()
+    .where('amenityId', '==', amenityId)
+    .where('status', 'in', ['PENDING', 'SCHEDULED'])
+    .get()
+  return snap.docs.map(turnWindowFromQueryDoc)
+}
+
+export async function updateTurnWindow(id: string, data: Partial<TurnWindow>): Promise<void> {
+  const updateData: Record<string, unknown> = { ...data }
+
+  if (data.defaultStart) updateData.defaultStart = Timestamp.fromDate(data.defaultStart)
+  if (data.defaultEnd) updateData.defaultEnd = Timestamp.fromDate(data.defaultEnd)
+  if (data.actualStart) updateData.actualStart = Timestamp.fromDate(data.actualStart)
+  if (data.actualEnd) updateData.actualEnd = Timestamp.fromDate(data.actualEnd)
+  if (data.completedAt) updateData.completedAt = Timestamp.fromDate(data.completedAt)
+
+  delete updateData.id
+
+  await turnWindowsCol().doc(id).update(updateData)
+}
+
+export async function completeTurnWindow(id: string): Promise<void> {
+  await turnWindowsCol().doc(id).update({
+    status: 'COMPLETED',
+    completedAt: Timestamp.fromDate(new Date()),
+  })
 }
 
 // ---------------------------------------------------------------------------

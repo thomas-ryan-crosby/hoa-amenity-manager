@@ -34,6 +34,7 @@ type Amenity = {
   partialRefundPercent: number
   maxAdvanceBookingDays: number
   janitorialAssignment: 'rotation' | 'manual' | 'none'
+  defaultTurnTimeHours: number
   blackoutDates: BlackoutDate[]
 }
 
@@ -54,6 +55,7 @@ type AmenityForm = {
   partialRefundPercent: number
   maxAdvanceBookingDays: number
   janitorialAssignment: 'rotation' | 'manual' | 'none'
+  defaultTurnTimeHours: number
 }
 
 const emptyAmenityForm: AmenityForm = {
@@ -73,6 +75,7 @@ const emptyAmenityForm: AmenityForm = {
   partialRefundPercent: 50,
   maxAdvanceBookingDays: 90,
   janitorialAssignment: 'rotation' as const,
+  defaultTurnTimeHours: 0,
 }
 
 function toAmenityForm(amenity: Amenity | null): AmenityForm {
@@ -94,6 +97,7 @@ function toAmenityForm(amenity: Amenity | null): AmenityForm {
     partialRefundPercent: amenity.partialRefundPercent,
     maxAdvanceBookingDays: amenity.maxAdvanceBookingDays,
     janitorialAssignment: amenity.janitorialAssignment,
+    defaultTurnTimeHours: amenity.defaultTurnTimeHours ?? 0,
   }
 }
 
@@ -224,6 +228,7 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
       partialRefundPercent: f.isPaid ? Number(f.partialRefundPercent) : 0,
       maxAdvanceBookingDays: Number(f.maxAdvanceBookingDays),
       janitorialAssignment: f.requiresJanitorial ? f.janitorialAssignment : 'none',
+      defaultTurnTimeHours: f.requiresJanitorial ? Number(f.defaultTurnTimeHours) : 0,
     }
 
     const url = selectedAmenity ? `/api/admin/amenities/${selectedAmenity.id}` : '/api/admin/amenities'
@@ -452,12 +457,25 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
               </div>
 
               {f.requiresJanitorial && (
-                <div className="rounded-2xl bg-stone-50 p-4">
+                <div className="space-y-4 rounded-2xl bg-stone-50 p-4">
                   <label className="text-sm font-medium text-stone-700">
                     Assignment mode <Info tip="Rotation: automatically assigns the next available janitor in a round-robin based on recent workload. Manual: the PM assigns janitorial staff from the dashboard." />
                     <select className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-stone-900" value={f.janitorialAssignment} onChange={(e) => set({ janitorialAssignment: e.target.value as 'rotation' | 'manual' | 'none' })}>
                       <option value="rotation">Automatic rotation</option>
                       <option value="manual">Manual assignment by PM</option>
+                    </select>
+                  </label>
+
+                  <label className="text-sm font-medium text-stone-700">
+                    Default turn time <Info tip="How long the amenity is blocked after an event for cleaning and inspection. Janitorial staff can adjust the actual cleaning window on their calendar." />
+                    <select className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-stone-900" value={f.defaultTurnTimeHours} onChange={(e) => set({ defaultTurnTimeHours: Number(e.target.value) })}>
+                      <option value="0">No turn time</option>
+                      <option value="4">4 hours</option>
+                      <option value="8">8 hours</option>
+                      <option value="12">12 hours</option>
+                      <option value="24">24 hours (1 day)</option>
+                      <option value="48">48 hours (2 days)</option>
+                      <option value="72">72 hours (3 days)</option>
                     </select>
                   </label>
                 </div>

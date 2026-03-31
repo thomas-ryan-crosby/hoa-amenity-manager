@@ -1,6 +1,7 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { Timestamp } from 'firebase-admin/firestore'
-import type { Booking } from '@/lib/firebase/db'
+import type { Booking, TurnWindow } from '@/lib/firebase/db'
+import { getActiveTurnWindows } from '@/lib/firebase/db'
 
 /** Statuses considered "active" — these bookings occupy a time slot. */
 const ACTIVE_STATUSES = [
@@ -67,10 +68,43 @@ export async function getConflictingBookings(
 }
 
 /**
- * Check whether an amenity has any active bookings overlapping the given time
- * window. Returns `true` when the slot is free (no conflicts).
- *
- * Kept for backward compatibility — delegates to `getConflictingBookings`.
+ * Return both booking conflicts and turn window conflicts for a given amenity
+ * and time range. Turn windows use actualStart/actualEnd when SCHEDULED,
+ * otherwise defaultStart/defaultEnd.
+ */
+export async function getBlockedPeriods(
+  amenityId: string,
+  start: Date,
+  end: Date,
+  excludeBookingId?: string,
+): Promise<{ bookingConflicts: Booking[]; turnWindowConflicts: TurnWindow[] }> {
+  const [bookingConflicts, activeTurnWindows] = await Promise.all([
+    getConflictingBookings(amenityId, start, end, excludeBookingId),
+    getActiveTurnWindows(amenityId),
+  ])
+
+  const turnWindowConflicts: TurnWindow[] = []
+
+  for (const tw of activeTurnWindows) {
+    // Skip turn windows that belong to the excluded booking
+    if (excludeBookingId && tw.bookingId === excludeBookingId) continue
+
+    // Use actual times if the janitor has overridden them (SCHEDULED), otherwise defaults
+    const twStart = tw.actualStart ?? tw.defaultStart
+    const twEnd = tw.actualEnd ?? tw.defaultEnd
+
+    // Standard overlap check
+    if (start < twEnd && end > twStart) {
+      turnWindowConflicts.push(tw)
+    }
+  }
+
+  return { bookingConflicts, turnWindowConflicts }
+}
+
+/**
+ * Check whether an amenity has any active bookings or turn windows overlapping
+ * the given time window. Returns `true` when the slot is free (no conflicts).
  */
 export async function checkAvailability(
   amenityId: string,
@@ -78,8 +112,13 @@ export async function checkAvailability(
   end: Date,
   excludeBookingId?: string,
 ): Promise<boolean> {
-  const conflicts = await getConflictingBookings(amenityId, start, end, excludeBookingId)
-  return conflicts.length === 0
+  const { bookingConflicts, turnWindowConflicts } = await getBlockedPeriods(
+    amenityId,
+    start,
+    end,
+    excludeBookingId,
+  )
+  return bookingConflicts.length === 0 && turnWindowConflicts.length === 0
 }
 
 /**

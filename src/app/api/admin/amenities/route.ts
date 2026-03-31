@@ -23,6 +23,7 @@ const AmenitySchema = z.object({
   partialRefundPercent: z.number().int().min(0).max(100),
   maxAdvanceBookingDays: z.number().int().positive(),
   janitorialAssignment: z.enum(['rotation', 'manual', 'none']),
+  defaultTurnTimeHours: z.number().int().min(0),
 })
 
 export async function GET() {
