@@ -17,10 +17,6 @@ export function NavBar() {
             Neighbri
           </Link>
 
-          <Link href="/technology" className="text-sm text-stone-500 hover:text-stone-900">
-            Technology
-          </Link>
-
           {user && (
             <div className="flex items-center gap-4 text-sm text-stone-600">
               <Link href="/resident" className="hover:text-stone-900">
