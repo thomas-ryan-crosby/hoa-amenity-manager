@@ -97,6 +97,26 @@ export function AdminCalendar() {
     }
   }
 
+  async function cancelBooking() {
+    if (!selectedEvent) return
+    if (!confirm('Cancel this booking? The resident will be notified and any applicable refund will be processed.')) return
+    setBusy(true)
+    setError(null)
+    try {
+      const response = await fetch(`/api/admin/bookings/${selectedEvent.id}/cancel`, { method: 'POST' })
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error ?? 'Unable to cancel booking.')
+      }
+      await loadEvents()
+      setSelectedId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to cancel booking.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (loading) {
     return <div className="h-[640px] animate-pulse rounded-3xl bg-stone-100" />
   }
@@ -182,9 +202,19 @@ export function AdminCalendar() {
                 </div>
               </>
             ) : (
-              <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-600">
-                This booking is confirmed.
-              </div>
+              <>
+                {error && (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+                )}
+                <button
+                  className="w-full rounded-full border border-red-300 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  disabled={busy}
+                  onClick={cancelBooking}
+                  type="button"
+                >
+                  {busy ? 'Cancelling...' : 'Cancel booking'}
+                </button>
+              </>
             )}
           </div>
         ) : (
