@@ -28,6 +28,8 @@ export async function sendEmail(options: EmailOptions): Promise<string> {
     return 'no-api-key'
   }
 
+  console.log(`[Email] Sending via Resend: from=${from}, to=${options.to}, subject="${options.subject}"`)
+
   const { data, error } = await getResend().emails.send({
     from,
     to: options.to,
@@ -36,8 +38,10 @@ export async function sendEmail(options: EmailOptions): Promise<string> {
   })
 
   if (error) {
+    console.error(`[Email] Resend error:`, JSON.stringify(error))
     throw new Error(`Resend error: ${error.message}`)
   }
 
+  console.log(`[Email] Sent successfully: id=${data?.id}`)
   return data?.id ?? 'sent'
 }
