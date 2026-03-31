@@ -223,6 +223,7 @@ export function BookingCalendar() {
             events={filteredEvents}
             selectable
             selectMirror
+            unselectAuto={false}
             select={(info) => {
               if (!selectedAmenity) return
               setSelection({

@@ -27,8 +27,15 @@ type CalendarEvent = {
   }
 }
 
+type Amenity = {
+  id: string
+  name: string
+}
+
 export function AdminCalendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [amenities, setAmenities] = useState<Amenity[]>([])
+  const [selectedAmenity, setSelectedAmenity] = useState<string>('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [denialReason, setDenialReason] = useState('')
   const [busy, setBusy] = useState(false)
@@ -37,9 +44,18 @@ export function AdminCalendar() {
 
   async function loadEvents() {
     try {
-      const response = await fetch('/api/calendar/events?role=admin')
-      const data = await response.json()
-      setEvents(data.events ?? [])
+      const [eventsRes, amenitiesRes] = await Promise.all([
+        fetch('/api/calendar/events?role=admin'),
+        fetch('/api/amenities'),
+      ])
+      const eventsData = await eventsRes.json()
+      const amenitiesData = await amenitiesRes.json()
+      setEvents(eventsData.events ?? [])
+      const amenityList = amenitiesData.amenities ?? []
+      setAmenities(amenityList)
+      if (!selectedAmenity && amenityList.length) {
+        setSelectedAmenity(amenityList[0].id)
+      }
     } catch (loadError) {
       console.error('Failed to load admin calendar', loadError)
       setError('Unable to load calendar data right now.')
@@ -51,6 +67,13 @@ export function AdminCalendar() {
   useEffect(() => {
     loadEvents()
   }, [])
+
+  const filteredEvents = useMemo(
+    () => selectedAmenity
+      ? events.filter((e) => e.extendedProps.amenityId === selectedAmenity)
+      : events,
+    [events, selectedAmenity],
+  )
 
   const selectedEvent = useMemo(
     () => events.find((e) => e.id === selectedId) ?? null,
@@ -154,52 +177,83 @@ export function AdminCalendar() {
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
-        <FullCalendar
-          plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-          initialView="rolling3Day"
-          views={{
-            rolling3Day: {
-              type: 'timeGrid',
-              duration: { days: 7 },
-              dateIncrement: { days: 3 },
-              buttonText: 'Week',
-            },
-          }}
-          headerToolbar={{
-            left: 'prev,next today',
-            center: 'title',
-            right: 'timeGridDay,rolling3Day,dayGridMonth',
-          }}
-          events={events}
-          editable={false}
-          eventStartEditable
-          eventDurationEditable
-          eventClick={(info) => {
-            setSelectedId(info.event.id)
-            setDenialReason('')
-            setError(null)
-          }}
-          eventDrop={(info) => {
-            const props = info.event.extendedProps
-            if (props.type === 'turn-window' && props.turnWindowId && props.status !== 'COMPLETED') {
-              updateTurnWindow(props.turnWindowId, info.event.startStr, info.event.endStr)
-            } else {
-              info.revert()
-            }
-          }}
-          eventResize={(info) => {
-            const props = info.event.extendedProps
-            if (props.type === 'turn-window' && props.turnWindowId && props.status !== 'COMPLETED') {
-              updateTurnWindow(props.turnWindowId, info.event.startStr, info.event.endStr)
-            } else {
-              info.revert()
-            }
-          }}
-          slotMinTime="06:00:00"
-          slotMaxTime="23:00:00"
-          height="auto"
-        />
+      <div>
+        {/* Amenity tabs */}
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+              selectedAmenity === ''
+                ? 'bg-stone-900 text-white'
+                : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+            }`}
+            onClick={() => setSelectedAmenity('')}
+            type="button"
+          >
+            All amenities
+          </button>
+          {amenities.map((a) => (
+            <button
+              key={a.id}
+              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                selectedAmenity === a.id
+                  ? 'bg-stone-900 text-white'
+                  : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+              }`}
+              onClick={() => setSelectedAmenity(a.id)}
+              type="button"
+            >
+              {a.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
+          <FullCalendar
+            plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
+            initialView="rolling3Day"
+            views={{
+              rolling3Day: {
+                type: 'timeGrid',
+                duration: { days: 7 },
+                dateIncrement: { days: 3 },
+                buttonText: 'Week',
+              },
+            }}
+            headerToolbar={{
+              left: 'prev,next today',
+              center: 'title',
+              right: 'timeGridDay,rolling3Day,dayGridMonth',
+            }}
+            events={filteredEvents}
+            editable={false}
+            eventStartEditable
+            eventDurationEditable
+            eventClick={(info) => {
+              setSelectedId(info.event.id)
+              setDenialReason('')
+              setError(null)
+            }}
+            eventDrop={(info) => {
+              const props = info.event.extendedProps
+              if (props.type === 'turn-window' && props.turnWindowId && props.status !== 'COMPLETED') {
+                updateTurnWindow(props.turnWindowId, info.event.startStr, info.event.endStr)
+              } else {
+                info.revert()
+              }
+            }}
+            eventResize={(info) => {
+              const props = info.event.extendedProps
+              if (props.type === 'turn-window' && props.turnWindowId && props.status !== 'COMPLETED') {
+                updateTurnWindow(props.turnWindowId, info.event.startStr, info.event.endStr)
+              } else {
+                info.revert()
+              }
+            }}
+            slotMinTime="06:00:00"
+            slotMaxTime="23:00:00"
+            height="auto"
+          />
+        </div>
       </div>
 
       <aside className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
