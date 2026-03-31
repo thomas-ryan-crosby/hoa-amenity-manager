@@ -352,10 +352,11 @@ export async function getBookingsByResident(
 ): Promise<(Booking & { amenityName: string })[]> {
   const snap = await bookingsCol()
     .where('residentId', '==', residentId)
-    .orderBy('createdAt', 'desc')
     .get()
 
-  const bookings = snap.docs.map(bookingFromQueryDoc)
+  const bookings = snap.docs
+    .map(bookingFromQueryDoc)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 
   // Fetch amenity names in parallel
   const amenityIds = [...new Set(bookings.map((b) => b.amenityId))]
