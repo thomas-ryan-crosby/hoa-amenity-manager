@@ -61,7 +61,7 @@ const STATUS_BADGE_STYLES: Record<string, string> = {
   PAYMENT_PENDING: 'bg-violet-100 text-violet-800',
   CONFIRMED: 'bg-blue-100 text-blue-800',
   REMINDER_SENT: 'bg-blue-100 text-blue-800',
-  WAITLISTED: 'bg-orange-100 text-orange-800',
+  WAITLISTED: 'bg-sky-100 text-sky-800',
 }
 
 export function BookingCalendar() {
@@ -252,19 +252,22 @@ export function BookingCalendar() {
         {/* Legend */}
         <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-stone-600">
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-3 w-3 rounded-sm bg-[#9CA3AF]" /> Inquiry
+            <span className="inline-block h-3 w-3 rounded-sm bg-[#D4D4D8]" /> New request
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-3 w-3 rounded-sm bg-[#F59E0B]" /> Pending Approval
+            <span className="inline-block h-3 w-3 rounded-sm bg-[#F59E0B]" /> Pending approval
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-3 w-3 rounded-sm bg-[#8B5CF6]" /> Awaiting Payment
+            <span className="inline-block h-3 w-3 rounded-sm bg-[#8B5CF6]" /> Awaiting payment
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-3 w-3 rounded-sm bg-[#3B82F6]" /> Confirmed
+            <span className="inline-block h-3 w-3 rounded-sm bg-[#10B981]" /> Confirmed
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-3 w-3 rounded-sm bg-[#FB923C]" /> Waitlisted
+            <span className="inline-block h-3 w-3 rounded-sm bg-[#0EA5E9]" /> Waitlisted
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-3 w-3 rounded-sm bg-[#78716C]" /> Cleaning
           </span>
         </div>
 
@@ -381,11 +384,12 @@ export function BookingCalendar() {
 
         {selection && amenityInfo ? (
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="rounded-2xl bg-stone-50 p-4 text-sm text-stone-700">
-              <p className="font-medium text-stone-900">
-                {formatDateTime(selection.start)}
-              </p>
-              <p>{formatDateTime(selection.end)}</p>
+            <div className="flex items-start justify-between rounded-2xl bg-stone-50 p-4 text-sm text-stone-700">
+              <div>
+                <p className="font-medium text-stone-900">
+                  {formatDateTime(selection.start)}
+                </p>
+                <p>{formatDateTime(selection.end)}</p>
               <p className="mt-3">{amenityInfo.description ?? 'No description yet.'}</p>
               <p className="mt-3">
                 Capacity: {amenityInfo.capacity} guests
@@ -394,6 +398,17 @@ export function BookingCalendar() {
                 Fee: {formatCurrency(amenityInfo.rentalFee)} + deposit{' '}
                 {formatCurrency(amenityInfo.depositAmount)}
               </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setSelection(null); setError(null) }}
+                className="ml-2 shrink-0 rounded-full p-1 text-stone-400 hover:bg-stone-200 hover:text-stone-600"
+                aria-label="Cancel booking"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
             </div>
 
             {/* Show if selected slot already has bookings */}

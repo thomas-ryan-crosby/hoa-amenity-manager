@@ -23,8 +23,8 @@ const AMENITY_COLORS = [
   '#6366F1',
 ]
 
-const PENDING_COLOR = '#F59E0B'
-const WAITLISTED_COLOR = '#FB923C' // orange-400
+const PENDING_COLOR = '#F59E0B'   // amber — pending approval
+const WAITLISTED_COLOR = '#0EA5E9' // sky blue — waitlisted
 
 // Turn windows are always gray — status shown in title text
 
@@ -90,12 +90,12 @@ export async function GET(req: NextRequest) {
         color: isWaitlisted
           ? WAITLISTED_COLOR
           : isEarlyStage
-            ? '#9CA3AF'
+            ? '#D4D4D8'
             : isPending
               ? PENDING_COLOR
               : isPaymentPending
                 ? '#8B5CF6'
-                : colorMap.get(booking.amenityId)!,
+                : '#10B981',
         editable: false,
         extendedProps: {
           type: 'booking' as const,

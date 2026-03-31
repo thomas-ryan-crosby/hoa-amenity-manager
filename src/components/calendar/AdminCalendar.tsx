@@ -52,7 +52,7 @@ const STATUS_BADGE_STYLES: Record<string, string> = {
   PAYMENT_PENDING: 'bg-violet-100 text-violet-800',
   CONFIRMED: 'bg-blue-100 text-blue-800',
   REMINDER_SENT: 'bg-blue-100 text-blue-800',
-  WAITLISTED: 'bg-orange-100 text-orange-800',
+  WAITLISTED: 'bg-sky-100 text-sky-800',
   PENDING: 'bg-stone-200 text-stone-600',
   SCHEDULED: 'bg-stone-800 text-white',
   COMPLETED: 'bg-emerald-100 text-emerald-800',
