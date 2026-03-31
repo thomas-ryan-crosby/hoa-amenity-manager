@@ -216,20 +216,20 @@ export function GeneralSettingsClient({ initialStaff, initialSettings }: Props) 
                 {editingStaffId ? 'Edit staff member' : 'Add staff member'}
               </p>
               <input
-                className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
+                className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm placeholder:text-stone-400"
                 placeholder="Name"
                 value={staffForm.name}
                 onChange={(e) => setStaffForm((c) => ({ ...c, name: e.target.value }))}
               />
               <input
-                className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
+                className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm placeholder:text-stone-400"
                 placeholder="Email"
                 type="email"
                 value={staffForm.email}
                 onChange={(e) => setStaffForm((c) => ({ ...c, email: e.target.value }))}
               />
               <input
-                className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
+                className="w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm placeholder:text-stone-400"
                 placeholder="Phone (optional)"
                 value={staffForm.phone}
                 onChange={(e) => setStaffForm((c) => ({ ...c, phone: e.target.value }))}
