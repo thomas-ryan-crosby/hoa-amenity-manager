@@ -76,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signOut() {
     await firebaseSignOut(getClientAuth())
     await fetch('/api/auth/session', { method: 'DELETE' })
+    window.location.href = '/'
   }
 
   return (
