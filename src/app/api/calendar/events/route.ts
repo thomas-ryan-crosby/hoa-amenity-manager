@@ -137,7 +137,7 @@ export async function GET(req: NextRequest) {
     }
   }> = []
 
-  if (isJanitorial) {
+  if (isJanitorial || isAdmin || !role) {
     // Fetch turn windows for all amenities
     const allTurnWindows: Array<TurnWindow & { amenityName: string }> = []
 
@@ -158,11 +158,13 @@ export async function GET(req: NextRequest) {
       return {
         id: `tw-${tw.id}`,
         resourceId: tw.amenityId,
-        title: `Turn: ${tw.amenityName}`,
+        title: isJanitorial ? `Turn: ${tw.amenityName}` : `Cleaning - ${tw.amenityName}`,
         start: start instanceof Date ? start.toISOString() : String(start),
         end: end instanceof Date ? end.toISOString() : String(end),
-        color: TURN_WINDOW_COLORS[tw.status] ?? TURN_WINDOW_COLORS.PENDING,
-        editable: tw.status !== 'COMPLETED',
+        color: isJanitorial
+          ? (TURN_WINDOW_COLORS[tw.status] ?? TURN_WINDOW_COLORS.PENDING)
+          : tw.status === 'COMPLETED' ? '#D4D4D8' : '#A1A1AA',
+        editable: isJanitorial && tw.status !== 'COMPLETED',
         extendedProps: {
           type: 'turn-window' as const,
           amenityId: tw.amenityId,

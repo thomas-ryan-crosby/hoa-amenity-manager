@@ -88,7 +88,22 @@ export async function handleNewBooking(bookingId: string): Promise<void> {
     return
   }
 
-  // 4. Determine approval routing
+  // 4. Create turn window immediately if the amenity requires janitorial turnaround
+  if (amenity.defaultTurnTimeHours > 0) {
+    await createTurnWindow({
+      bookingId,
+      amenityId: amenity.id,
+      staffId: null,
+      defaultStart: booking.endDatetime,
+      defaultEnd: new Date(booking.endDatetime.getTime() + amenity.defaultTurnTimeHours * 60 * 60 * 1000),
+      actualStart: null,
+      actualEnd: null,
+      status: 'PENDING',
+      completedAt: null,
+    })
+  }
+
+  // 5. Determine approval routing
   const needsApproval =
     amenity.requiresApproval &&
     (amenity.autoApproveThreshold === null ||
@@ -112,22 +127,6 @@ export async function handleNewBooking(bookingId: string): Promise<void> {
     })
     await scheduleReminder(bookingId, booking.startDatetime)
     await schedulePostEventFollowup(bookingId, booking.endDatetime)
-
-    // Create turn window if the amenity requires janitorial turnaround time
-    if (amenity.defaultTurnTimeHours > 0) {
-      await createTurnWindow({
-        bookingId,
-        amenityId: amenity.id,
-        staffId: null,
-        defaultStart: booking.endDatetime,
-        defaultEnd: new Date(booking.endDatetime.getTime() + amenity.defaultTurnTimeHours * 60 * 60 * 1000),
-        actualStart: null,
-        actualEnd: null,
-        status: 'PENDING',
-        completedAt: null,
-      })
-    }
-
     residentAgent.sendConfirmation(bookingId).catch((err) => {
       console.error(`[Orchestrator] Failed to send confirmation for ${bookingId}:`, err)
     })
@@ -174,22 +173,6 @@ export async function handleApproval(bookingId: string): Promise<void> {
     })
     await scheduleReminder(bookingId, booking.startDatetime)
     await schedulePostEventFollowup(bookingId, booking.endDatetime)
-
-    // Create turn window if the amenity requires janitorial turnaround time
-    if (amenity.defaultTurnTimeHours > 0) {
-      await createTurnWindow({
-        bookingId,
-        amenityId: amenity.id,
-        staffId: null,
-        defaultStart: booking.endDatetime,
-        defaultEnd: new Date(booking.endDatetime.getTime() + amenity.defaultTurnTimeHours * 60 * 60 * 1000),
-        actualStart: null,
-        actualEnd: null,
-        status: 'PENDING',
-        completedAt: null,
-      })
-    }
-
     residentAgent.sendConfirmation(bookingId).catch((err) => {
       console.error(`[Orchestrator] Failed to send confirmation for ${bookingId}:`, err)
     })
@@ -254,22 +237,6 @@ export async function handlePaymentSuccess(bookingId: string): Promise<void> {
 
   await scheduleReminder(bookingId, booking.startDatetime)
   await schedulePostEventFollowup(bookingId, booking.endDatetime)
-
-  // Create turn window if the amenity requires janitorial turnaround time
-  if (amenity.defaultTurnTimeHours > 0) {
-    await createTurnWindow({
-      bookingId,
-      amenityId: amenity.id,
-      staffId: null,
-      defaultStart: booking.endDatetime,
-      defaultEnd: new Date(booking.endDatetime.getTime() + amenity.defaultTurnTimeHours * 60 * 60 * 1000),
-      actualStart: null,
-      actualEnd: null,
-      status: 'PENDING',
-      completedAt: null,
-    })
-  }
-
   await residentAgent.sendConfirmation(bookingId)
 }
 
