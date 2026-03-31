@@ -2,9 +2,9 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import FullCalendar from '@fullcalendar/react'
-import resourceTimeGridPlugin from '@fullcalendar/resource-timegrid'
-import interactionPlugin from '@fullcalendar/interaction'
+import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
+import interactionPlugin from '@fullcalendar/interaction'
 import { formatCurrency, formatDateTime } from '@/lib/format'
 
 type Amenity = {
@@ -17,18 +17,13 @@ type Amenity = {
   maxAdvanceBookingDays: number
 }
 
-type CalendarResource = {
-  id: string
-  title: string
-}
-
 type CalendarEvent = {
   id: string
-  resourceId?: string
   title: string
   start: string
   end: string
   color?: string
+  extendedProps?: Record<string, unknown>
 }
 
 type SelectionState = {
@@ -39,8 +34,8 @@ type SelectionState = {
 
 export function BookingCalendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
-  const [resources, setResources] = useState<CalendarResource[]>([])
   const [amenities, setAmenities] = useState<Amenity[]>([])
+  const [selectedAmenity, setSelectedAmenity] = useState<string>('')
   const [selection, setSelection] = useState<SelectionState | null>(null)
   const [guestCount, setGuestCount] = useState(1)
   const [notes, setNotes] = useState('')
@@ -60,8 +55,10 @@ export function BookingCalendar() {
         const amenitiesData = await amenitiesRes.json()
 
         setEvents(eventsData.events ?? [])
-        setResources(eventsData.resources ?? [])
         setAmenities(amenitiesData.amenities ?? [])
+        if (amenitiesData.amenities?.length) {
+          setSelectedAmenity(amenitiesData.amenities[0].id)
+        }
       } catch (loadError) {
         console.error('Failed to load booking calendar', loadError)
         setError('Unable to load calendar data right now.')
@@ -73,17 +70,27 @@ export function BookingCalendar() {
     loadCalendar()
   }, [])
 
-  const selectedAmenity = useMemo(
-    () => amenities.find((amenity) => amenity.id === selection?.amenityId) ?? null,
+  const amenityInfo = useMemo(
+    () => amenities.find((a) => a.id === selection?.amenityId) ?? null,
     [amenities, selection],
+  )
+
+  // Filter events by selected amenity
+  const filteredEvents = useMemo(
+    () =>
+      selectedAmenity
+        ? events.filter(
+            (e) =>
+              (e.extendedProps?.amenityId as string) === selectedAmenity,
+          )
+        : events,
+    [events, selectedAmenity],
   )
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!selection) {
-      return
-    }
+    if (!selection) return
 
     setSubmitting(true)
     setError(null)
@@ -91,9 +98,7 @@ export function BookingCalendar() {
     try {
       const response = await fetch('/api/bookings', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amenityId: selection.amenityId,
           startDatetime: selection.start,
@@ -112,7 +117,7 @@ export function BookingCalendar() {
       setSelection(null)
       setGuestCount(1)
       setNotes('')
-      alert(`Booking request submitted. Status: ${data.status}`)
+      alert(`Booking request submitted! Status: ${data.status}`)
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -130,40 +135,54 @@ export function BookingCalendar() {
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
-        <FullCalendar
-          plugins={[resourceTimeGridPlugin, interactionPlugin, dayGridPlugin]}
-          initialView="resourceTimeGridDay"
-          schedulerLicenseKey="CC-Attribution-NonCommercial-NoDerivatives"
-          headerToolbar={{
-            left: 'prev,next today',
-            center: 'title',
-            right: 'resourceTimeGridDay,resourceTimeGridWeek,dayGridMonth',
-          }}
-          resources={resources}
-          events={events}
-          selectable
-          selectMirror
-          select={(info) => {
-            if (!info.resource?.id) {
-              return
-            }
+      <div>
+        {/* Amenity tabs */}
+        <div className="mb-4 flex flex-wrap gap-2">
+          {amenities.map((amenity) => (
+            <button
+              key={amenity.id}
+              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                selectedAmenity === amenity.id
+                  ? 'bg-stone-900 text-white'
+                  : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+              }`}
+              onClick={() => setSelectedAmenity(amenity.id)}
+              type="button"
+            >
+              {amenity.name}
+            </button>
+          ))}
+        </div>
 
-            setSelection({
-              amenityId: info.resource.id,
-              start: info.startStr,
-              end: info.endStr,
-            })
-            setGuestCount(1)
-            setNotes('')
-          }}
-          eventOverlap={false}
-          selectOverlap={false}
-          slotMinTime="06:00:00"
-          slotMaxTime="23:00:00"
-          resourceAreaHeaderContent="Amenities"
-          height="auto"
-        />
+        <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
+          <FullCalendar
+            plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
+            initialView="timeGridWeek"
+            headerToolbar={{
+              left: 'prev,next today',
+              center: 'title',
+              right: 'timeGridDay,timeGridWeek,dayGridMonth',
+            }}
+            events={filteredEvents}
+            selectable
+            selectMirror
+            select={(info) => {
+              if (!selectedAmenity) return
+              setSelection({
+                amenityId: selectedAmenity,
+                start: info.startStr,
+                end: info.endStr,
+              })
+              setGuestCount(1)
+              setNotes('')
+            }}
+            eventOverlap={false}
+            selectOverlap={false}
+            slotMinTime="06:00:00"
+            slotMaxTime="23:00:00"
+            height="auto"
+          />
+        </div>
       </div>
 
       <aside className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
@@ -172,28 +191,28 @@ export function BookingCalendar() {
             Request Booking
           </p>
           <h2 className="mt-2 text-2xl font-semibold text-stone-900">
-            {selectedAmenity ? selectedAmenity.name : 'Choose an open time slot'}
+            {amenityInfo ? amenityInfo.name : 'Choose an open time slot'}
           </h2>
           <p className="mt-2 text-sm leading-6 text-stone-600">
-            Select a slot in the calendar to open the request form. Confirmed
-            bookings are already shown on the calendar.
+            Select an amenity tab, then click and drag a time slot on the
+            calendar to start a booking request.
           </p>
         </div>
 
-        {selection && selectedAmenity ? (
+        {selection && amenityInfo ? (
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="rounded-2xl bg-stone-50 p-4 text-sm text-stone-700">
               <p className="font-medium text-stone-900">
                 {formatDateTime(selection.start)}
               </p>
               <p>{formatDateTime(selection.end)}</p>
-              <p className="mt-3">{selectedAmenity.description ?? 'No description yet.'}</p>
+              <p className="mt-3">{amenityInfo.description ?? 'No description yet.'}</p>
               <p className="mt-3">
-                Capacity: {selectedAmenity.capacity} guests
+                Capacity: {amenityInfo.capacity} guests
               </p>
               <p>
-                Fee: {formatCurrency(selectedAmenity.rentalFee)} + deposit{' '}
-                {formatCurrency(selectedAmenity.depositAmount)}
+                Fee: {formatCurrency(amenityInfo.rentalFee)} + deposit{' '}
+                {formatCurrency(amenityInfo.depositAmount)}
               </p>
             </div>
 
@@ -201,11 +220,11 @@ export function BookingCalendar() {
               Guest count
               <input
                 className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none transition focus:border-emerald-500"
-                max={selectedAmenity.capacity}
+                max={amenityInfo.capacity}
                 min={1}
                 type="number"
                 value={guestCount}
-                onChange={(event) => setGuestCount(Number(event.target.value))}
+                onChange={(e) => setGuestCount(Number(e.target.value))}
               />
             </label>
 
@@ -215,7 +234,7 @@ export function BookingCalendar() {
                 className="mt-2 min-h-28 w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none transition focus:border-emerald-500"
                 placeholder="Accessibility needs, event type, or any extra context"
                 value={notes}
-                onChange={(event) => setNotes(event.target.value)}
+                onChange={(e) => setNotes(e.target.value)}
               />
             </label>
 
@@ -235,8 +254,8 @@ export function BookingCalendar() {
           </form>
         ) : (
           <div className="rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-4 py-6 text-sm leading-6 text-stone-600">
-            Open slots are requestable directly from the calendar. Pick a date
-            and time to see the selected amenity, pricing, and request form here.
+            Pick an amenity tab above, then click and drag a time slot on the
+            calendar to see pricing and the booking form here.
           </div>
         )}
       </aside>

@@ -14,7 +14,6 @@
     "@fullcalendar/interaction": "^6.1.20",
     "@fullcalendar/list": "^6.1.20",
     "@fullcalendar/react": "^6.1.20",
-    "@fullcalendar/resource-timegrid": "^6.1.20",
     "@fullcalendar/timegrid": "^6.1.20",
     "@stripe/stripe-js": "^9.0.1",
     "bullmq": "^5.71.1",
