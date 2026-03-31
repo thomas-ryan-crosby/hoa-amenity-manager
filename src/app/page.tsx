@@ -116,16 +116,16 @@ export default function Home() {
 
           <div className="mt-14 grid gap-6 sm:grid-cols-2">
             {[
-              { role: 'Residents', color: 'emerald', desc: 'Browse availability, submit booking requests, track status, and receive email updates.' },
-              { role: 'Property Managers', color: 'amber', desc: 'Approve or deny requests, manage amenity settings, cancel bookings, and adjust cleaning windows.' },
-              { role: 'Janitorial Staff', color: 'cyan', desc: 'See assigned jobs, drag-and-drop cleaning windows, and mark inspections complete.' },
-              { role: 'HOA Board', color: 'violet', desc: 'Read-only overview of all bookings and utilization across the community.' },
+              { role: 'Residents', desc: 'Browse availability, submit booking requests, track status, and receive email updates.' },
+              { role: 'Property Managers', desc: 'Approve or deny requests, manage amenity settings, cancel bookings, and adjust cleaning windows.' },
+              { role: 'Janitorial Staff', desc: 'See assigned jobs, drag-and-drop cleaning windows, and mark inspections complete.' },
+              { role: 'HOA Board', desc: 'Read-only overview of all bookings and utilization across the community.' },
             ].map((r) => (
               <div
                 key={r.role}
                 className="rounded-2xl border border-stone-200 bg-stone-50 p-6"
               >
-                <p className={`text-xs font-semibold uppercase tracking-[0.2em] text-${r.color}-600`}>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600">
                   {r.role}
                 </p>
                 <p className="mt-3 text-sm leading-relaxed text-stone-600">{r.desc}</p>

@@ -14,7 +14,7 @@ export function NavBar() {
             href="/"
             className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700"
           >
-            Sanctuary
+            Neighbri
           </Link>
 
           <Link href="/technology" className="text-sm text-stone-500 hover:text-stone-900">
