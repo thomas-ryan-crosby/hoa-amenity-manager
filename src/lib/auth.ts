@@ -1,67 +1,45 @@
-import { auth } from '@clerk/nextjs/server'
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { adminAuth } from '@/lib/firebase/admin'
 
-export type AppRole =
-  | 'resident'
-  | 'property_manager'
-  | 'janitorial'
-  | 'board'
-
-type SessionClaimsWithRole = {
-  metadata?: { role?: string }
-  public_metadata?: { role?: string }
-}
-
-function readRole(sessionClaims: unknown): string | undefined {
-  const claims = sessionClaims as SessionClaimsWithRole | undefined
-  return claims?.metadata?.role ?? claims?.public_metadata?.role
-}
+export type AppRole = 'resident' | 'property_manager' | 'janitorial' | 'board'
 
 export async function getAuthContext() {
-  const authResult = await auth()
-  const role = readRole(authResult.sessionClaims)
+  const cookieStore = await cookies()
+  const sessionCookie = cookieStore.get('__session')?.value
 
-  return {
-    userId: authResult.userId,
-    role,
+  if (!sessionCookie) {
+    return { userId: null, role: undefined }
+  }
+
+  try {
+    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true)
+    const role = (decoded as Record<string, unknown>).role as string | undefined
+    return { userId: decoded.uid, role }
+  } catch {
+    return { userId: null, role: undefined }
   }
 }
 
 export async function requireUser() {
   const { userId, role } = await getAuthContext()
-
   if (!userId) {
     return {
       ok: false as const,
-      response: NextResponse.json(
-        { error: 'Unauthorized', code: 'UNAUTHORIZED' },
-        { status: 401 },
-      ),
+      response: NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 }),
     }
   }
-
-  return {
-    ok: true as const,
-    userId,
-    role,
-  }
+  return { ok: true as const, userId, role }
 }
 
 export async function requireRole(allowedRoles: AppRole[]) {
   const authState = await requireUser()
-  if (!authState.ok) {
-    return authState
-  }
-
+  if (!authState.ok) return authState
   if (!authState.role || !allowedRoles.includes(authState.role as AppRole)) {
     return {
       ok: false as const,
-      response: NextResponse.json(
-        { error: 'Forbidden', code: 'FORBIDDEN' },
-        { status: 403 },
-      ),
+      response: NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 }),
     }
   }
-
   return authState
 }

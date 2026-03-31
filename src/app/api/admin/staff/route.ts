@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/db/client'
 import { requireRole } from '@/lib/auth'
+import { getAllStaff, createStaff } from '@/lib/firebase/db'
 
 const StaffSchema = z.object({
   name: z.string().min(2),
@@ -16,9 +16,7 @@ export async function GET() {
     return authState.response
   }
 
-  const staff = await prisma.staff.findMany({
-    orderBy: [{ role: 'asc' }, { name: 'asc' }],
-  })
+  const staff = await getAllStaff()
 
   return NextResponse.json({ staff })
 }
@@ -43,11 +41,9 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const staff = await prisma.staff.create({
-    data: {
-      ...parsed.data,
-      phone: parsed.data.phone ?? null,
-    },
+  const staff = await createStaff({
+    ...parsed.data,
+    phone: parsed.data.phone ?? null,
   })
 
   return NextResponse.json({ staff }, { status: 201 })

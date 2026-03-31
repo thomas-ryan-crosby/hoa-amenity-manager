@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/db/client'
 import { requireRole } from '@/lib/auth'
+import {
+  updateAmenity,
+  deleteAmenity,
+  getBlackoutDates,
+  addAuditLog,
+} from '@/lib/firebase/db'
 
 const AmenityUpdateSchema = z.object({
   name: z.string().min(2),
@@ -45,33 +50,32 @@ export async function PUT(
     )
   }
 
-  const amenity = await prisma.amenity.update({
-    where: { id },
-    data: {
+  await updateAmenity(id, {
+    ...parsed.data,
+    description: parsed.data.description ?? null,
+    autoApproveThreshold: parsed.data.autoApproveThreshold ?? null,
+    approverStaffId: parsed.data.approverStaffId ?? null,
+  })
+
+  await addAuditLog(id, 'admin', 'AMENITY_UPDATED', {
+    amenityName: parsed.data.name,
+  })
+
+  const blackoutDates = await getBlackoutDates(id)
+
+  return NextResponse.json({
+    amenity: {
+      id,
       ...parsed.data,
       description: parsed.data.description ?? null,
       autoApproveThreshold: parsed.data.autoApproveThreshold ?? null,
       approverStaffId: parsed.data.approverStaffId ?? null,
-    },
-    include: {
-      approverStaff: {
-        select: { id: true, name: true, email: true },
-      },
-      blackoutDates: {
-        orderBy: { startDate: 'asc' },
-      },
-    },
-  })
-
-  return NextResponse.json({
-    amenity: {
-      ...amenity,
-      rentalFee: Number(amenity.rentalFee),
-      depositAmount: Number(amenity.depositAmount),
-      blackoutDates: amenity.blackoutDates.map((blackout) => ({
+      rentalFee: Number(parsed.data.rentalFee),
+      depositAmount: Number(parsed.data.depositAmount),
+      blackoutDates: blackoutDates.map((blackout) => ({
         ...blackout,
-        startDate: blackout.startDate.toISOString(),
-        endDate: blackout.endDate.toISOString(),
+        startDate: blackout.startDate instanceof Date ? blackout.startDate.toISOString() : blackout.startDate,
+        endDate: blackout.endDate instanceof Date ? blackout.endDate.toISOString() : blackout.endDate,
       })),
     },
   })
@@ -88,9 +92,9 @@ export async function DELETE(
 
   const { id } = await params
 
-  await prisma.amenity.delete({
-    where: { id },
-  })
+  await deleteAmenity(id)
+
+  await addAuditLog(id, 'admin', 'AMENITY_DELETED')
 
   return NextResponse.json({ success: true })
 }

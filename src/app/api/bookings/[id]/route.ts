@@ -1,88 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/client'
+import { requireUser } from '@/lib/auth'
+import {
+  getBookingWithRelations,
+  getBookingAuditLogs,
+  getResidentByFirebaseUid,
+} from '@/lib/firebase/db'
 
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { userId } = await auth()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authState = await requireUser()
+  if (!authState.ok) {
+    return authState.response
   }
-
-  const resident = await prisma.resident.findUnique({
-    where: { clerkUserId: userId },
-  })
-  if (!resident) {
-    return NextResponse.json(
-      { error: 'Resident profile not found.' },
-      { status: 404 },
-    )
-  }
+  const { userId } = authState
 
   const { id } = await params
 
-  const booking = await prisma.booking.findUnique({
-    where: { id },
-    include: {
-      amenity: {
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          capacity: true,
-          rentalFee: true,
-          depositAmount: true,
-        },
-      },
-      auditLogs: {
-        orderBy: { timestamp: 'asc' },
-        select: {
-          id: true,
-          agent: true,
-          event: true,
-          payload: true,
-          timestamp: true,
-        },
-      },
-    },
-  })
-
-  if (!booking) {
+  const result = await getBookingWithRelations(id)
+  if (!result) {
     return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
   }
 
-  // Ensure the booking belongs to the authenticated resident
-  if (booking.residentId !== resident.id) {
+  const { booking, amenity, resident } = result
+
+  // Verify ownership: resident's firebaseUid must match the authenticated user
+  if (!resident || resident.firebaseUid !== userId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
+
+  const auditLogs = await getBookingAuditLogs(id)
 
   return NextResponse.json({
     booking: {
       id: booking.id,
       status: booking.status,
-      startDatetime: booking.startDatetime.toISOString(),
-      endDatetime: booking.endDatetime.toISOString(),
+      startDatetime: booking.startDatetime instanceof Date ? booking.startDatetime.toISOString() : booking.startDatetime,
+      endDatetime: booking.endDatetime instanceof Date ? booking.endDatetime.toISOString() : booking.endDatetime,
       guestCount: booking.guestCount,
       notes: booking.notes,
       calendarEventId: booking.calendarEventId,
-      createdAt: booking.createdAt.toISOString(),
-      updatedAt: booking.updatedAt.toISOString(),
-      amenity: {
-        id: booking.amenity.id,
-        name: booking.amenity.name,
-        description: booking.amenity.description,
-        capacity: booking.amenity.capacity,
-        rentalFee: Number(booking.amenity.rentalFee),
-        depositAmount: Number(booking.amenity.depositAmount),
-      },
-      auditLogs: booking.auditLogs.map((log) => ({
+      createdAt: booking.createdAt instanceof Date ? booking.createdAt.toISOString() : booking.createdAt,
+      updatedAt: booking.updatedAt instanceof Date ? booking.updatedAt.toISOString() : booking.updatedAt,
+      amenity: amenity
+        ? {
+            id: amenity.id,
+            name: amenity.name,
+            description: amenity.description,
+            capacity: amenity.capacity,
+            rentalFee: Number(amenity.rentalFee),
+            depositAmount: Number(amenity.depositAmount),
+          }
+        : null,
+      auditLogs: auditLogs.map((log) => ({
         id: log.id,
         agent: log.agent,
         event: log.event,
         payload: log.payload,
-        timestamp: log.timestamp.toISOString(),
+        timestamp: log.timestamp instanceof Date ? log.timestamp.toISOString() : log.timestamp,
       })),
     },
   })

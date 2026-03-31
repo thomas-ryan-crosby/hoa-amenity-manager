@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/db/client'
 import { requireRole } from '@/lib/auth'
+import {
+  getBlackoutDates,
+  addBlackoutDate,
+  addAuditLog,
+} from '@/lib/firebase/db'
 
 const BlackoutSchema = z.object({
   startDate: z.string().datetime(),
@@ -20,16 +24,13 @@ export async function GET(
   }
 
   const { id } = await params
-  const blackoutDates = await prisma.blackoutDate.findMany({
-    where: { amenityId: id },
-    orderBy: { startDate: 'asc' },
-  })
+  const blackoutDates = await getBlackoutDates(id)
 
   return NextResponse.json({
     blackoutDates: blackoutDates.map((blackout) => ({
       ...blackout,
-      startDate: blackout.startDate.toISOString(),
-      endDate: blackout.endDate.toISOString(),
+      startDate: blackout.startDate instanceof Date ? blackout.startDate.toISOString() : blackout.startDate,
+      endDate: blackout.endDate instanceof Date ? blackout.endDate.toISOString() : blackout.endDate,
     })),
   })
 }
@@ -58,22 +59,24 @@ export async function POST(
     )
   }
 
-  const blackoutDate = await prisma.blackoutDate.create({
-    data: {
-      amenityId: id,
-      startDate: new Date(parsed.data.startDate),
-      endDate: new Date(parsed.data.endDate),
-      reason: parsed.data.reason ?? null,
-      recurring: parsed.data.recurring,
-    },
+  const blackoutDate = await addBlackoutDate(id, {
+    startDate: new Date(parsed.data.startDate),
+    endDate: new Date(parsed.data.endDate),
+    reason: parsed.data.reason ?? null,
+    recurring: parsed.data.recurring,
+  })
+
+  await addAuditLog(id, 'admin', 'BLACKOUT_DATE_ADDED', {
+    startDate: parsed.data.startDate,
+    endDate: parsed.data.endDate,
   })
 
   return NextResponse.json(
     {
       blackoutDate: {
         ...blackoutDate,
-        startDate: blackoutDate.startDate.toISOString(),
-        endDate: blackoutDate.endDate.toISOString(),
+        startDate: blackoutDate.startDate instanceof Date ? blackoutDate.startDate.toISOString() : blackoutDate.startDate,
+        endDate: blackoutDate.endDate instanceof Date ? blackoutDate.endDate.toISOString() : blackoutDate.endDate,
       },
     },
     { status: 201 },

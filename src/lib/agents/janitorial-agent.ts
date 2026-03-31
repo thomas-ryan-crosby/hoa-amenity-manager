@@ -1,4 +1,13 @@
-import { prisma } from '@/lib/db/client'
+import {
+  getBookingWithRelations,
+  getStaffByRole,
+  getStaffById,
+  countRecentInspectionsByStaff,
+  addAuditLog,
+  getBookingAuditLogs,
+  getInspectionReport,
+  getAmenityById,
+} from '@/lib/firebase/db'
 import { formatDateRange } from '@/lib/format'
 import { sendEmail } from '@/lib/integrations/gmail'
 import { sendSMS } from '@/lib/integrations/twilio'
@@ -8,38 +17,20 @@ import { sendSMS } from '@/lib/integrations/twilio'
  * recent assignments. Falls back to first available if counts are equal.
  */
 async function assignJanitorialStaff(amenityId: string) {
-  const amenity = await prisma.amenity.findUnique({
-    where: { id: amenityId },
-    select: { janitorialAssignment: true },
-  })
+  const amenity = await getAmenityById(amenityId)
 
   if (amenity?.janitorialAssignment === 'manual') {
     return null // Manual assignment — PM will assign via dashboard
   }
 
-  const janitorialStaff = await prisma.staff.findMany({
-    where: { role: 'JANITORIAL' },
-  })
+  const janitorialStaff = await getStaffByRole('JANITORIAL')
 
   if (janitorialStaff.length === 0) return null
   if (janitorialStaff.length === 1) return janitorialStaff[0]
 
   // Count recent assignments (last 30 days) per staff member
-  const thirtyDaysAgo = new Date()
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-  const assignmentCounts = await prisma.inspectionReport.groupBy({
-    by: ['staffId'],
-    where: {
-      submittedAt: { gte: thirtyDaysAgo },
-      staffId: { in: janitorialStaff.map((s) => s.id) },
-    },
-    _count: { staffId: true },
-  })
-
-  const countMap = new Map(
-    assignmentCounts.map((a) => [a.staffId, a._count.staffId]),
-  )
+  const staffIds = janitorialStaff.map((s) => s.id)
+  const countMap = await countRecentInspectionsByStaff(staffIds, 30)
 
   // Sort staff by assignment count (ascending) for round-robin
   janitorialStaff.sort(
@@ -50,10 +41,7 @@ async function assignJanitorialStaff(amenityId: string) {
 }
 
 export async function notifyJobAssigned(bookingId: string): Promise<void> {
-  const booking = await prisma.booking.findUniqueOrThrow({
-    where: { id: bookingId },
-    include: { amenity: true },
-  })
+  const { booking, amenity } = await getBookingWithRelations(bookingId)
 
   const staff = await assignJanitorialStaff(booking.amenityId)
 
@@ -70,12 +58,12 @@ export async function notifyJobAssigned(bookingId: string): Promise<void> {
 
   await sendEmail({
     to: staff.email,
-    subject: `New janitorial assignment: ${booking.amenity.name}`,
+    subject: `New janitorial assignment: ${amenity.name}`,
     html: `
       <div style="font-family: sans-serif; max-width: 500px;">
         <h2 style="color: #1a1a1a;">New Job Assignment</h2>
         <table style="width: 100%; border-collapse: collapse;">
-          <tr><td style="padding: 6px 0; font-weight: bold;">Amenity:</td><td>${booking.amenity.name}</td></tr>
+          <tr><td style="padding: 6px 0; font-weight: bold;">Amenity:</td><td>${amenity.name}</td></tr>
           <tr><td style="padding: 6px 0; font-weight: bold;">When:</td><td>${formatDateRange(booking.startDatetime, booking.endDatetime)}</td></tr>
         </table>
         <h3 style="margin-top: 16px;">Pre-Event Setup Checklist</h3>
@@ -97,46 +85,40 @@ export async function notifyJobAssigned(bookingId: string): Promise<void> {
   if (staff.phone) {
     await sendSMS(
       staff.phone,
-      `New job: ${booking.amenity.name} on ${new Date(booking.startDatetime).toLocaleDateString()}. Inspection: ${inspectionUrl}`,
+      `New job: ${amenity.name} on ${new Date(booking.startDatetime).toLocaleDateString()}. Inspection: ${inspectionUrl}`,
     )
   }
 
   // Record the assignment in audit log
-  await prisma.auditLog.create({
-    data: {
-      bookingId,
-      agent: 'janitorial-agent',
-      event: 'JOB_ASSIGNED',
-      payload: { staffId: staff.id, staffName: staff.name },
-    },
+  await addAuditLog(bookingId, 'janitorial-agent', 'JOB_ASSIGNED', {
+    staffId: staff.id,
+    staffName: staff.name,
   })
 }
 
 export async function sendInspectionReminder(
   bookingId: string,
 ): Promise<void> {
-  const booking = await prisma.booking.findUniqueOrThrow({
-    where: { id: bookingId },
-    include: { amenity: true, inspectionReport: true },
-  })
+  const { booking, amenity } = await getBookingWithRelations(bookingId)
 
   // Skip if inspection already submitted
-  if (booking.inspectionReport) return
+  const inspection = await getInspectionReport(bookingId)
+  if (inspection) return
 
   // Find who was assigned via audit log
-  const assignmentLog = await prisma.auditLog.findFirst({
-    where: {
-      bookingId,
-      agent: 'janitorial-agent',
-      event: 'JOB_ASSIGNED',
-    },
-    orderBy: { timestamp: 'desc' },
-  })
+  const auditLogs = await getBookingAuditLogs(bookingId)
+  const assignmentLog = auditLogs
+    .filter((log) => log.agent === 'janitorial-agent' && log.event === 'JOB_ASSIGNED')
+    .sort((a, b) => {
+      const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime()
+      const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime()
+      return bTime - aTime
+    })[0]
 
   const staffId = (assignmentLog?.payload as { staffId?: string })?.staffId
   if (!staffId) return
 
-  const staff = await prisma.staff.findUnique({ where: { id: staffId } })
+  const staff = await getStaffById(staffId)
   if (!staff?.phone) return
 
   const inspectionUrl = `${
@@ -145,6 +127,6 @@ export async function sendInspectionReminder(
 
   await sendSMS(
     staff.phone,
-    `Reminder: complete inspection for ${booking.amenity.name}. ${inspectionUrl}`,
+    `Reminder: complete inspection for ${amenity.name}. ${inspectionUrl}`,
   )
 }

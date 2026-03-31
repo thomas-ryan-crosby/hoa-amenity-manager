@@ -1,19 +1,8 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/db/client'
+import { getAllAmenities } from '@/lib/firebase/db'
 
 export async function GET() {
-  const amenities = await prisma.amenity.findMany({
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      capacity: true,
-      rentalFee: true,
-      depositAmount: true,
-      maxAdvanceBookingDays: true,
-    },
-    orderBy: { name: 'asc' },
-  })
+  const amenities = await getAllAmenities()
 
   const result = amenities.map((a) => ({
     id: a.id,

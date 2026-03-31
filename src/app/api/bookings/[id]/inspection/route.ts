@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/db/client'
 import { requireRole } from '@/lib/auth'
+import { upsertInspectionReport } from '@/lib/firebase/db'
 import * as orchestrator from '@/lib/agents/orchestrator'
 
 const InspectionSchema = z.object({
@@ -34,36 +34,11 @@ export async function POST(
     )
   }
 
-  const staff = await prisma.staff.findFirst({
-    where: authState.role === 'property_manager'
-      ? { role: 'PROPERTY_MANAGER' }
-      : { role: 'JANITORIAL' },
-    orderBy: { name: 'asc' },
-  })
-
-  if (!staff) {
-    return NextResponse.json(
-      { error: 'No staff record found', code: 'STAFF_NOT_FOUND' },
-      { status: 404 },
-    )
-  }
-
-  const report = await prisma.inspectionReport.upsert({
-    where: { bookingId: id },
-    update: {
-      staffId: staff.id,
-      status: parsed.data.status,
-      notes: parsed.data.notes ?? null,
-      photos: parsed.data.photos ?? [],
-      submittedAt: new Date(),
-    },
-    create: {
-      bookingId: id,
-      staffId: staff.id,
-      status: parsed.data.status,
-      notes: parsed.data.notes ?? null,
-      photos: parsed.data.photos ?? [],
-    },
+  const report = await upsertInspectionReport(id, {
+    staffId: authState.userId,
+    status: parsed.data.status,
+    notes: parsed.data.notes ?? null,
+    photos: parsed.data.photos ?? [],
   })
 
   await orchestrator.handleInspectionComplete(id, parsed.data.status)
@@ -72,7 +47,9 @@ export async function POST(
     {
       inspectionReport: {
         ...report,
-        submittedAt: report.submittedAt.toISOString(),
+        submittedAt: report.submittedAt instanceof Date
+          ? report.submittedAt.toISOString()
+          : report.submittedAt,
       },
     },
     { status: 201 },

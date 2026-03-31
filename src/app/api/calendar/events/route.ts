@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db/client'
+import {
+  getAllAmenities,
+  getBookingsByStatus,
+  getResidentById,
+  getAmenityById,
+  getInspectionReport,
+  type BookingStatus,
+} from '@/lib/firebase/db'
 
 const AMENITY_COLORS = [
   '#3B82F6',
@@ -22,33 +29,15 @@ export async function GET(req: NextRequest) {
   const isAdmin = role === 'admin'
   const isJanitorial = role === 'janitorial'
 
-  const statusFilter = isJanitorial
-    ? { in: ['CONFIRMED' as const, 'COMPLETED' as const, 'DISPUTE' as const] }
+  const statuses: BookingStatus[] = isJanitorial
+    ? ['CONFIRMED', 'COMPLETED', 'DISPUTE']
     : isAdmin
-      ? { in: ['CONFIRMED' as const, 'PENDING_APPROVAL' as const] }
-      : 'CONFIRMED' as const
+      ? ['CONFIRMED', 'PENDING_APPROVAL']
+      : ['CONFIRMED']
 
   const [amenities, bookings] = await Promise.all([
-    prisma.amenity.findMany({
-      orderBy: { name: 'asc' },
-      select: {
-        id: true,
-        name: true,
-      },
-    }),
-    prisma.booking.findMany({
-      where: { status: statusFilter },
-      include: {
-        amenity: { select: { id: true, name: true } },
-        resident: {
-          select: { name: true, unitNumber: true, email: true },
-        },
-        inspectionReport: {
-          select: { status: true, submittedAt: true },
-        },
-      },
-      orderBy: { startDatetime: 'asc' },
-    }),
+    getAllAmenities(),
+    getBookingsByStatus(statuses),
   ])
 
   const colorMap = new Map<string, string>()
@@ -62,35 +51,47 @@ export async function GET(req: NextRequest) {
     eventColor: colorMap.get(amenity.id),
   }))
 
-  const events = bookings.map((booking) => {
-    const isPending = booking.status === 'PENDING_APPROVAL'
-    const inspectionNeeded =
-      booking.status === 'CONFIRMED' &&
-      booking.endDatetime.getTime() < Date.now() &&
-      !booking.inspectionReport
+  // Resolve related data for each booking
+  const events = await Promise.all(
+    bookings.map(async (booking) => {
+      const [amenity, resident, inspection] = await Promise.all([
+        getAmenityById(booking.amenityId),
+        getResidentById(booking.residentId),
+        getInspectionReport(booking.id),
+      ])
 
-    return {
-      id: booking.id,
-      resourceId: booking.amenityId,
-      title: isJanitorial
-        ? `${booking.amenity.name} setup / inspection`
-        : `${booking.amenity.name} - ${booking.resident.name} (Unit ${booking.resident.unitNumber})`,
-      start: booking.startDatetime.toISOString(),
-      end: booking.endDatetime.toISOString(),
-      color: isPending ? PENDING_COLOR : colorMap.get(booking.amenityId)!,
-      extendedProps: {
-        amenityId: booking.amenityId,
-        amenityName: booking.amenity.name,
-        residentName: booking.resident.name,
-        residentEmail: booking.resident.email,
-        unitNumber: booking.resident.unitNumber,
-        guestCount: booking.guestCount,
-        status: booking.status,
-        inspectionStatus: booking.inspectionReport?.status ?? null,
-        inspectionNeeded,
-      },
-    }
-  })
+      const isPending = booking.status === 'PENDING_APPROVAL'
+      const endTime = booking.endDatetime instanceof Date
+        ? booking.endDatetime.getTime()
+        : new Date(booking.endDatetime).getTime()
+      const inspectionNeeded =
+        booking.status === 'CONFIRMED' &&
+        endTime < Date.now() &&
+        !inspection
+
+      return {
+        id: booking.id,
+        resourceId: booking.amenityId,
+        title: isJanitorial
+          ? `${amenity?.name ?? 'Unknown'} setup / inspection`
+          : `${amenity?.name ?? 'Unknown'} - ${resident?.name ?? 'Unknown'} (Unit ${resident?.unitNumber ?? '?'})`,
+        start: booking.startDatetime instanceof Date ? booking.startDatetime.toISOString() : booking.startDatetime,
+        end: booking.endDatetime instanceof Date ? booking.endDatetime.toISOString() : booking.endDatetime,
+        color: isPending ? PENDING_COLOR : colorMap.get(booking.amenityId)!,
+        extendedProps: {
+          amenityId: booking.amenityId,
+          amenityName: amenity?.name ?? 'Unknown',
+          residentName: resident?.name ?? 'Unknown',
+          residentEmail: resident?.email ?? '',
+          unitNumber: resident?.unitNumber ?? '',
+          guestCount: booking.guestCount,
+          status: booking.status,
+          inspectionStatus: inspection?.status ?? null,
+          inspectionNeeded,
+        },
+      }
+    }),
+  )
 
   return NextResponse.json({ events, resources })
 }

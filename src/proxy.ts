@@ -1,36 +1,27 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/api/webhooks/(.*)',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-])
+const publicPaths = ['/', '/sign-in', '/sign-up']
 
-const isAdminRoute = createRouteMatcher(['/admin(.*)', '/api/admin(.*)'])
+function isPublic(pathname: string) {
+  if (publicPaths.includes(pathname)) return true
+  if (pathname.startsWith('/api/webhooks/')) return true
+  return false
+}
 
-const isJanitorialRoute = createRouteMatcher(['/janitorial(.*)'])
+export default function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl
+  if (isPublic(pathname)) return NextResponse.next()
 
-export default clerkMiddleware(async (auth, req) => {
-  if (isPublicRoute(req)) {
-    return
+  const session = req.cookies.get('__session')?.value
+  if (!session) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    return NextResponse.redirect(new URL('/sign-in', req.url))
   }
 
-  const { sessionClaims } = await auth.protect()
-  const role = (sessionClaims?.metadata as { role?: string } | undefined)?.role
-
-  if (isAdminRoute(req) && role !== 'property_manager' && role !== 'board') {
-    return new Response('Forbidden', { status: 403 })
-  }
-
-  if (
-    isJanitorialRoute(req) &&
-    role !== 'janitorial' &&
-    role !== 'property_manager'
-  ) {
-    return new Response('Forbidden', { status: 403 })
-  }
-})
+  return NextResponse.next()
+}
 
 export const config = {
   matcher: [

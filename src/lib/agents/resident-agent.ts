@@ -1,16 +1,11 @@
-import { prisma } from '@/lib/db/client'
+import { getBookingWithRelations } from '@/lib/firebase/db'
 import { formatCurrency, formatDateRange } from '@/lib/format'
 import { sendEmail } from '@/lib/integrations/gmail'
 import { sendSMS } from '@/lib/integrations/twilio'
 
 async function getBooking(bookingId: string) {
-  return prisma.booking.findUniqueOrThrow({
-    where: { id: bookingId },
-    include: {
-      resident: true,
-      amenity: true,
-    },
-  })
+  const { booking, amenity, resident } = await getBookingWithRelations(bookingId)
+  return { ...booking, amenity, resident }
 }
 
 function bookingSummaryHtml(booking: Awaited<ReturnType<typeof getBooking>>) {
@@ -19,8 +14,8 @@ function bookingSummaryHtml(booking: Awaited<ReturnType<typeof getBooking>>) {
       <li><strong>Amenity:</strong> ${booking.amenity.name}</li>
       <li><strong>When:</strong> ${formatDateRange(booking.startDatetime, booking.endDatetime)}</li>
       <li><strong>Guests:</strong> ${booking.guestCount}</li>
-      <li><strong>Rental fee:</strong> ${formatCurrency(Number(booking.amenity.rentalFee))}</li>
-      <li><strong>Deposit:</strong> ${formatCurrency(Number(booking.amenity.depositAmount))}</li>
+      <li><strong>Rental fee:</strong> ${formatCurrency(booking.amenity.rentalFee)}</li>
+      <li><strong>Deposit:</strong> ${formatCurrency(booking.amenity.depositAmount)}</li>
     </ul>
   `
 }

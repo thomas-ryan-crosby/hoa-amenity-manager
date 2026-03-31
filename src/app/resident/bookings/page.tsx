@@ -1,28 +1,18 @@
 export const dynamic = 'force-dynamic'
 
-import { auth } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/db/client'
+import { getAuthContext } from '@/lib/auth'
+import { getResidentByFirebaseUid, getBookingsByResident } from '@/lib/firebase/db'
 import { formatDateRange } from '@/lib/format'
 
 export default async function BookingHistoryPage() {
-  const { userId } = await auth()
+  const { userId } = await getAuthContext()
 
   const resident = userId
-    ? await prisma.resident.findUnique({
-        where: { clerkUserId: userId },
-      })
+    ? await getResidentByFirebaseUid(userId)
     : null
 
   const bookings = resident
-    ? await prisma.booking.findMany({
-        where: { residentId: resident.id },
-        include: {
-          amenity: {
-            select: { name: true },
-          },
-        },
-        orderBy: { startDatetime: 'desc' },
-      })
+    ? await getBookingsByResident(resident.id)
     : []
 
   return (
@@ -49,7 +39,7 @@ export default async function BookingHistoryPage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-semibold text-stone-900">
-                    {booking.amenity.name}
+                    {booking.amenityName}
                   </h2>
                   <p className="mt-2 text-sm text-stone-600">
                     {formatDateRange(booking.startDatetime, booking.endDatetime)}

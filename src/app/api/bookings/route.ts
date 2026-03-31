@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/db/client'
+import { requireUser } from '@/lib/auth'
+import {
+  getResidentByFirebaseUid,
+  getBookingsByResident,
+  createBookingWithAuditLog,
+} from '@/lib/firebase/db'
 import * as orchestrator from '@/lib/agents/orchestrator'
 
 const CreateBookingSchema = z.object({
@@ -13,14 +17,13 @@ const CreateBookingSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const { userId } = await auth()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authState = await requireUser()
+  if (!authState.ok) {
+    return authState.response
   }
+  const { userId } = authState
 
-  const resident = await prisma.resident.findUnique({
-    where: { clerkUserId: userId },
-  })
+  const resident = await getResidentByFirebaseUid(userId)
   if (!resident) {
     return NextResponse.json(
       { error: 'Resident profile not found. Please complete onboarding.' },
@@ -45,37 +48,19 @@ export async function POST(req: NextRequest) {
 
   const { amenityId, startDatetime, endDatetime, guestCount, notes } = parsed.data
 
-  // Create booking and initial audit log in a transaction
-  const booking = await prisma.$transaction(async (tx) => {
-    const newBooking = await tx.booking.create({
-      data: {
-        residentId: resident.id,
-        amenityId,
-        status: 'INQUIRY_RECEIVED',
-        startDatetime: new Date(startDatetime),
-        endDatetime: new Date(endDatetime),
-        guestCount,
-        notes: notes ?? null,
-      },
-    })
-
-    await tx.auditLog.create({
-      data: {
-        bookingId: newBooking.id,
-        agent: 'api',
-        event: 'BOOKING_CREATED',
-        payload: {
-          amenityId,
-          startDatetime,
-          endDatetime,
-          guestCount,
-          notes: notes ?? null,
-        },
-      },
-    })
-
-    return newBooking
-  })
+  const booking = await createBookingWithAuditLog(
+    {
+      residentId: resident.id,
+      amenityId,
+      status: 'INQUIRY_RECEIVED',
+      startDatetime: new Date(startDatetime),
+      endDatetime: new Date(endDatetime),
+      guestCount,
+      notes: notes ?? null,
+    },
+    'api',
+    'BOOKING_CREATED',
+  )
 
   // Kick off async orchestration (fire-and-forget)
   orchestrator.handleNewBooking(booking.id).catch((err) => {
@@ -89,14 +74,13 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  const { userId } = await auth()
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authState = await requireUser()
+  if (!authState.ok) {
+    return authState.response
   }
+  const { userId } = authState
 
-  const resident = await prisma.resident.findUnique({
-    where: { clerkUserId: userId },
-  })
+  const resident = await getResidentByFirebaseUid(userId)
   if (!resident) {
     return NextResponse.json(
       { error: 'Resident profile not found.' },
@@ -104,24 +88,16 @@ export async function GET() {
     )
   }
 
-  const bookings = await prisma.booking.findMany({
-    where: { residentId: resident.id },
-    include: {
-      amenity: {
-        select: { name: true },
-      },
-    },
-    orderBy: { startDatetime: 'desc' },
-  })
+  const bookings = await getBookingsByResident(resident.id)
 
   const result = bookings.map((b) => ({
     id: b.id,
-    amenityName: b.amenity.name,
-    startDatetime: b.startDatetime.toISOString(),
-    endDatetime: b.endDatetime.toISOString(),
+    amenityName: b.amenityName,
+    startDatetime: b.startDatetime instanceof Date ? b.startDatetime.toISOString() : b.startDatetime,
+    endDatetime: b.endDatetime instanceof Date ? b.endDatetime.toISOString() : b.endDatetime,
     guestCount: b.guestCount,
     status: b.status,
-    createdAt: b.createdAt.toISOString(),
+    createdAt: b.createdAt instanceof Date ? b.createdAt.toISOString() : b.createdAt,
   }))
 
   return NextResponse.json({ bookings: result })

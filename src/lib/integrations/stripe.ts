@@ -1,5 +1,5 @@
 import Stripe from 'stripe'
-import { prisma } from '@/lib/db/client'
+import { updateResident } from '@/lib/firebase/db'
 
 let _stripe: Stripe | null = null
 
@@ -31,10 +31,7 @@ export async function getOrCreateCustomer(resident: {
     metadata: { residentId: resident.id },
   })
 
-  await prisma.resident.update({
-    where: { id: resident.id },
-    data: { stripeCustomerId: customer.id },
-  })
+  await updateResident(resident.id, { stripeCustomerId: customer.id })
 
   return customer.id
 }

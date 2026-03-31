@@ -1,11 +1,16 @@
 import type Anthropic from '@anthropic-ai/sdk'
-import { Prisma } from '@prisma/client'
-import { prisma } from '@/lib/db/client'
-
-/** Safely convert unknown values to Prisma JSON */
-function toJson(value: unknown): Prisma.InputJsonValue {
-  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue
-}
+import {
+  getAllAmenities,
+  getAmenityById,
+  updateAmenity,
+  createAmenity,
+  getAllStaff,
+  createStaff,
+  getBlackoutDates,
+  addBlackoutDate,
+  removeBlackoutDate,
+  addAuditLog,
+} from '@/lib/firebase/db'
 
 let _anthropic: Anthropic | null = null
 async function getAnthropicClient(): Promise<Anthropic> {
@@ -136,9 +141,10 @@ const tools: Anthropic.Tool[] = [
     input_schema: {
       type: 'object' as const,
       properties: {
+        amenityId: { type: 'string' },
         blackoutDateId: { type: 'string' },
       },
-      required: ['blackoutDateId'],
+      required: ['amenityId', 'blackoutDateId'],
     },
   },
 ]
@@ -149,17 +155,14 @@ async function executeTool(
 ): Promise<string> {
   switch (name) {
     case 'list_amenities': {
-      const amenities = await prisma.amenity.findMany({
-        include: { blackoutDates: true, approverStaff: true },
-        orderBy: { name: 'asc' },
-      })
+      const amenities = await getAllAmenities()
       return JSON.stringify(
         amenities.map((a) => ({
           id: a.id,
           name: a.name,
           capacity: a.capacity,
-          rentalFee: Number(a.rentalFee),
-          depositAmount: Number(a.depositAmount),
+          rentalFee: a.rentalFee,
+          depositAmount: a.depositAmount,
           requiresApproval: a.requiresApproval,
           autoApproveThreshold: a.autoApproveThreshold,
           escalationHours: a.escalationHours,
@@ -168,8 +171,6 @@ async function executeTool(
           partialRefundPercent: a.partialRefundPercent,
           maxAdvanceBookingDays: a.maxAdvanceBookingDays,
           janitorialAssignment: a.janitorialAssignment,
-          approver: a.approverStaff?.name ?? 'Default PM',
-          blackoutDates: a.blackoutDates.length,
         })),
         null,
         2,
@@ -182,43 +183,33 @@ async function executeTool(
       for (const [key, value] of Object.entries(updates)) {
         if (value !== undefined) data[key] = value
       }
-      const updated = await prisma.amenity.update({
-        where: { id: amenityId as string },
-        data,
+      await updateAmenity(amenityId as string, data)
+      const updated = await getAmenityById(amenityId as string)
+      await addAuditLog(null, 'config-agent', 'AMENITY_UPDATED', {
+        amenityId,
+        updates: data,
       })
-      await prisma.auditLog.create({
-        data: {
-          agent: 'config-agent',
-          event: 'AMENITY_UPDATED',
-          payload: toJson({ amenityId, updates: data }),
-        },
-      })
-      return `Updated amenity "${updated.name}" successfully.`
+      return `Updated amenity "${updated?.name ?? amenityId}" successfully.`
     }
 
     case 'create_amenity': {
-      const amenity = await prisma.amenity.create({
-        data: {
-          name: input.name as string,
-          description: (input.description as string) ?? null,
-          capacity: input.capacity as number,
-          rentalFee: input.rentalFee as number,
-          depositAmount: input.depositAmount as number,
-          calendarId: (input.calendarId as string) ?? 'pending-setup',
-        },
+      const amenity = await createAmenity({
+        name: input.name as string,
+        description: (input.description as string) ?? null,
+        capacity: input.capacity as number,
+        rentalFee: input.rentalFee as number,
+        depositAmount: input.depositAmount as number,
+        calendarId: (input.calendarId as string) ?? 'pending-setup',
       })
-      await prisma.auditLog.create({
-        data: {
-          agent: 'config-agent',
-          event: 'AMENITY_CREATED',
-          payload: toJson({ amenityId: amenity.id, name: amenity.name }),
-        },
+      await addAuditLog(null, 'config-agent', 'AMENITY_CREATED', {
+        amenityId: amenity.id,
+        name: amenity.name,
       })
       return `Created amenity "${amenity.name}" (ID: ${amenity.id}).`
     }
 
     case 'list_staff': {
-      const staff = await prisma.staff.findMany({ orderBy: { name: 'asc' } })
+      const staff = await getAllStaff()
       return JSON.stringify(
         staff.map((s) => ({
           id: s.id,
@@ -233,60 +224,44 @@ async function executeTool(
     }
 
     case 'create_staff': {
-      const staff = await prisma.staff.create({
-        data: {
-          name: input.name as string,
-          email: input.email as string,
-          phone: (input.phone as string) ?? null,
-          role: input.role as 'PROPERTY_MANAGER' | 'JANITORIAL',
-        },
+      const staff = await createStaff({
+        name: input.name as string,
+        email: input.email as string,
+        phone: (input.phone as string) ?? null,
+        role: input.role as 'PROPERTY_MANAGER' | 'JANITORIAL',
       })
-      await prisma.auditLog.create({
-        data: {
-          agent: 'config-agent',
-          event: 'STAFF_CREATED',
-          payload: toJson({ staffId: staff.id, name: staff.name, role: staff.role }),
-        },
+      await addAuditLog(null, 'config-agent', 'STAFF_CREATED', {
+        staffId: staff.id,
+        name: staff.name,
+        role: staff.role,
       })
       return `Created staff member "${staff.name}" (${staff.role}).`
     }
 
     case 'add_blackout_date': {
-      const blackout = await prisma.blackoutDate.create({
-        data: {
-          amenityId: input.amenityId as string,
-          startDate: new Date(input.startDate as string),
-          endDate: new Date(input.endDate as string),
-          reason: (input.reason as string) ?? null,
-          recurring: (input.recurring as boolean) ?? false,
-        },
+      const blackout = await addBlackoutDate(input.amenityId as string, {
+        startDate: new Date(input.startDate as string),
+        endDate: new Date(input.endDate as string),
+        reason: (input.reason as string) ?? null,
+        recurring: (input.recurring as boolean) ?? false,
       })
-      await prisma.auditLog.create({
-        data: {
-          agent: 'config-agent',
-          event: 'BLACKOUT_DATE_ADDED',
-          payload: toJson({
-            amenityId: input.amenityId,
-            blackoutDateId: blackout.id,
-            startDate: input.startDate,
-            endDate: input.endDate,
-          }),
-        },
+      await addAuditLog(null, 'config-agent', 'BLACKOUT_DATE_ADDED', {
+        amenityId: input.amenityId,
+        blackoutDateId: blackout.id,
+        startDate: input.startDate,
+        endDate: input.endDate,
       })
       return `Added blackout date (${input.startDate} to ${input.endDate})${input.recurring ? ' (recurring annually)' : ''}.`
     }
 
     case 'list_blackout_dates': {
-      const dates = await prisma.blackoutDate.findMany({
-        where: { amenityId: input.amenityId as string },
-        orderBy: { startDate: 'asc' },
-      })
+      const dates = await getBlackoutDates(input.amenityId as string)
       if (dates.length === 0) return 'No blackout dates configured for this amenity.'
       return JSON.stringify(
         dates.map((d) => ({
           id: d.id,
-          startDate: d.startDate.toISOString().split('T')[0],
-          endDate: d.endDate.toISOString().split('T')[0],
+          startDate: d.startDate instanceof Date ? d.startDate.toISOString().split('T')[0] : String(d.startDate).split('T')[0],
+          endDate: d.endDate instanceof Date ? d.endDate.toISOString().split('T')[0] : String(d.endDate).split('T')[0],
           reason: d.reason,
           recurring: d.recurring,
         })),
@@ -296,15 +271,12 @@ async function executeTool(
     }
 
     case 'remove_blackout_date': {
-      await prisma.blackoutDate.delete({
-        where: { id: input.blackoutDateId as string },
-      })
-      await prisma.auditLog.create({
-        data: {
-          agent: 'config-agent',
-          event: 'BLACKOUT_DATE_REMOVED',
-          payload: toJson({ blackoutDateId: input.blackoutDateId }),
-        },
+      await removeBlackoutDate(
+        input.amenityId as string,
+        input.blackoutDateId as string,
+      )
+      await addAuditLog(null, 'config-agent', 'BLACKOUT_DATE_REMOVED', {
+        blackoutDateId: input.blackoutDateId,
       })
       return 'Blackout date removed.'
     }

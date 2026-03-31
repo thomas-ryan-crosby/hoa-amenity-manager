@@ -1,41 +1,42 @@
-import { PrismaClient } from '@prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
+import { initializeApp, cert, getApps } from 'firebase-admin/app'
+import { getFirestore } from 'firebase-admin/firestore'
 
-const prisma = new PrismaClient({
-  adapter: new PrismaPg({
-    connectionString:
-      process.env.DATABASE_URL ??
-      'postgresql://user:password@localhost:5432/sanctuary_booking',
-  }),
-})
+// Initialize Firebase Admin directly (standalone script)
+if (!getApps().length) {
+  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+  if (serviceAccount) {
+    initializeApp({ credential: cert(JSON.parse(serviceAccount)) })
+  } else {
+    initializeApp()
+  }
+}
+
+const db = getFirestore()
 
 async function main() {
-  console.log('Seeding database...')
+  console.log('Seeding Firestore...')
 
-  // Seed staff
-  const pm = await prisma.staff.upsert({
-    where: { email: 'pm@sanctuaryhoa.org' },
-    update: {},
-    create: {
-      name: 'Property Manager',
-      email: 'pm@sanctuaryhoa.org',
-      phone: '+15551234567',
-      role: 'PROPERTY_MANAGER',
-    },
+  // ---- Staff ----
+  const pmRef = db.collection('staff').doc()
+  const janitorRef = db.collection('staff').doc()
+
+  await pmRef.set({
+    name: 'Property Manager',
+    email: 'pm@sanctuaryhoa.org',
+    phone: '+15551234567',
+    role: 'PROPERTY_MANAGER',
   })
 
-  const janitor = await prisma.staff.upsert({
-    where: { email: 'janitorial@sanctuaryhoa.org' },
-    update: {},
-    create: {
-      name: 'Janitorial Staff',
-      email: 'janitorial@sanctuaryhoa.org',
-      phone: '+15559876543',
-      role: 'JANITORIAL',
-    },
+  await janitorRef.set({
+    name: 'Janitorial Staff',
+    email: 'janitorial@sanctuaryhoa.org',
+    phone: '+15559876543',
+    role: 'JANITORIAL',
   })
 
-  // Seed amenities
+  console.log(`  Staff: Property Manager (${pmRef.id}), Janitorial Staff (${janitorRef.id})`)
+
+  // ---- Amenities ----
   const amenities = [
     {
       name: 'Clubhouse / Event Room',
@@ -46,7 +47,7 @@ async function main() {
       calendarId: 'clubhouse-calendar-id',
       requiresApproval: true,
       autoApproveThreshold: null,
-      approverStaffId: pm.id,
+      approverStaffId: pmRef.id,
       escalationHours: 48,
       fullRefundHours: 72,
       partialRefundHours: 24,
@@ -63,7 +64,7 @@ async function main() {
       calendarId: 'pool-calendar-id',
       requiresApproval: true,
       autoApproveThreshold: 10,
-      approverStaffId: pm.id,
+      approverStaffId: pmRef.id,
       escalationHours: 48,
       fullRefundHours: 72,
       partialRefundHours: 24,
@@ -97,7 +98,7 @@ async function main() {
       calendarId: 'bbq-calendar-id',
       requiresApproval: true,
       autoApproveThreshold: 15,
-      approverStaffId: pm.id,
+      approverStaffId: pmRef.id,
       escalationHours: 48,
       fullRefundHours: 72,
       partialRefundHours: 24,
@@ -108,27 +109,17 @@ async function main() {
   ]
 
   for (const amenity of amenities) {
-    await prisma.amenity.upsert({
-      where: { id: amenity.name.toLowerCase().replace(/[^a-z0-9]/g, '-') },
-      update: {},
-      create: {
-        ...amenity,
-        rentalFee: amenity.rentalFee,
-        depositAmount: amenity.depositAmount,
-      },
-    })
+    const ref = db.collection('amenities').doc()
+    await ref.set(amenity)
+    console.log(`  Amenity: ${amenity.name} (${ref.id})`)
   }
 
   console.log('Seeding complete.')
-  console.log(`  Staff: ${pm.name}, ${janitor.name}`)
+  console.log(`  Staff: 2 created`)
   console.log(`  Amenities: ${amenities.length} created`)
 }
 
-main()
-  .catch((e) => {
-    console.error(e)
-    process.exit(1)
-  })
-  .finally(async () => {
-    await prisma.$disconnect()
-  })
+main().catch((e) => {
+  console.error(e)
+  process.exit(1)
+})

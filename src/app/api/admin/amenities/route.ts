@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/db/client'
 import { requireRole } from '@/lib/auth'
+import {
+  getAllAmenities,
+  getBlackoutDates,
+  createAmenity,
+  addAuditLog,
+} from '@/lib/firebase/db'
 
 const AmenitySchema = z.object({
   name: z.string().min(2),
@@ -21,42 +26,31 @@ const AmenitySchema = z.object({
   janitorialAssignment: z.enum(['rotation', 'manual']),
 })
 
-function serializeAmenity(amenity: Awaited<ReturnType<typeof prisma.amenity.findFirstOrThrow>>) {
-  return {
-    ...amenity,
-    rentalFee: Number(amenity.rentalFee),
-    depositAmount: Number(amenity.depositAmount),
-  }
-}
-
 export async function GET() {
   const authState = await requireRole(['property_manager', 'board'])
   if (!authState.ok) {
     return authState.response
   }
 
-  const amenities = await prisma.amenity.findMany({
-    include: {
-      approverStaff: {
-        select: { id: true, name: true, email: true },
-      },
-      blackoutDates: {
-        orderBy: { startDate: 'asc' },
-      },
-    },
-    orderBy: { name: 'asc' },
-  })
+  const amenities = await getAllAmenities()
 
-  return NextResponse.json({
-    amenities: amenities.map((amenity) => ({
-      ...serializeAmenity(amenity),
-      blackoutDates: amenity.blackoutDates.map((blackout) => ({
-        ...blackout,
-        startDate: blackout.startDate.toISOString(),
-        endDate: blackout.endDate.toISOString(),
-      })),
-    })),
-  })
+  const amenitiesWithBlackouts = await Promise.all(
+    amenities.map(async (amenity) => {
+      const blackoutDates = await getBlackoutDates(amenity.id)
+      return {
+        ...amenity,
+        rentalFee: Number(amenity.rentalFee),
+        depositAmount: Number(amenity.depositAmount),
+        blackoutDates: blackoutDates.map((blackout) => ({
+          ...blackout,
+          startDate: blackout.startDate instanceof Date ? blackout.startDate.toISOString() : blackout.startDate,
+          endDate: blackout.endDate instanceof Date ? blackout.endDate.toISOString() : blackout.endDate,
+        })),
+      }
+    }),
+  )
+
+  return NextResponse.json({ amenities: amenitiesWithBlackouts })
 }
 
 export async function POST(req: NextRequest) {
@@ -79,25 +73,23 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const amenity = await prisma.amenity.create({
-    data: {
-      ...parsed.data,
-      description: parsed.data.description ?? null,
-      autoApproveThreshold: parsed.data.autoApproveThreshold ?? null,
-      approverStaffId: parsed.data.approverStaffId ?? null,
-    },
-    include: {
-      approverStaff: {
-        select: { id: true, name: true, email: true },
-      },
-      blackoutDates: true,
-    },
+  const amenity = await createAmenity({
+    ...parsed.data,
+    description: parsed.data.description ?? null,
+    autoApproveThreshold: parsed.data.autoApproveThreshold ?? null,
+    approverStaffId: parsed.data.approverStaffId ?? null,
+  })
+
+  await addAuditLog(amenity.id, 'admin', 'AMENITY_CREATED', {
+    amenityName: parsed.data.name,
   })
 
   return NextResponse.json(
     {
       amenity: {
-        ...serializeAmenity(amenity),
+        ...amenity,
+        rentalFee: Number(amenity.rentalFee),
+        depositAmount: Number(amenity.depositAmount),
         blackoutDates: [],
       },
     },
