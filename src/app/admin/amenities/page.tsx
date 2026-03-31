@@ -16,7 +16,7 @@ export default async function AmenitySetupPage() {
         const blackoutDates = await getBlackoutDates(amenity.id)
         return {
           ...amenity,
-          janitorialAssignment: amenity.janitorialAssignment as 'rotation' | 'manual',
+          janitorialAssignment: amenity.janitorialAssignment as 'rotation' | 'manual' | 'none',
           blackoutDates: blackoutDates
             .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
             .map((blackout) => ({

@@ -22,7 +22,7 @@ const AmenityUpdateSchema = z.object({
   partialRefundHours: z.number().int().min(0),
   partialRefundPercent: z.number().int().min(0).max(100),
   maxAdvanceBookingDays: z.number().int().positive(),
-  janitorialAssignment: z.enum(['rotation', 'manual']),
+  janitorialAssignment: z.enum(['rotation', 'manual', 'none']),
 })
 
 export async function PUT(

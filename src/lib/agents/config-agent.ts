@@ -69,7 +69,7 @@ const tools: Anthropic.Tool[] = [
         partialRefundHours: { type: 'number' },
         partialRefundPercent: { type: 'number' },
         maxAdvanceBookingDays: { type: 'number' },
-        janitorialAssignment: { type: 'string', enum: ['rotation', 'manual'] },
+        janitorialAssignment: { type: 'string', enum: ['rotation', 'manual', 'none'] },
       },
       required: ['amenityId'],
     },

@@ -18,6 +18,10 @@ import { sendEmail } from '@/lib/integrations/gmail'
 async function assignJanitorialStaff(amenityId: string) {
   const amenity = await getAmenityById(amenityId)
 
+  if (amenity?.janitorialAssignment === 'none') {
+    return null // Janitorial not required for this amenity
+  }
+
   if (amenity?.janitorialAssignment === 'manual') {
     return null // Manual assignment — PM will assign via dashboard
   }

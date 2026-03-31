@@ -33,7 +33,7 @@ type Amenity = {
   partialRefundHours: number
   partialRefundPercent: number
   maxAdvanceBookingDays: number
-  janitorialAssignment: 'rotation' | 'manual'
+  janitorialAssignment: 'rotation' | 'manual' | 'none'
   blackoutDates: BlackoutDate[]
 }
 
@@ -42,6 +42,7 @@ type AmenityForm = {
   description: string
   capacity: number
   isPaid: boolean
+  requiresJanitorial: boolean
   rentalFee: number
   depositAmount: number
   requiresApproval: boolean
@@ -52,7 +53,7 @@ type AmenityForm = {
   partialRefundHours: number
   partialRefundPercent: number
   maxAdvanceBookingDays: number
-  janitorialAssignment: 'rotation' | 'manual'
+  janitorialAssignment: 'rotation' | 'manual' | 'none'
 }
 
 const emptyAmenityForm: AmenityForm = {
@@ -60,6 +61,7 @@ const emptyAmenityForm: AmenityForm = {
   description: '',
   capacity: 1,
   isPaid: true,
+  requiresJanitorial: true,
   rentalFee: 0,
   depositAmount: 0,
   requiresApproval: true,
@@ -80,6 +82,7 @@ function toAmenityForm(amenity: Amenity | null): AmenityForm {
     description: amenity.description ?? '',
     capacity: amenity.capacity,
     isPaid: amenity.rentalFee > 0 || amenity.depositAmount > 0,
+    requiresJanitorial: amenity.janitorialAssignment !== 'none',
     rentalFee: amenity.rentalFee,
     depositAmount: amenity.depositAmount,
     requiresApproval: amenity.requiresApproval,
@@ -220,7 +223,7 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
       partialRefundHours: f.isPaid ? Number(f.partialRefundHours) : 0,
       partialRefundPercent: f.isPaid ? Number(f.partialRefundPercent) : 0,
       maxAdvanceBookingDays: Number(f.maxAdvanceBookingDays),
-      janitorialAssignment: f.janitorialAssignment,
+      janitorialAssignment: f.requiresJanitorial ? f.janitorialAssignment : 'none',
     }
 
     const url = selectedAmenity ? `/api/admin/amenities/${selectedAmenity.id}` : '/api/admin/amenities'
@@ -438,16 +441,27 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
                 </div>
               )}
 
-              {/* -- Janitorial -- */}
+              {/* -- Janitorial toggle -- */}
               <div className="border-t border-stone-200 pt-5">
-                <label className="text-sm font-medium text-stone-700">
-                  Janitorial assignment <Info tip="Rotation: automatically assigns the next available janitor in a round-robin. Manual: the PM assigns janitorial staff from the dashboard." />
-                  <select className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3" value={f.janitorialAssignment} onChange={(e) => set({ janitorialAssignment: e.target.value as 'rotation' | 'manual' })}>
-                    <option value="rotation">Automatic rotation</option>
-                    <option value="manual">Manual assignment by PM</option>
-                  </select>
-                </label>
+                <Toggle
+                  checked={f.requiresJanitorial}
+                  onChange={(v) => set({ requiresJanitorial: v })}
+                  label="Requires janitorial"
+                  tip="When enabled, janitorial staff are automatically assigned for pre-event setup and post-event inspection. When disabled, no janitorial work is scheduled."
+                />
               </div>
+
+              {f.requiresJanitorial && (
+                <div className="rounded-2xl bg-stone-50 p-4">
+                  <label className="text-sm font-medium text-stone-700">
+                    Assignment mode <Info tip="Rotation: automatically assigns the next available janitor in a round-robin based on recent workload. Manual: the PM assigns janitorial staff from the dashboard." />
+                    <select className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3" value={f.janitorialAssignment} onChange={(e) => set({ janitorialAssignment: e.target.value as 'rotation' | 'manual' | 'none' })}>
+                      <option value="rotation">Automatic rotation</option>
+                      <option value="manual">Manual assignment by PM</option>
+                    </select>
+                  </label>
+                </div>
+              )}
 
               <div className="flex gap-3">
                 <button className="rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white" type="submit">
