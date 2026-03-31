@@ -7,6 +7,7 @@ import {
   createBookingWithAuditLog,
 } from '@/lib/firebase/db'
 import * as orchestrator from '@/lib/agents/orchestrator'
+import * as residentAgent from '@/lib/agents/resident-agent'
 
 const CreateBookingSchema = z.object({
   amenityId: z.string().min(1),
@@ -61,6 +62,11 @@ export async function POST(req: NextRequest) {
     'api',
     'BOOKING_CREATED',
   )
+
+  // Send booking received email immediately
+  residentAgent.notifyBookingReceived(booking.id).catch((err) => {
+    console.error(`[Email] Booking received notification failed for ${booking.id}:`, err)
+  })
 
   // Kick off async orchestration (fire-and-forget)
   orchestrator.handleNewBooking(booking.id).catch((err) => {

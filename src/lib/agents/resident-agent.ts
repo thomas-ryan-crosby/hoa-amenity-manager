@@ -19,6 +19,35 @@ function bookingSummaryHtml(booking: Awaited<ReturnType<typeof getBooking>>) {
   `
 }
 
+export async function notifyBookingReceived(bookingId: string): Promise<void> {
+  const booking = await getBooking(bookingId)
+  await sendEmail({
+    to: booking.resident.email,
+    subject: `Booking request received for ${booking.amenity.name}`,
+    html: `
+      <p>Hi ${booking.resident.name},</p>
+      <p>We've received your booking request for <strong>${booking.amenity.name}</strong>. We'll notify you once it's been reviewed.</p>
+      ${bookingSummaryHtml(booking)}
+      <p style="color: #78716c; font-size: 13px;">You can check the status of your booking anytime in the booking portal.</p>
+    `,
+  })
+}
+
+export async function notifyCancelled(bookingId: string, reason?: string): Promise<void> {
+  const booking = await getBooking(bookingId)
+  await sendEmail({
+    to: booking.resident.email,
+    subject: `Booking cancelled for ${booking.amenity.name}`,
+    html: `
+      <p>Hi ${booking.resident.name},</p>
+      <p>Your booking for <strong>${booking.amenity.name}</strong> has been cancelled.</p>
+      ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
+      ${bookingSummaryHtml(booking)}
+      <p>Any applicable refund will be processed per the cancellation policy.</p>
+    `,
+  })
+}
+
 export async function notifyUnavailable(bookingId: string): Promise<void> {
   const booking = await getBooking(bookingId)
   await sendEmail({

@@ -293,6 +293,11 @@ export async function handleCancellation(bookingId: string): Promise<void> {
     refundReason,
   })
 
+  // Notify resident of cancellation
+  residentAgent.notifyCancelled(bookingId, refundReason).catch((err) => {
+    console.error(`[Orchestrator] Cancellation email failed for ${bookingId}:`, err)
+  })
+
   // Promote the next waitlisted booking for this slot
   await promoteNextWaitlisted(
     booking.amenityId,
