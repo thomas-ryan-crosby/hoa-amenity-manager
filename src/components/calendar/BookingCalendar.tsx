@@ -206,16 +206,19 @@ export function BookingCalendar() {
         <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
           <FullCalendar
             plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-            initialView="timeGridWeek"
+            initialView="rolling3Day"
             views={{
-              timeGridWeek: {
+              rolling3Day: {
+                type: 'timeGrid',
+                duration: { days: 7 },
                 dateIncrement: { days: 3 },
+                buttonText: 'Week',
               },
             }}
             headerToolbar={{
               left: 'prev,next today',
               center: 'title',
-              right: 'timeGridDay,timeGridWeek,dayGridMonth',
+              right: 'timeGridDay,rolling3Day,dayGridMonth',
             }}
             events={filteredEvents}
             selectable

@@ -231,16 +231,19 @@ export function JanitorialCalendar() {
         <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-          initialView="timeGridWeek"
+          initialView="rolling3Day"
           views={{
-            timeGridWeek: {
+            rolling3Day: {
+              type: 'timeGrid',
+              duration: { days: 7 },
               dateIncrement: { days: 3 },
+              buttonText: 'Week',
             },
           }}
           headerToolbar={{
             left: 'prev,next today',
             center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay',
+            right: 'timeGridDay,rolling3Day,dayGridMonth',
           }}
           events={calendarEvents}
           editable={true}
