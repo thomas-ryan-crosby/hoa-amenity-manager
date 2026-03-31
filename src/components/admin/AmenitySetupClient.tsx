@@ -345,22 +345,22 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="text-sm font-medium text-stone-700 md:col-span-2">
                   Name <Info tip="The public-facing name residents see when booking." />
-                  <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3" value={f.name} onChange={(e) => set({ name: e.target.value })} />
+                  <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900" value={f.name} onChange={(e) => set({ name: e.target.value })} />
                 </label>
 
                 <label className="text-sm font-medium text-stone-700 md:col-span-2">
                   Description <Info tip="A short description shown to residents during booking. Include capacity info, rules, or what's included." />
-                  <textarea className="mt-2 min-h-20 w-full rounded-2xl border border-stone-300 px-4 py-3" value={f.description} onChange={(e) => set({ description: e.target.value })} />
+                  <textarea className="mt-2 min-h-20 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900" value={f.description} onChange={(e) => set({ description: e.target.value })} />
                 </label>
 
                 <label className="text-sm font-medium text-stone-700">
                   Max capacity <Info tip="Maximum number of guests allowed. Booking requests exceeding this are rejected." />
-                  <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3" type="number" min={1} value={f.capacity} onChange={(e) => set({ capacity: Number(e.target.value) })} />
+                  <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900" type="number" min={1} value={f.capacity} onChange={(e) => set({ capacity: Number(e.target.value) })} />
                 </label>
 
                 <label className="text-sm font-medium text-stone-700">
                   Advance booking window <Info tip="How many days in advance residents can book. E.g. 90 means they can book up to 3 months out." />
-                  <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3" type="number" min={1} value={f.maxAdvanceBookingDays} onChange={(e) => set({ maxAdvanceBookingDays: Number(e.target.value) })} />
+                  <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900" type="number" min={1} value={f.maxAdvanceBookingDays} onChange={(e) => set({ maxAdvanceBookingDays: Number(e.target.value) })} />
                 </label>
               </div>
 
@@ -378,12 +378,12 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
                 <div className="grid gap-4 rounded-2xl bg-stone-50 p-4 md:grid-cols-2">
                   <label className="text-sm font-medium text-stone-700">
                     Rental fee ($) <Info tip="The base fee charged to the resident for each booking." />
-                    <input className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3" type="number" min={0} step="0.01" value={f.rentalFee} onChange={(e) => set({ rentalFee: Number(e.target.value) })} />
+                    <input className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-stone-900" type="number" min={0} step="0.01" value={f.rentalFee} onChange={(e) => set({ rentalFee: Number(e.target.value) })} />
                   </label>
 
                   <label className="text-sm font-medium text-stone-700">
                     Security deposit ($) <Info tip="A refundable deposit held until after the event. Released automatically if the post-event inspection passes." />
-                    <input className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3" type="number" min={0} step="0.01" value={f.depositAmount} onChange={(e) => set({ depositAmount: Number(e.target.value) })} />
+                    <input className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-stone-900" type="number" min={0} step="0.01" value={f.depositAmount} onChange={(e) => set({ depositAmount: Number(e.target.value) })} />
                   </label>
 
                   <h4 className="text-sm font-semibold text-stone-800 md:col-span-2">
@@ -392,17 +392,17 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
 
                   <label className="text-sm font-medium text-stone-700">
                     Full refund if cancelled (hours before) <Info tip="Residents get 100% back if they cancel at least this many hours before the event." />
-                    <input className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3" type="number" min={0} value={f.fullRefundHours} onChange={(e) => set({ fullRefundHours: Number(e.target.value) })} />
+                    <input className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-stone-900" type="number" min={0} value={f.fullRefundHours} onChange={(e) => set({ fullRefundHours: Number(e.target.value) })} />
                   </label>
 
                   <label className="text-sm font-medium text-stone-700">
                     Partial refund if cancelled (hours before) <Info tip="Residents get a partial refund if they cancel between this time and the full-refund window." />
-                    <input className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3" type="number" min={0} value={f.partialRefundHours} onChange={(e) => set({ partialRefundHours: Number(e.target.value) })} />
+                    <input className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-stone-900" type="number" min={0} value={f.partialRefundHours} onChange={(e) => set({ partialRefundHours: Number(e.target.value) })} />
                   </label>
 
                   <label className="text-sm font-medium text-stone-700">
                     Partial refund percent <Info tip="The percentage refunded during the partial refund window. E.g. 50 means they get half back." />
-                    <input className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3" type="number" min={0} max={100} value={f.partialRefundPercent} onChange={(e) => set({ partialRefundPercent: Number(e.target.value) })} />
+                    <input className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-stone-900" type="number" min={0} max={100} value={f.partialRefundPercent} onChange={(e) => set({ partialRefundPercent: Number(e.target.value) })} />
                   </label>
                 </div>
               )}
@@ -421,12 +421,12 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
                 <div className="grid gap-4 rounded-2xl bg-stone-50 p-4 md:grid-cols-2">
                   <label className="text-sm font-medium text-stone-700">
                     Auto-approve if guests under <Info tip="Bookings with fewer guests than this number are automatically approved, skipping PM review. Leave blank to always require approval." />
-                    <input className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3" type="number" min={1} placeholder="Always require approval" value={f.autoApproveThreshold} onChange={(e) => set({ autoApproveThreshold: e.target.value })} />
+                    <input className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-stone-900" type="number" min={1} placeholder="Always require approval" value={f.autoApproveThreshold} onChange={(e) => set({ autoApproveThreshold: e.target.value })} />
                   </label>
 
                   <label className="text-sm font-medium text-stone-700">
                     Designated approver <Info tip="Which property manager receives the approval request email. Falls back to the PM email in General Settings." />
-                    <select className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3" value={f.approverStaffId} onChange={(e) => set({ approverStaffId: e.target.value })}>
+                    <select className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-stone-900" value={f.approverStaffId} onChange={(e) => set({ approverStaffId: e.target.value })}>
                       <option value="">Default PM email</option>
                       {staff.filter((m) => m.role === 'PROPERTY_MANAGER').map((m) => (
                         <option key={m.id} value={m.id}>{m.name}</option>
@@ -436,7 +436,7 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
 
                   <label className="text-sm font-medium text-stone-700">
                     Escalation timeout (hours) <Info tip="If the approver doesn't respond within this many hours, the request escalates to the default PM email." />
-                    <input className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3" type="number" min={1} value={f.escalationHours} onChange={(e) => set({ escalationHours: Number(e.target.value) })} />
+                    <input className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-stone-900" type="number" min={1} value={f.escalationHours} onChange={(e) => set({ escalationHours: Number(e.target.value) })} />
                   </label>
                 </div>
               )}
@@ -455,7 +455,7 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
                 <div className="rounded-2xl bg-stone-50 p-4">
                   <label className="text-sm font-medium text-stone-700">
                     Assignment mode <Info tip="Rotation: automatically assigns the next available janitor in a round-robin based on recent workload. Manual: the PM assigns janitorial staff from the dashboard." />
-                    <select className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3" value={f.janitorialAssignment} onChange={(e) => set({ janitorialAssignment: e.target.value as 'rotation' | 'manual' | 'none' })}>
+                    <select className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-stone-900" value={f.janitorialAssignment} onChange={(e) => set({ janitorialAssignment: e.target.value as 'rotation' | 'manual' | 'none' })}>
                       <option value="rotation">Automatic rotation</option>
                       <option value="manual">Manual assignment by PM</option>
                     </select>
@@ -488,15 +488,15 @@ export function AmenitySetupClient({ initialAmenities, initialStaff }: Props) {
               <form className="mt-4 grid gap-4 md:grid-cols-2" onSubmit={addBlackoutDate}>
                 <label className="text-sm font-medium text-stone-700">
                   Start
-                  <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3" type="datetime-local" value={blackoutForm.startDate} onChange={(e) => setBlackoutForm((c) => ({ ...c, startDate: e.target.value }))} />
+                  <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900" type="datetime-local" value={blackoutForm.startDate} onChange={(e) => setBlackoutForm((c) => ({ ...c, startDate: e.target.value }))} />
                 </label>
                 <label className="text-sm font-medium text-stone-700">
                   End
-                  <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3" type="datetime-local" value={blackoutForm.endDate} onChange={(e) => setBlackoutForm((c) => ({ ...c, endDate: e.target.value }))} />
+                  <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900" type="datetime-local" value={blackoutForm.endDate} onChange={(e) => setBlackoutForm((c) => ({ ...c, endDate: e.target.value }))} />
                 </label>
                 <label className="text-sm font-medium text-stone-700 md:col-span-2">
                   Reason
-                  <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3" value={blackoutForm.reason} onChange={(e) => setBlackoutForm((c) => ({ ...c, reason: e.target.value }))} />
+                  <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900" value={blackoutForm.reason} onChange={(e) => setBlackoutForm((c) => ({ ...c, reason: e.target.value }))} />
                 </label>
                 <label className="flex items-center gap-3 rounded-2xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 md:col-span-2">
                   <input checked={blackoutForm.recurring} onChange={(e) => setBlackoutForm((c) => ({ ...c, recurring: e.target.checked }))} type="checkbox" />
