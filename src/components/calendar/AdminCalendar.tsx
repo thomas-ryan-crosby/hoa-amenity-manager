@@ -285,9 +285,33 @@ export function AdminCalendar() {
           </div>
         </div>
 
-        <p className="mb-3 text-xs text-stone-400">
+        <p className="mb-2 text-xs text-stone-400">
           Tip: Shift+click to view multiple amenities together
         </p>
+
+        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-600">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#D4D4D8]" /> New request
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#F59E0B]" /> Pending approval
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#8B5CF6]" /> Awaiting payment
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#10B981]" /> Confirmed
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#0EA5E9]" /> Waitlisted
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#78716C]" /> Cleaning
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#A1A1AA]" /> Cleaning done
+          </span>
+        </div>
 
         {viewMode === 'calendar' ? (
           <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
