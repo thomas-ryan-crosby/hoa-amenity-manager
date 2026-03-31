@@ -54,20 +54,18 @@ export async function PUT(
     )
   }
 
-  // Handle parent-child relationship changes
+  // Handle parent-child relationship — always ensure both sides are synced
   const existing = await getAmenityById(id)
   const newParentId = parsed.data.parentAmenityId ?? null
   const oldParentId = existing?.parentAmenityId ?? null
 
-  if (newParentId !== oldParentId) {
-    // Unlink from old parent
-    if (oldParentId) {
-      await unlinkAmenity(id)
-    }
-    // Link to new parent
-    if (newParentId) {
-      await linkAmenities(newParentId, id)
-    }
+  // Unlink from old parent if changing
+  if (oldParentId && oldParentId !== newParentId) {
+    await unlinkAmenity(id)
+  }
+  // Link to new parent (always re-link to ensure both sides are correct)
+  if (newParentId) {
+    await linkAmenities(newParentId, id)
   }
 
   await updateAmenity(id, {
