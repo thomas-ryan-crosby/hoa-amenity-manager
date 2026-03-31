@@ -13,14 +13,17 @@ type CalendarEvent = {
   start: string
   end: string
   color?: string
+  editable?: boolean
   extendedProps: {
+    type: 'booking' | 'turn-window'
     amenityId: string
     amenityName: string
-    residentName: string
-    residentEmail: string
-    unitNumber: string
-    guestCount: number
+    residentName?: string
+    residentEmail?: string
+    unitNumber?: string
+    guestCount?: number
     status: string
+    turnWindowId?: string
   }
 }
 
@@ -50,24 +53,24 @@ export function AdminCalendar() {
   }, [])
 
   const selectedEvent = useMemo(
-    () => events.find((event) => event.id === selectedId) ?? null,
+    () => events.find((e) => e.id === selectedId) ?? null,
     [events, selectedId],
   )
+
+  const isTurnWindow = selectedEvent?.extendedProps.type === 'turn-window'
+  const isBooking = selectedEvent?.extendedProps.type === 'booking'
 
   async function approveBooking() {
     if (!selectedEvent) return
     setBusy(true)
     setError(null)
     try {
-      const response = await fetch(`/api/admin/bookings/${selectedEvent.id}/approve`, { method: 'POST' })
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error ?? 'Unable to approve booking.')
-      }
+      const res = await fetch(`/api/admin/bookings/${selectedEvent.id}/approve`, { method: 'POST' })
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Unable to approve.')
       await loadEvents()
       setSelectedId(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to approve booking.')
+      setError(err instanceof Error ? err.message : 'Unable to approve.')
     } finally {
       setBusy(false)
     }
@@ -78,20 +81,17 @@ export function AdminCalendar() {
     setBusy(true)
     setError(null)
     try {
-      const response = await fetch(`/api/admin/bookings/${selectedEvent.id}/deny`, {
+      const res = await fetch(`/api/admin/bookings/${selectedEvent.id}/deny`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: denialReason }),
       })
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error ?? 'Unable to deny booking.')
-      }
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Unable to deny.')
       await loadEvents()
       setSelectedId(null)
       setDenialReason('')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to deny booking.')
+      setError(err instanceof Error ? err.message : 'Unable to deny.')
     } finally {
       setBusy(false)
     }
@@ -103,15 +103,46 @@ export function AdminCalendar() {
     setBusy(true)
     setError(null)
     try {
-      const response = await fetch(`/api/admin/bookings/${selectedEvent.id}/cancel`, { method: 'POST' })
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error ?? 'Unable to cancel booking.')
-      }
+      const res = await fetch(`/api/admin/bookings/${selectedEvent.id}/cancel`, { method: 'POST' })
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Unable to cancel.')
       await loadEvents()
       setSelectedId(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to cancel booking.')
+      setError(err instanceof Error ? err.message : 'Unable to cancel.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function updateTurnWindow(turnWindowId: string, start: string, end: string) {
+    try {
+      const res = await fetch(`/api/turn-windows/${turnWindowId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actualStart: start, actualEnd: end }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Unable to update turn window.')
+      await loadEvents()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to update turn window.')
+    }
+  }
+
+  async function completeTurnWindow() {
+    if (!selectedEvent?.extendedProps.turnWindowId) return
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/turn-windows/${selectedEvent.extendedProps.turnWindowId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete' }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Unable to complete.')
+      await loadEvents()
+      setSelectedId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to complete turn window.')
     } finally {
       setBusy(false)
     }
@@ -133,10 +164,29 @@ export function AdminCalendar() {
             right: 'timeGridDay,timeGridWeek,dayGridMonth',
           }}
           events={events}
+          editable={false}
+          eventStartEditable
+          eventDurationEditable
           eventClick={(info) => {
             setSelectedId(info.event.id)
             setDenialReason('')
             setError(null)
+          }}
+          eventDrop={(info) => {
+            const props = info.event.extendedProps
+            if (props.type === 'turn-window' && props.turnWindowId && props.status !== 'COMPLETED') {
+              updateTurnWindow(props.turnWindowId, info.event.startStr, info.event.endStr)
+            } else {
+              info.revert()
+            }
+          }}
+          eventResize={(info) => {
+            const props = info.event.extendedProps
+            if (props.type === 'turn-window' && props.turnWindowId && props.status !== 'COMPLETED') {
+              updateTurnWindow(props.turnWindowId, info.event.startStr, info.event.endStr)
+            } else {
+              info.revert()
+            }
           }}
           slotMinTime="06:00:00"
           slotMaxTime="23:00:00"
@@ -146,13 +196,49 @@ export function AdminCalendar() {
 
       <aside className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
-          Booking Review
+          {isTurnWindow ? 'Cleaning Window' : 'Booking Review'}
         </p>
         <h2 className="mt-2 text-2xl font-semibold text-stone-900">
           {selectedEvent ? selectedEvent.extendedProps.amenityName : 'Select an event'}
         </h2>
 
-        {selectedEvent ? (
+        {selectedEvent && isTurnWindow ? (
+          <div className="mt-5 space-y-4">
+            <div className="rounded-2xl bg-stone-50 p-4 text-sm leading-6 text-stone-700">
+              <p><strong>Type:</strong> Cleaning / Turn Window</p>
+              <p><strong>Amenity:</strong> {selectedEvent.extendedProps.amenityName}</p>
+              <p><strong>Window:</strong> {formatDateRange(selectedEvent.start, selectedEvent.end)}</p>
+              <p>
+                <strong>Status:</strong>{' '}
+                <span className={`font-medium ${
+                  selectedEvent.extendedProps.status === 'COMPLETED' ? 'text-emerald-700' :
+                  selectedEvent.extendedProps.status === 'SCHEDULED' ? 'text-cyan-700' : 'text-amber-700'
+                }`}>
+                  {selectedEvent.extendedProps.status}
+                </span>
+              </p>
+            </div>
+
+            <p className="text-sm text-stone-600">
+              Drag or resize the cleaning block on the calendar to adjust the window.
+            </p>
+
+            {error && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+            )}
+
+            {selectedEvent.extendedProps.status !== 'COMPLETED' && (
+              <button
+                className="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:bg-emerald-300"
+                disabled={busy}
+                onClick={completeTurnWindow}
+                type="button"
+              >
+                {busy ? 'Working...' : 'Mark cleaning complete'}
+              </button>
+            )}
+          </div>
+        ) : selectedEvent && isBooking ? (
           <div className="mt-5 space-y-4">
             <div className="rounded-2xl bg-stone-50 p-4 text-sm leading-6 text-stone-700">
               <p><strong>Resident:</strong> {selectedEvent.extendedProps.residentName}</p>
@@ -173,7 +259,7 @@ export function AdminCalendar() {
                 <label className="block text-sm font-medium text-stone-700">
                   Denial reason
                   <textarea
-                    className="mt-2 min-h-28 w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none transition focus:border-amber-500"
+                    className="mt-2 min-h-28 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900 outline-none transition focus:border-amber-500"
                     placeholder="Explain why the request cannot be approved."
                     value={denialReason}
                     onChange={(e) => setDenialReason(e.target.value)}
@@ -219,7 +305,7 @@ export function AdminCalendar() {
           </div>
         ) : (
           <div className="mt-5 rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-4 py-6 text-sm leading-6 text-stone-600">
-            Click any event to inspect details and act on pending approvals.
+            Click any event to inspect details. Drag cleaning blocks to adjust turn windows.
           </div>
         )}
       </aside>

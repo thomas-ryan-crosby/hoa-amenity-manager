@@ -158,13 +158,13 @@ export async function GET(req: NextRequest) {
       return {
         id: `tw-${tw.id}`,
         resourceId: tw.amenityId,
-        title: isJanitorial ? `Turn: ${tw.amenityName}` : `Cleaning - ${tw.amenityName}`,
+        title: (isJanitorial || isAdmin) ? `Turn: ${tw.amenityName}` : `Cleaning - ${tw.amenityName}`,
         start: start instanceof Date ? start.toISOString() : String(start),
         end: end instanceof Date ? end.toISOString() : String(end),
-        color: isJanitorial
+        color: (isJanitorial || isAdmin)
           ? (TURN_WINDOW_COLORS[tw.status] ?? TURN_WINDOW_COLORS.PENDING)
           : tw.status === 'COMPLETED' ? '#D4D4D8' : '#A1A1AA',
-        editable: isJanitorial && tw.status !== 'COMPLETED',
+        editable: (isJanitorial || isAdmin) && tw.status !== 'COMPLETED',
         extendedProps: {
           type: 'turn-window' as const,
           amenityId: tw.amenityId,
