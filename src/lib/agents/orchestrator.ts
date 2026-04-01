@@ -15,10 +15,6 @@ import {
 } from '@/lib/integrations/stripe'
 import * as residentAgent from '@/lib/agents/resident-agent'
 import * as pmAgent from '@/lib/agents/pm-agent'
-import {
-  scheduleReminder,
-  schedulePostEventFollowup,
-} from '@/lib/queue/reminder-jobs'
 
 // ---------------------------------------------------------------------------
 // handleNewBooking
@@ -127,8 +123,7 @@ export async function handleNewBooking(bookingId: string): Promise<void> {
       event: 'AUTO_CONFIRMED_FREE',
       guestCount: booking.guestCount,
     })
-    await scheduleReminder(bookingId, booking.startDatetime)
-    await schedulePostEventFollowup(bookingId, booking.endDatetime)
+    // Reminders and follow-ups handled by Vercel Cron (/api/cron)
     residentAgent.sendConfirmation(bookingId).catch((err) => {
       console.error(`[Orchestrator] Failed to send confirmation for ${bookingId}:`, err)
     })
@@ -174,8 +169,7 @@ export async function handleApproval(bookingId: string): Promise<void> {
       event: 'APPROVED_AND_CONFIRMED_FREE',
       from: booking.status,
     })
-    await scheduleReminder(bookingId, booking.startDatetime)
-    await schedulePostEventFollowup(bookingId, booking.endDatetime)
+    // Reminders and follow-ups handled by Vercel Cron (/api/cron)
     residentAgent.sendConfirmation(bookingId).catch((err) => {
       console.error(`[Orchestrator] Failed to send confirmation for ${bookingId}:`, err)
     })
@@ -241,8 +235,7 @@ export async function handlePaymentSuccess(bookingId: string): Promise<void> {
     from: booking.status,
   })
 
-  await scheduleReminder(bookingId, booking.startDatetime)
-  await schedulePostEventFollowup(bookingId, booking.endDatetime)
+  // Reminders and follow-ups handled by Vercel Cron (/api/cron)
   await residentAgent.sendConfirmation(bookingId)
 }
 
