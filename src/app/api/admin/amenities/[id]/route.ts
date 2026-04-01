@@ -71,13 +71,40 @@ export async function PUT(
     await linkAmenities(newParentId, id)
   }
 
+  // Sync suggested pairings both ways
+  const newSuggested = new Set(parsed.data.suggestedAmenityIds ?? [])
+  const oldSuggested = new Set(existing?.suggestedAmenityIds ?? [])
+
+  // Add this amenity to newly suggested partners
+  for (const partnerId of newSuggested) {
+    if (!oldSuggested.has(partnerId)) {
+      const partner = await getAmenityById(partnerId)
+      if (partner) {
+        const partnerSuggestions = new Set(partner.suggestedAmenityIds ?? [])
+        partnerSuggestions.add(id)
+        await updateAmenity(partnerId, { suggestedAmenityIds: [...partnerSuggestions] })
+      }
+    }
+  }
+
+  // Remove this amenity from partners that were unlinked
+  for (const partnerId of oldSuggested) {
+    if (!newSuggested.has(partnerId)) {
+      const partner = await getAmenityById(partnerId)
+      if (partner) {
+        const partnerSuggestions = (partner.suggestedAmenityIds ?? []).filter((sid: string) => sid !== id)
+        await updateAmenity(partnerId, { suggestedAmenityIds: partnerSuggestions })
+      }
+    }
+  }
+
   await updateAmenity(id, {
     ...parsed.data,
     description: parsed.data.description ?? null,
     autoApproveThreshold: parsed.data.autoApproveThreshold ?? null,
     approverStaffId: parsed.data.approverStaffId ?? null,
     parentAmenityId: newParentId,
-    suggestedAmenityIds: parsed.data.suggestedAmenityIds ?? [],
+    suggestedAmenityIds: [...newSuggested],
     areaId: parsed.data.areaId ?? null,
     sortOrder: parsed.data.sortOrder ?? 0,
   })
