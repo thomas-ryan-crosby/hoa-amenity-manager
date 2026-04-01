@@ -1,6 +1,13 @@
+'use client'
+
+import { useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 import { BookingCalendar } from '@/components/calendar/BookingCalendar'
 
-export default function ResidentBookingPage() {
+function ResidentContent() {
+  const searchParams = useSearchParams()
+  const modifyBookingId = searchParams.get('modify')
+
   return (
     <main className="min-h-screen bg-stone-50 px-6 py-8">
       <div className="mx-auto max-w-7xl">
@@ -9,16 +16,31 @@ export default function ResidentBookingPage() {
             Resident Portal
           </p>
           <h1 className="mt-2 text-4xl font-semibold text-stone-900">
-            Book an amenity
+            {modifyBookingId ? 'Modify booking' : 'Book an amenity'}
           </h1>
           <p className="mt-3 max-w-3xl text-base leading-7 text-stone-600">
-            Browse confirmed reservations, pick an open slot, and submit a request
-            for review. Payment is collected only after approval or auto-approval.
+            {modifyBookingId
+              ? 'Select a new time slot below. Once you submit the new booking, the original will be cancelled automatically.'
+              : 'Browse confirmed reservations, pick an open slot, and submit a request for review.'}
           </p>
         </div>
 
-        <BookingCalendar />
+        {modifyBookingId && (
+          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            You are modifying an existing booking. Select a new time and submit — your original booking will be cancelled and any applicable refund processed.
+          </div>
+        )}
+
+        <BookingCalendar modifyBookingId={modifyBookingId} />
       </div>
     </main>
+  )
+}
+
+export default function ResidentBookingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-stone-50" />}>
+      <ResidentContent />
+    </Suspense>
   )
 }

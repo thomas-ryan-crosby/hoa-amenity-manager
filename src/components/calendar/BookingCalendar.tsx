@@ -72,7 +72,7 @@ const STATUS_BADGE_STYLES: Record<string, string> = {
   WAITLISTED: 'bg-sky-100 text-sky-800',
 }
 
-export function BookingCalendar() {
+export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string | null }) {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [amenities, setAmenities] = useState<Amenity[]>([])
   const [areas, setAreas] = useState<Area[]>([])
@@ -217,10 +217,23 @@ export function BookingCalendar() {
       setGuestCount(1)
       setNotes('')
 
-      const statusMsg = data.status === 'WAITLISTED'
-        ? 'Your booking has been waitlisted because the slot already has an active booking. You will be notified if it opens up.'
-        : `Booking request submitted! Status: ${data.status}`
+      // If modifying, cancel the original booking
+      if (modifyBookingId) {
+        await fetch(`/api/bookings/${modifyBookingId}/cancel`, { method: 'POST' }).catch(() => {})
+      }
+
+      const statusMsg = modifyBookingId
+        ? 'Booking modified! Your original booking has been cancelled.'
+        : data.status === 'WAITLISTED'
+          ? 'Your booking has been waitlisted because the slot already has an active booking. You will be notified if it opens up.'
+          : 'Booking request submitted!'
       alert(statusMsg)
+
+      // If modifying, redirect back to bookings
+      if (modifyBookingId) {
+        window.location.href = '/resident/bookings'
+        return
+      }
     } catch (submitError) {
       setError(
         submitError instanceof Error
