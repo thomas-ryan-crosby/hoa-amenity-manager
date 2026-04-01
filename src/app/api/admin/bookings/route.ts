@@ -15,8 +15,11 @@ const AdminBookingSchema = z.object({
   guestCount: z.number().int().positive(),
   notes: z.string().optional(),
   // Book on behalf
-  residentId: z.string().optional(),       // link to existing resident
-  bookedByName: z.string().optional(),     // OR enter a generic name
+  residentId: z.string().optional(),
+  bookedByName: z.string().optional(),
+  bookedByEmail: z.string().email().optional().or(z.literal('')),
+  bookedByPhone: z.string().optional(),
+  sendCommsToBookee: z.boolean().optional(),
   // Options
   feeWaived: z.boolean().optional(),
   anonymous: z.boolean().optional(),
@@ -36,7 +39,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { amenityId, startDatetime, endDatetime, guestCount, notes, residentId, bookedByName, feeWaived, anonymous } = parsed.data
+  const { amenityId, startDatetime, endDatetime, guestCount, notes, residentId, bookedByName, bookedByEmail, bookedByPhone, sendCommsToBookee, feeWaived, anonymous } = parsed.data
 
   // Determine the resident
   let actualResidentId = residentId ?? ''
@@ -60,7 +63,10 @@ export async function POST(req: NextRequest) {
       guestCount,
       notes: notes ?? null,
       bookedByName: bookedByName ?? null,
+      bookedByEmail: bookedByEmail || null,
+      bookedByPhone: bookedByPhone || null,
       bookedByStaffId: authState.userId,
+      sendCommsToBookee: sendCommsToBookee ?? false,
       feeWaived: feeWaived ?? false,
       anonymous: anonymous ?? false,
     },

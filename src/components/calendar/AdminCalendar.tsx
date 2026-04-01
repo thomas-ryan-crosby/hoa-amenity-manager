@@ -95,6 +95,9 @@ export function AdminCalendar() {
   const [bookingForm, setBookingForm] = useState({
     residentId: '',
     bookedByName: '',
+    bookedByEmail: '',
+    bookedByPhone: '',
+    sendCommsToBookee: false,
     guestCount: 1,
     notes: '',
     feeWaived: false,
@@ -198,6 +201,9 @@ export function AdminCalendar() {
     setBookingForm({
       residentId: '',
       bookedByName: '',
+      bookedByEmail: '',
+      bookedByPhone: '',
+      sendCommsToBookee: false,
       guestCount: 1,
       notes: '',
       feeWaived: false,
@@ -361,6 +367,9 @@ export function AdminCalendar() {
         body.residentId = bookingForm.residentId
       } else if (nameMode === 'manual' && bookingForm.bookedByName.trim()) {
         body.bookedByName = bookingForm.bookedByName.trim()
+        if (bookingForm.bookedByEmail.trim()) body.bookedByEmail = bookingForm.bookedByEmail.trim()
+        if (bookingForm.bookedByPhone.trim()) body.bookedByPhone = bookingForm.bookedByPhone.trim()
+        body.sendCommsToBookee = bookingForm.sendCommsToBookee
       }
 
       const res = await fetch('/api/admin/bookings', {
@@ -531,6 +540,9 @@ export function AdminCalendar() {
                 setBookingForm({
                   residentId: '',
                   bookedByName: '',
+                  bookedByEmail: '',
+                  bookedByPhone: '',
+                  sendCommsToBookee: false,
                   guestCount: 1,
                   notes: '',
                   feeWaived: false,
@@ -711,6 +723,7 @@ export function AdminCalendar() {
                 </select>
               </label>
             ) : (
+              <>
               <label className="block text-sm font-medium text-stone-700">
                 Name
                 <input
@@ -721,6 +734,39 @@ export function AdminCalendar() {
                   onChange={(e) => setBookingForm((prev) => ({ ...prev, bookedByName: e.target.value }))}
                 />
               </label>
+
+              <label className="block text-sm font-medium text-stone-700">
+                Email
+                <input
+                  className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900 placeholder:text-stone-400 outline-none transition focus:border-amber-500"
+                  type="email"
+                  placeholder="guest@example.com"
+                  value={bookingForm.bookedByEmail}
+                  onChange={(e) => setBookingForm((prev) => ({ ...prev, bookedByEmail: e.target.value }))}
+                />
+              </label>
+
+              <label className="block text-sm font-medium text-stone-700">
+                Phone
+                <input
+                  className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900 placeholder:text-stone-400 outline-none transition focus:border-amber-500"
+                  type="tel"
+                  placeholder="(555) 123-4567"
+                  value={bookingForm.bookedByPhone}
+                  onChange={(e) => setBookingForm((prev) => ({ ...prev, bookedByPhone: e.target.value }))}
+                />
+              </label>
+
+              <label className="flex items-center gap-3 text-sm text-stone-700">
+                <input
+                  type="checkbox"
+                  checked={bookingForm.sendCommsToBookee}
+                  onChange={(e) => setBookingForm((prev) => ({ ...prev, sendCommsToBookee: e.target.checked }))}
+                  className="rounded"
+                />
+                Send booking emails to this person
+              </label>
+              </>
             )}
 
             <label className="block text-sm font-medium text-stone-700">
