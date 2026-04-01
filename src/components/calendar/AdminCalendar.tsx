@@ -510,7 +510,7 @@ export function AdminCalendar() {
             <FullCalendar
               ref={calendarRef}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-              initialView={isMobile ? 'timeGridDay' : 'rolling3Day'}
+              initialView={isMobile ? 'timeGridDay' : 'dayGridMonth'}
               eventDisplay="block"
               views={{
                 rolling3Day: {
@@ -534,12 +534,12 @@ export function AdminCalendar() {
               selectAllow={(info) => !info.allDay}
               dateClick={(info) => {
                 if (info.view.type === 'dayGridMonth') {
-                  calendarRef.current?.getApi().changeView('timeGridDay', info.dateStr)
+                  calendarRef.current?.getApi().changeView('rolling3Day', info.dateStr)
                 }
               }}
               navLinks
               navLinkDayClick={(date) => {
-                calendarRef.current?.getApi().changeView('timeGridDay', date)
+                calendarRef.current?.getApi().changeView('rolling3Day', date)
               }}
               select={(info) => {
                 if (!primaryAmenityId || info.allDay) return

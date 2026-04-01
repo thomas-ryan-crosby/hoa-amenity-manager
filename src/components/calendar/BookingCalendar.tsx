@@ -443,7 +443,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
             <FullCalendar
               ref={calendarRef}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-              initialView={isMobile ? 'timeGridDay' : 'rolling3Day'}
+              initialView={isMobile ? 'timeGridDay' : 'dayGridMonth'}
               eventDisplay="block"
               views={{
                 rolling3Day: {
@@ -480,14 +480,13 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                 setNotes('')
               }}
               dateClick={(info) => {
-                // In month view, clicking a day navigates to that day's time grid
                 if (info.view.type === 'dayGridMonth') {
-                  calendarRef.current?.getApi().changeView('timeGridDay', info.dateStr)
+                  calendarRef.current?.getApi().changeView('rolling3Day', info.dateStr)
                 }
               }}
               navLinks
               navLinkDayClick={(date) => {
-                calendarRef.current?.getApi().changeView('timeGridDay', date)
+                calendarRef.current?.getApi().changeView('rolling3Day', date)
               }}
               eventOverlap
               selectOverlap
