@@ -3,6 +3,7 @@ import {
   getAllAmenities,
   getBookingsByStatus,
   getResidentById,
+  getResidentByFirebaseUid,
   getAmenityById,
   getInspectionReport,
   getTurnWindowsForAmenity,
@@ -83,10 +84,11 @@ export async function GET(req: NextRequest) {
   // Resolve related data for each booking
   const bookingEvents = await Promise.all(
     bookings.map(async (booking) => {
-      const [amenity, resident, inspection] = await Promise.all([
+      const [amenity, resident, inspection, createdByResident] = await Promise.all([
         getAmenityById(booking.amenityId),
         booking.residentId ? getResidentById(booking.residentId) : Promise.resolve(null),
         getInspectionReport(booking.id),
+        booking.bookedByStaffId ? getResidentByFirebaseUid(booking.bookedByStaffId).catch(() => null) : Promise.resolve(null),
       ])
 
       const isEarlyStage = ['INQUIRY_RECEIVED', 'AVAILABILITY_CHECKING'].includes(booking.status)
@@ -139,6 +141,7 @@ export async function GET(req: NextRequest) {
           unitNumber: (isAdmin || isJanitorial) ? displayUnit : publicUnit,
           guestCount: booking.guestCount,
           bookedByName: booking.bookedByName,
+          createdByName: booking.bookedByStaffId ? (createdByResident?.name ?? 'Staff') : null,
           feeWaived: booking.feeWaived ?? false,
           anonymous: isAnonymous,
           status: booking.status,

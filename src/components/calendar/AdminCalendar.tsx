@@ -31,6 +31,7 @@ type CalendarEvent = {
     status: string
     turnWindowId?: string
     bookedByName?: string
+    createdByName?: string
     feeWaived?: boolean
     anonymous?: boolean
   }
@@ -917,7 +918,12 @@ export function AdminCalendar() {
               )}
               {selectedEvent.extendedProps.bookedByName && (
                 <span className="inline-flex items-center rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800">
-                  Booked by: {selectedEvent.extendedProps.bookedByName}
+                  Booked for: {selectedEvent.extendedProps.bookedByName}
+                </span>
+              )}
+              {selectedEvent.extendedProps.createdByName && (
+                <span className="inline-flex items-center rounded-full bg-stone-200 px-2.5 py-0.5 text-xs font-semibold text-stone-700">
+                  Created by: {selectedEvent.extendedProps.createdByName}
                 </span>
               )}
             </div>
