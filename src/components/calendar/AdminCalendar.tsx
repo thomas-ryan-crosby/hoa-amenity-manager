@@ -119,25 +119,35 @@ export function AdminCalendar() {
 
   async function loadEvents() {
     try {
-      const [eventsRes, amenitiesRes, residentsRes] = await Promise.all([
+      const [eventsRes, amenitiesRes] = await Promise.all([
         fetch('/api/calendar/events?role=admin'),
         fetch('/api/amenities'),
-        fetch('/api/admin/residents'),
       ])
-      const eventsData = await eventsRes.json()
-      const amenitiesData = await amenitiesRes.json()
-      const residentsData = await residentsRes.json()
+
+      const eventsData = eventsRes.ok ? await eventsRes.json() : { events: [] }
+      const amenitiesData = amenitiesRes.ok ? await amenitiesRes.json() : { amenities: [], areas: [] }
+
       setEvents(eventsData.events ?? [])
       const amenityList = amenitiesData.amenities ?? []
       setAmenities(amenityList)
       setAreas(amenitiesData.areas ?? [])
-      setResidents(residentsData.residents ?? [])
       setSelectedAmenities((prev) => {
         if (prev.size === 0 && amenityList.length) {
           return new Set([amenityList[0].id])
         }
         return prev
       })
+
+      // Residents fetch separately — don't let it block calendar
+      try {
+        const residentsRes = await fetch('/api/admin/residents')
+        if (residentsRes.ok) {
+          const residentsData = await residentsRes.json()
+          setResidents(residentsData.residents ?? [])
+        }
+      } catch {
+        // Residents list is optional for calendar display
+      }
     } catch (loadError) {
       console.error('Failed to load admin calendar', loadError)
       setError('Unable to load calendar data right now.')
