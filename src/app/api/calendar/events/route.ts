@@ -125,7 +125,7 @@ export async function GET(req: NextRequest) {
         color: isWaitlisted
           ? WAITLISTED_COLOR
           : isEarlyStage
-            ? '#D4D4D8'
+            ? '#EC4899'
             : isPending
               ? PENDING_COLOR
               : isPaymentPending
@@ -134,14 +134,14 @@ export async function GET(req: NextRequest) {
         backgroundColor: isWaitlisted
           ? WAITLISTED_COLOR
           : isEarlyStage
-            ? '#D4D4D8'
+            ? '#EC4899'
             : isPending
               ? PENDING_COLOR
               : isPaymentPending
                 ? '#8B5CF6'
                 : '#10B981',
         borderColor: 'transparent',
-        textColor: isEarlyStage ? '#44403c' : '#ffffff',
+        textColor: '#ffffff',
         editable: false,
         extendedProps: {
           type: 'booking' as const,

@@ -77,16 +77,41 @@ body {
   font-size: 0.72rem;
 }
 
-/* Month view: compact pills */
+/* Month view: force block display for ALL events (not dot style) */
 .fc-daygrid-event {
-  padding: 1px 5px !important;
-  margin-bottom: 1px !important;
+  padding: 2px 6px !important;
+  margin-bottom: 2px !important;
   cursor: pointer;
+  border-radius: 4px !important;
+  display: block !important;
 }
 
-/* Hide the dot — the colored pill is enough */
+/* Hide the dot — the colored block is enough */
 .fc-daygrid-event-dot {
   display: none !important;
+}
+
+/* Force timed events in month view to show as colored blocks */
+.fc .fc-daygrid-event-harness {
+  margin-top: 1px;
+}
+
+.fc .fc-daygrid-block-event .fc-event-time,
+.fc .fc-daygrid-block-event .fc-event-title {
+  padding: 0 2px;
+}
+
+/* Ensure timed events in month view use their background color */
+.fc .fc-daygrid-dot-event {
+  display: flex !important;
+  align-items: center;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+}
+
+.fc .fc-daygrid-dot-event .fc-event-title {
+  font-weight: 600;
+  font-size: 0.72rem;
 }
 
 /* "+N more" link */

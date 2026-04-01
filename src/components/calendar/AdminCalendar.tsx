@@ -64,8 +64,8 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const STATUS_BADGE_STYLES: Record<string, string> = {
-  INQUIRY_RECEIVED: 'bg-stone-200 text-stone-700',
-  AVAILABILITY_CHECKING: 'bg-stone-200 text-stone-700',
+  INQUIRY_RECEIVED: 'bg-pink-100 text-pink-800',
+  AVAILABILITY_CHECKING: 'bg-pink-100 text-pink-800',
   PENDING_APPROVAL: 'bg-amber-100 text-amber-800',
   PAYMENT_PENDING: 'bg-violet-100 text-violet-800',
   CONFIRMED: 'bg-blue-100 text-blue-800',
@@ -480,7 +480,7 @@ export function AdminCalendar() {
 
         <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-600">
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#D4D4D8]" /> New request
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#EC4899]" /> New request
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#F59E0B]" /> Pending approval
@@ -517,6 +517,9 @@ export function AdminCalendar() {
                   duration: { days: 7 },
                   dateIncrement: { days: 3 },
                   buttonText: 'Week',
+                },
+                dayGridMonth: {
+                  eventDisplay: 'block',
                 },
               }}
               headerToolbar={{
