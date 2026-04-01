@@ -266,7 +266,82 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
     return <div className="h-[640px] animate-pulse rounded-3xl bg-stone-100" />
   }
 
+  // Mobile booking modal
+  const mobileModal = isMobile && selection && amenityInfo ? (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={(e) => { if (e.target === e.currentTarget) clearSelection() }}>
+      <div className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white p-5 shadow-xl animate-in slide-in-from-bottom">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">Confirm Booking</p>
+            <h2 className="mt-1 text-xl font-semibold text-stone-900">{amenityInfo.name}</h2>
+          </div>
+          <button onClick={clearSelection} className="rounded-full p-2 text-stone-400 hover:bg-stone-100" aria-label="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="rounded-2xl bg-stone-50 p-4 text-sm text-stone-700 mb-4">
+          <p className="font-medium text-stone-900">{formatDateTime(selection.start)}</p>
+          <p>{formatDateTime(selection.end)}</p>
+          {amenityInfo.description && <p className="mt-2 text-stone-500">{amenityInfo.description}</p>}
+          <p className="mt-2">Capacity: {amenityInfo.capacity} guests</p>
+          {(amenityInfo.rentalFee > 0 || amenityInfo.depositAmount > 0) && (
+            <p>Fee: {formatCurrency(amenityInfo.rentalFee)} + deposit {formatCurrency(amenityInfo.depositAmount)}</p>
+          )}
+        </div>
+
+        {filteredEvents.some(
+          (e) => new Date(e.start) < new Date(selection.end) && new Date(e.end) > new Date(selection.start),
+        ) && (
+          <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800 mb-4">
+            This slot has existing bookings. Your request will be <strong>waitlisted</strong>.
+          </div>
+        )}
+
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <label className="block text-sm font-medium text-stone-700">
+            Guest count
+            <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900" max={amenityInfo.capacity} min={1} type="number" value={guestCount} onChange={(e) => setGuestCount(Number(e.target.value))} />
+          </label>
+
+          <label className="block text-sm font-medium text-stone-700">
+            Notes (optional)
+            <textarea className="mt-2 min-h-20 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900" placeholder="Event type, accessibility needs, etc." value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </label>
+
+          <label className="flex items-center gap-3 text-sm text-stone-700">
+            <input type="checkbox" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} className="rounded" />
+            Book anonymously
+          </label>
+
+          {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+
+          <div className="flex gap-3">
+            <button
+              className="flex-1 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white disabled:bg-emerald-300"
+              disabled={submitting}
+              type="submit"
+            >
+              {submitting ? 'Submitting...' : 'Confirm Booking'}
+            </button>
+            <button
+              className="rounded-full border border-stone-300 px-5 py-3 text-sm font-semibold text-stone-700"
+              type="button"
+              onClick={clearSelection}
+            >
+              Adjust
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  ) : null
+
   return (
+    <>
+    {mobileModal}
     <div className="grid gap-6 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div>
         {/* Amenity tabs grouped by area + view toggle */}
@@ -322,8 +397,14 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
           </div>
         </div>
 
-        <p className="mb-2 text-xs text-stone-400">
-          {isMobile ? 'Tap and hold a time slot to book' : 'Tip: Shift+click to view multiple amenities together'}
+        {isMobile && (
+          <div className="mb-3 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
+            <strong>How to book:</strong> Tap and hold on a time slot, then drag to set your duration. A confirmation window will appear.
+          </div>
+        )}
+
+        <p className="mb-2 text-xs text-stone-400 hidden sm:block">
+          Tip: Shift+click to view multiple amenities together
         </p>
 
         <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-600">
@@ -450,7 +531,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         )}
       </div>
 
-      <aside className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+      <aside className="hidden xl:block rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
         <div className="mb-4">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
             Request Booking
@@ -562,5 +643,6 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         )}
       </aside>
     </div>
+    </>
   )
 }
