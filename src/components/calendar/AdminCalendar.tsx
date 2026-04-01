@@ -73,6 +73,7 @@ export function AdminCalendar() {
   const [selectedAmenities, setSelectedAmenities] = useState<Set<string>>(new Set())
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [denialReason, setDenialReason] = useState('')
+  const [waiveFee, setWaiveFee] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -185,10 +186,15 @@ export function AdminCalendar() {
     setBusy(true)
     setError(null)
     try {
-      const res = await fetch(`/api/admin/bookings/${selectedEvent.id}/approve`, { method: 'POST' })
+      const res = await fetch(`/api/admin/bookings/${selectedEvent.id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feeWaived: waiveFee }),
+      })
       if (!res.ok) throw new Error((await res.json()).error ?? 'Unable to approve.')
       await loadEvents()
       setSelectedId(null)
+      setWaiveFee(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to approve.')
     } finally {
@@ -807,6 +813,17 @@ export function AdminCalendar() {
                     onChange={(e) => setDenialReason(e.target.value)}
                   />
                 </label>
+                <label className="flex items-center gap-3 text-sm text-stone-700">
+                  <input
+                    type="checkbox"
+                    checked={waiveFee}
+                    onChange={(e) => setWaiveFee(e.target.checked)}
+                    className="rounded"
+                  />
+                  Waive booking fees
+                  <span className="text-xs text-stone-400">(resident won't be charged)</span>
+                </label>
+
                 {error && (
                   <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
                 )}
@@ -817,7 +834,7 @@ export function AdminCalendar() {
                     onClick={approveBooking}
                     type="button"
                   >
-                    {busy ? 'Working...' : 'Approve'}
+                    {busy ? 'Working...' : (waiveFee ? 'Approve (fee waived)' : 'Approve')}
                   </button>
                   <button
                     className="flex-1 rounded-full bg-stone-900 px-4 py-3 text-sm font-semibold text-white disabled:bg-stone-400"
