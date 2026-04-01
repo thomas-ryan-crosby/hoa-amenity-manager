@@ -107,7 +107,7 @@ export default function BookingHistoryPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-stone-50 px-6 py-8">
+      <main className="min-h-screen bg-stone-50 px-4 sm:px-6 py-8">
         <div className="mx-auto max-w-5xl">
           <div className="h-96 animate-pulse rounded-3xl bg-stone-100" />
         </div>
@@ -116,9 +116,9 @@ export default function BookingHistoryPage() {
   }
 
   return (
-    <main className="min-h-screen bg-stone-50 px-6 py-8">
+    <main className="min-h-screen bg-stone-50 px-4 sm:px-6 py-8">
       <div className="mx-auto max-w-5xl">
-        <h1 className="text-3xl font-semibold text-stone-900">My bookings</h1>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-stone-900">My bookings</h1>
         <p className="mt-2 text-sm text-stone-500">
           Track your reservations, modify upcoming bookings, or cancel if plans change.
         </p>
@@ -149,11 +149,11 @@ export default function BookingHistoryPage() {
               return (
                 <div
                   key={booking.id}
-                  className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"
+                  className="rounded-2xl border border-stone-200 bg-white p-4 sm:p-5 shadow-sm"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-lg font-semibold text-stone-900">
                           {booking.amenityName}
                         </h2>

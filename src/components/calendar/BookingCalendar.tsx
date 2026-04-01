@@ -85,6 +85,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
+  const [isMobile, setIsMobile] = useState(false)
   const calendarRef = useRef<FullCalendar>(null)
 
   function clearSelection() {
@@ -93,6 +94,16 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
     setAnonymous(false)
     calendarRef.current?.getApi().unselect()
   }
+
+  // Detect mobile
+  useEffect(() => {
+    function checkMobile() {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     async function loadCalendar() {
@@ -256,7 +267,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid gap-6 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div>
         {/* Amenity tabs grouped by area + view toggle */}
         <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -340,11 +351,11 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         </div>
 
         {viewMode === 'calendar' ? (
-          <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
+          <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-2 sm:p-4 shadow-sm">
             <FullCalendar
               ref={calendarRef}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-              initialView="rolling3Day"
+              initialView={isMobile ? 'timeGridDay' : 'rolling3Day'}
               views={{
                 rolling3Day: {
                   type: 'timeGrid',
@@ -357,6 +368,13 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                 left: 'prev,next today',
                 center: 'title',
                 right: 'timeGridDay,rolling3Day,dayGridMonth',
+              }}
+              windowResize={(arg) => {
+                const api = arg.view.calendar
+                const width = window.innerWidth
+                if (width < 768 && arg.view.type !== 'timeGridDay') {
+                  api.changeView('timeGridDay')
+                }
               }}
               events={filteredEvents}
               selectable
@@ -413,7 +431,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                     }}
                     type="button"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-3">
                       <div className="min-w-0">
                         <p className="font-medium text-stone-900">
                           {props?.amenityName ?? event.title}
@@ -427,7 +445,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                           </p>
                         )}
                       </div>
-                      <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeStyle}`}>
+                      <span className={`inline-flex shrink-0 self-start items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeStyle}`}>
                         {label}
                       </span>
                     </div>

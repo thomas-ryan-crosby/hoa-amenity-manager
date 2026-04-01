@@ -429,11 +429,11 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
   const groupedAmenities = getGroupedAmenities()
 
   return (
-    <main className="min-h-screen bg-stone-50 px-6 py-8">
+    <main className="min-h-screen bg-stone-50 px-4 sm:px-6 py-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-6">
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-amber-700">Amenity Setup</p>
-          <h1 className="mt-2 text-4xl font-semibold text-stone-900">Amenities, policies, and blackout dates</h1>
+          <h1 className="mt-2 text-2xl sm:text-4xl font-semibold text-stone-900">Amenities, policies, and blackout dates</h1>
         </div>
 
         {notice && (
@@ -442,7 +442,7 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
           </div>
         )}
 
-        <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_360px]">
           {/* ---- LEFT: amenity list grouped by area ---- */}
           <section className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">

@@ -7,6 +7,12 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import { formatDateRange } from '@/lib/format'
 
+type Area = {
+  id: string
+  name: string
+  sortOrder: number
+}
+
 type CalendarEvent = {
   id: string
   title: string
@@ -33,6 +39,8 @@ type CalendarEvent = {
 type Amenity = {
   id: string
   name: string
+  areaId: string | null
+  sortOrder: number
 }
 
 type Resident = {
@@ -70,6 +78,7 @@ const STATUS_BADGE_STYLES: Record<string, string> = {
 export function AdminCalendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [amenities, setAmenities] = useState<Amenity[]>([])
+  const [areas, setAreas] = useState<Area[]>([])
   const [selectedAmenities, setSelectedAmenities] = useState<Set<string>>(new Set())
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [denialReason, setDenialReason] = useState('')
@@ -78,6 +87,7 @@ export function AdminCalendar() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
+  const [isMobile, setIsMobile] = useState(false)
   const calendarRef = useRef<FullCalendar>(null)
 
   // "Book on behalf" states
@@ -94,6 +104,16 @@ export function AdminCalendar() {
   const [nameMode, setNameMode] = useState<'resident' | 'manual'>('resident')
   const [adminSubmitting, setAdminSubmitting] = useState(false)
 
+  // Detect mobile
+  useEffect(() => {
+    function checkMobile() {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
   async function loadEvents() {
     try {
       const [eventsRes, amenitiesRes, residentsRes] = await Promise.all([
@@ -107,6 +127,7 @@ export function AdminCalendar() {
       setEvents(eventsData.events ?? [])
       const amenityList = amenitiesData.amenities ?? []
       setAmenities(amenityList)
+      setAreas(amenitiesData.areas ?? [])
       setResidents(residentsData.residents ?? [])
       setSelectedAmenities((prev) => {
         if (prev.size === 0 && amenityList.length) {
@@ -125,6 +146,31 @@ export function AdminCalendar() {
   useEffect(() => {
     loadEvents()
   }, [])
+
+  // Group amenities by area for tab rendering
+  const amenityGroups = useMemo(() => {
+    const groups: { area: Area | null; amenities: Amenity[] }[] = []
+
+    // Areas sorted by sortOrder (already sorted from API)
+    for (const area of areas) {
+      const areaAmenities = amenities
+        .filter((a) => a.areaId === area.id)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      if (areaAmenities.length > 0) {
+        groups.push({ area, amenities: areaAmenities })
+      }
+    }
+
+    // Ungrouped amenities
+    const ungrouped = amenities
+      .filter((a) => !a.areaId)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    if (ungrouped.length > 0) {
+      groups.push({ area: null, amenities: ungrouped })
+    }
+
+    return groups
+  }, [amenities, areas])
 
   const filteredEvents = useMemo(
     () => selectedAmenities.size > 0
@@ -342,11 +388,11 @@ export function AdminCalendar() {
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid gap-6 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div>
-        {/* Amenity tabs + view toggle */}
+        {/* Amenity tabs grouped by area + view toggle */}
         <div className="mb-1 flex flex-wrap items-center gap-2">
-          <div className="flex flex-1 flex-wrap gap-2">
+          <div className="flex flex-1 flex-wrap items-center gap-x-4 gap-y-2">
             <button
               className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                 selectedAmenities.size === 0
@@ -358,19 +404,26 @@ export function AdminCalendar() {
             >
               All amenities
             </button>
-            {amenities.map((a) => (
-              <button
-                key={a.id}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                  selectedAmenities.has(a.id)
-                    ? 'bg-stone-900 text-white'
-                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
-                }`}
-                onClick={(e) => handleAmenityClick(a.id, e)}
-                type="button"
-              >
-                {a.name}
-              </button>
+            {amenityGroups.map((group) => (
+              <div key={group.area?.id ?? '_ungrouped'} className="flex flex-wrap items-center gap-1.5">
+                <span className="mr-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-400">
+                  {group.area?.name ?? 'Other'}
+                </span>
+                {group.amenities.map((amenity) => (
+                  <button
+                    key={amenity.id}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                      selectedAmenities.has(amenity.id)
+                        ? 'bg-stone-900 text-white'
+                        : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                    }`}
+                    onClick={(e) => handleAmenityClick(amenity.id, e)}
+                    type="button"
+                  >
+                    {amenity.name}
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
 
@@ -433,11 +486,11 @@ export function AdminCalendar() {
         </div>
 
         {viewMode === 'calendar' ? (
-          <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
+          <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-2 sm:p-4 shadow-sm">
             <FullCalendar
               ref={calendarRef}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-              initialView="rolling3Day"
+              initialView={isMobile ? 'timeGridDay' : 'rolling3Day'}
               views={{
                 rolling3Day: {
                   type: 'timeGrid',
@@ -450,6 +503,13 @@ export function AdminCalendar() {
                 left: 'prev,next today',
                 center: 'title',
                 right: 'timeGridDay,rolling3Day,dayGridMonth',
+              }}
+              windowResize={(arg) => {
+                const api = arg.view.calendar
+                const width = window.innerWidth
+                if (width < 768 && arg.view.type !== 'timeGridDay') {
+                  api.changeView('timeGridDay')
+                }
               }}
               events={filteredEvents}
               selectable
@@ -541,7 +601,7 @@ export function AdminCalendar() {
                     }}
                     type="button"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-3">
                       <div className="min-w-0">
                         <p className="font-medium text-stone-900">
                           {props.amenityName}
@@ -562,7 +622,7 @@ export function AdminCalendar() {
                           </p>
                         )}
                       </div>
-                      <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeStyle}`}>
+                      <span className={`inline-flex shrink-0 self-start items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeStyle}`}>
                         {label}
                       </span>
                     </div>
@@ -827,7 +887,7 @@ export function AdminCalendar() {
                 {error && (
                   <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
                 )}
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     className="flex-1 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:bg-emerald-300"
                     disabled={busy}
