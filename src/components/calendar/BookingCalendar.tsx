@@ -21,6 +21,7 @@ type Amenity = {
   rentalFee: number
   depositAmount: number
   maxAdvanceBookingDays: number
+  suggestedAmenityIds: string[]
   areaId: string | null
   sortOrder: number
 }
@@ -84,6 +85,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [additionalAmenities, setAdditionalAmenities] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
   const [isMobile, setIsMobile] = useState(false)
   const calendarRef = useRef<FullCalendar>(null)
@@ -92,6 +94,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
     setSelection(null)
     setError(null)
     setAnonymous(false)
+    setAdditionalAmenities([])
     calendarRef.current?.getApi().unselect()
   }
 
@@ -226,6 +229,22 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         throw new Error(data.error ?? 'Unable to submit booking request.')
       }
 
+      // Create additional bookings for suggested amenities
+      for (const additionalId of additionalAmenities) {
+        await fetch('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amenityId: additionalId,
+            startDatetime: selection.start,
+            endDatetime: selection.end,
+            guestCount,
+            notes: notes ? `[Booked with ${amenityInfo?.name}] ${notes}` : `[Booked with ${amenityInfo?.name}]`,
+            anonymous,
+          }),
+        })
+      }
+
       // Reload events to reflect the new booking (or waitlist entry)
       const eventsRes = await fetch('/api/calendar/events')
       const eventsData = await eventsRes.json()
@@ -304,6 +323,34 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         ) && (
           <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800 mb-4">
             This slot has existing bookings. Your request will be <strong>waitlisted</strong>.
+          </div>
+        )}
+
+        {amenityInfo && amenityInfo.suggestedAmenityIds?.length > 0 && (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 mb-4">
+            <p className="text-sm font-semibold text-emerald-800">Also available for this time:</p>
+            <div className="mt-2 space-y-2">
+              {amenities
+                .filter((a) => amenityInfo.suggestedAmenityIds.includes(a.id))
+                .map((a) => (
+                  <label key={a.id} className="flex items-center gap-2 text-sm text-stone-700">
+                    <input
+                      type="checkbox"
+                      checked={additionalAmenities.includes(a.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setAdditionalAmenities(prev => [...prev, a.id])
+                        } else {
+                          setAdditionalAmenities(prev => prev.filter(id => id !== a.id))
+                        }
+                      }}
+                      className="rounded"
+                    />
+                    {a.name}
+                    {a.rentalFee > 0 && <span className="text-xs text-stone-400">(${a.rentalFee})</span>}
+                  </label>
+                ))}
+            </div>
           </div>
         )}
 
@@ -607,6 +654,34 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                 This time slot already has one or more bookings. Your request
                 will be <strong>waitlisted</strong> and you will be notified if
                 the slot opens up.
+              </div>
+            )}
+
+            {amenityInfo && amenityInfo.suggestedAmenityIds?.length > 0 && (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-sm font-semibold text-emerald-800">Also available for this time:</p>
+                <div className="mt-2 space-y-2">
+                  {amenities
+                    .filter((a) => amenityInfo.suggestedAmenityIds.includes(a.id))
+                    .map((a) => (
+                      <label key={a.id} className="flex items-center gap-2 text-sm text-stone-700">
+                        <input
+                          type="checkbox"
+                          checked={additionalAmenities.includes(a.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setAdditionalAmenities(prev => [...prev, a.id])
+                            } else {
+                              setAdditionalAmenities(prev => prev.filter(id => id !== a.id))
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        {a.name}
+                        {a.rentalFee > 0 && <span className="text-xs text-stone-400">(${a.rentalFee})</span>}
+                      </label>
+                    ))}
+                </div>
               </div>
             )}
 

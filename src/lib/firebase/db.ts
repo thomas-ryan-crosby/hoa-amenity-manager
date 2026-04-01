@@ -65,8 +65,9 @@ export interface Amenity {
   defaultTurnTimeHours: number
   parentAmenityId: string | null
   childAmenityIds: string[]
-  areaId: string | null            // which area this amenity belongs to
-  sortOrder: number                // display order within its area
+  suggestedAmenityIds: string[]    // "book together" suggestions (e.g. clubroom + pool)
+  areaId: string | null
+  sortOrder: number
 }
 
 export interface TurnWindow {
@@ -245,6 +246,7 @@ export async function createAmenity(
     defaultTurnTimeHours: data.defaultTurnTimeHours ?? 0,
     parentAmenityId: data.parentAmenityId ?? null,
     childAmenityIds: data.childAmenityIds ?? [],
+    suggestedAmenityIds: data.suggestedAmenityIds ?? [],
     areaId: data.areaId ?? null,
     sortOrder: data.sortOrder ?? 0,
   }

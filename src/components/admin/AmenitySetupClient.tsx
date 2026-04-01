@@ -43,6 +43,7 @@ type Amenity = {
   defaultTurnTimeHours: number
   parentAmenityId: string | null
   childAmenityIds: string[]
+  suggestedAmenityIds: string[]
   blackoutDates: BlackoutDate[]
   areaId: string | null
   sortOrder: number
@@ -67,6 +68,7 @@ type AmenityForm = {
   janitorialAssignment: 'rotation' | 'manual' | 'none'
   defaultTurnTimeHours: number
   parentAmenityId: string
+  suggestedAmenityIds: string[]
   areaId: string
   sortOrder: number
 }
@@ -90,6 +92,7 @@ const emptyAmenityForm: AmenityForm = {
   janitorialAssignment: 'rotation' as const,
   defaultTurnTimeHours: 0,
   parentAmenityId: '',
+  suggestedAmenityIds: [],
   areaId: '',
   sortOrder: 0,
 }
@@ -115,6 +118,7 @@ function toAmenityForm(amenity: Amenity | null): AmenityForm {
     janitorialAssignment: amenity.janitorialAssignment,
     defaultTurnTimeHours: amenity.defaultTurnTimeHours ?? 0,
     parentAmenityId: amenity.parentAmenityId ?? '',
+    suggestedAmenityIds: amenity.suggestedAmenityIds ?? [],
     areaId: amenity.areaId ?? '',
     sortOrder: amenity.sortOrder ?? 0,
   }
@@ -282,6 +286,7 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
       janitorialAssignment: f.requiresJanitorial ? f.janitorialAssignment : 'none',
       defaultTurnTimeHours: f.requiresJanitorial ? Number(f.defaultTurnTimeHours) : 0,
       parentAmenityId: f.parentAmenityId || null,
+      suggestedAmenityIds: f.suggestedAmenityIds,
       areaId: f.areaId || null,
       sortOrder: f.sortOrder,
     }
@@ -709,6 +714,33 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
                     Booking either one blocks the other.
                   </p>
                 )}
+              </div>
+
+              <div className="border-t border-stone-200 pt-5">
+                <label className="text-sm font-medium text-stone-700">
+                  Suggested pairings <Info tip="Amenities that residents are prompted to also book when they select this one. E.g., suggest the Pool when booking the Clubroom." />
+                </label>
+                <div className="mt-2 space-y-2">
+                  {amenities
+                    .filter((a) => a.id !== selectedAmenity?.id)
+                    .map((a) => (
+                      <label key={a.id} className="flex items-center gap-2 text-sm text-stone-700">
+                        <input
+                          type="checkbox"
+                          checked={f.suggestedAmenityIds.includes(a.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              set({ suggestedAmenityIds: [...f.suggestedAmenityIds, a.id] })
+                            } else {
+                              set({ suggestedAmenityIds: f.suggestedAmenityIds.filter((id) => id !== a.id) })
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        {a.name}
+                      </label>
+                    ))}
+                </div>
               </div>
 
               <div className="flex gap-3">

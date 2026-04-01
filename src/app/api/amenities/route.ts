@@ -14,6 +14,7 @@ export async function GET() {
       rentalFee: Number(a.rentalFee),
       depositAmount: Number(a.depositAmount),
       maxAdvanceBookingDays: a.maxAdvanceBookingDays,
+      suggestedAmenityIds: a.suggestedAmenityIds ?? [],
       areaId: a.areaId ?? null,
       sortOrder: a.sortOrder ?? 0,
     }))
