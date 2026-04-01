@@ -511,15 +511,13 @@ export function AdminCalendar() {
               ref={calendarRef}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
               initialView={isMobile ? 'timeGridDay' : 'rolling3Day'}
+              eventDisplay="block"
               views={{
                 rolling3Day: {
                   type: 'timeGrid',
                   duration: { days: 7 },
                   dateIncrement: { days: 3 },
                   buttonText: 'Week',
-                },
-                dayGridMonth: {
-                  eventDisplay: 'block',
                 },
               }}
               headerToolbar={{
