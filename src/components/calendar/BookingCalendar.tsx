@@ -113,8 +113,15 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
           fetch('/api/amenities'),
         ])
 
-        const eventsData = await eventsRes.json()
-        const amenitiesData = await amenitiesRes.json()
+        if (!amenitiesRes.ok) {
+          console.error('Amenities API error:', amenitiesRes.status, await amenitiesRes.text())
+        }
+        if (!eventsRes.ok) {
+          console.error('Events API error:', eventsRes.status, await eventsRes.text())
+        }
+
+        const eventsData = eventsRes.ok ? await eventsRes.json() : { events: [] }
+        const amenitiesData = amenitiesRes.ok ? await amenitiesRes.json() : { amenities: [], areas: [] }
 
         setEvents(eventsData.events ?? [])
         setAmenities(amenitiesData.amenities ?? [])

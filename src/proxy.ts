@@ -6,6 +6,9 @@ function isPublic(pathname: string) {
   if (publicPaths.includes(pathname)) return true
   if (pathname.startsWith('/api/webhooks/')) return true
   if (pathname.startsWith('/api/auth/')) return true
+  if (pathname.startsWith('/api/cron')) return true
+  if (pathname === '/api/amenities') return true
+  if (pathname === '/api/calendar/events') return true
   return false
 }
 
