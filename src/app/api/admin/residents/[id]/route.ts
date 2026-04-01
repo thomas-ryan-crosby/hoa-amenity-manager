@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth'
 import { updateResident, getResidentById } from '@/lib/firebase/db'
+import { adminAuth } from '@/lib/firebase/admin'
 import { sendEmail } from '@/lib/integrations/gmail'
 
 const UpdateResidentSchema = z.object({
@@ -32,13 +33,13 @@ export async function PUT(
     return NextResponse.json({ error: 'Resident not found' }, { status: 404 })
   }
 
-  if (parsed.data.status) {
+  // Handle status change
+  if (parsed.data.status && parsed.data.status !== resident.status) {
     await updateResident(id, { status: parsed.data.status })
 
-    // Set Firebase Auth custom claims for role if approved
     if (parsed.data.status === 'approved') {
+      // Set role on approval (default to resident if not specified)
       const role = parsed.data.role ?? 'resident'
-      const { adminAuth } = await import('@/lib/firebase/admin')
       await adminAuth.setCustomUserClaims(resident.firebaseUid, { role })
 
       sendEmail({
@@ -76,9 +77,8 @@ export async function PUT(
     }
   }
 
-  if (parsed.data.role && parsed.data.status !== 'approved') {
-    // Update role even without status change
-    const { adminAuth } = await import('@/lib/firebase/admin')
+  // Handle role change (works independently of status change)
+  if (parsed.data.role) {
     await adminAuth.setCustomUserClaims(resident.firebaseUid, { role: parsed.data.role })
   }
 
