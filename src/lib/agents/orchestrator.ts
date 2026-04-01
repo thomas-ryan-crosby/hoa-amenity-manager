@@ -5,7 +5,10 @@ import {
   hasBlackoutConflict,
   getWaitlistedBookingsForSlot,
   createTurnWindow,
+  getTurnWindowByBookingId,
   deleteTurnWindowByBookingId,
+  type Amenity,
+  type Booking,
 } from '@/lib/firebase/db'
 import { getConflictingBookings } from '@/lib/integrations/google-calendar'
 import {
@@ -15,6 +18,29 @@ import {
 } from '@/lib/integrations/stripe'
 import * as residentAgent from '@/lib/agents/resident-agent'
 import * as pmAgent from '@/lib/agents/pm-agent'
+
+// ---------------------------------------------------------------------------
+// Ensure a turn window exists for a booking (idempotent)
+// ---------------------------------------------------------------------------
+async function ensureTurnWindow(booking: Booking, amenity: Amenity): Promise<void> {
+  if (amenity.defaultTurnTimeHours <= 0) return
+
+  // Check if one already exists
+  const existing = await getTurnWindowByBookingId(booking.id)
+  if (existing) return
+
+  await createTurnWindow({
+    bookingId: booking.id,
+    amenityId: amenity.id,
+    staffId: null,
+    defaultStart: booking.endDatetime,
+    defaultEnd: new Date(booking.endDatetime.getTime() + amenity.defaultTurnTimeHours * 60 * 60 * 1000),
+    actualStart: null,
+    actualEnd: null,
+    status: 'PENDING',
+    completedAt: null,
+  })
+}
 
 // ---------------------------------------------------------------------------
 // handleNewBooking
@@ -86,19 +112,7 @@ export async function handleNewBooking(bookingId: string): Promise<void> {
   }
 
   // 4. Create turn window immediately if the amenity requires janitorial turnaround
-  if (amenity.defaultTurnTimeHours > 0) {
-    await createTurnWindow({
-      bookingId,
-      amenityId: amenity.id,
-      staffId: null,
-      defaultStart: booking.endDatetime,
-      defaultEnd: new Date(booking.endDatetime.getTime() + amenity.defaultTurnTimeHours * 60 * 60 * 1000),
-      actualStart: null,
-      actualEnd: null,
-      status: 'PENDING',
-      completedAt: null,
-    })
-  }
+  await ensureTurnWindow(booking, amenity)
 
   // 5. Determine approval routing
   const needsApproval =
@@ -123,6 +137,7 @@ export async function handleNewBooking(bookingId: string): Promise<void> {
       event: 'AUTO_CONFIRMED_FREE',
       guestCount: booking.guestCount,
     })
+    await ensureTurnWindow(booking, amenity)
     // Reminders and follow-ups handled by Vercel Cron (/api/cron)
     residentAgent.sendConfirmation(bookingId).catch((err) => {
       console.error(`[Orchestrator] Failed to send confirmation for ${bookingId}:`, err)
@@ -169,6 +184,7 @@ export async function handleApproval(bookingId: string): Promise<void> {
       event: 'APPROVED_AND_CONFIRMED_FREE',
       from: booking.status,
     })
+    await ensureTurnWindow(booking, amenity)
     // Reminders and follow-ups handled by Vercel Cron (/api/cron)
     residentAgent.sendConfirmation(bookingId).catch((err) => {
       console.error(`[Orchestrator] Failed to send confirmation for ${bookingId}:`, err)
@@ -234,6 +250,8 @@ export async function handlePaymentSuccess(bookingId: string): Promise<void> {
     event: 'PAYMENT_RECEIVED',
     from: booking.status,
   })
+
+  await ensureTurnWindow(booking, amenity)
 
   // Reminders and follow-ups handled by Vercel Cron (/api/cron)
   await residentAgent.sendConfirmation(bookingId)
