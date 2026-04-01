@@ -323,7 +323,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         </div>
 
         <p className="mb-2 text-xs text-stone-400">
-          Tip: Shift+click to view multiple amenities together
+          {isMobile ? 'Tap and hold a time slot to book' : 'Tip: Shift+click to view multiple amenities together'}
         </p>
 
         <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-600">
@@ -369,18 +369,12 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                 center: 'title',
                 right: 'timeGridDay,rolling3Day,dayGridMonth',
               }}
-              windowResize={(arg) => {
-                const api = arg.view.calendar
-                const width = window.innerWidth
-                if (width < 768 && arg.view.type !== 'timeGridDay') {
-                  api.changeView('timeGridDay')
-                }
-              }}
               events={filteredEvents}
               selectable
               selectMirror
               unselectAuto={false}
-              selectMinDistance={5}
+              selectMinDistance={isMobile ? 0 : 5}
+              longPressDelay={isMobile ? 300 : 0}
               select={(info) => {
                 if (!primaryAmenityId) return
                 setSelection({

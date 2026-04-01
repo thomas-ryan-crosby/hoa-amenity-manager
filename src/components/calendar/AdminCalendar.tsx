@@ -504,18 +504,12 @@ export function AdminCalendar() {
                 center: 'title',
                 right: 'timeGridDay,rolling3Day,dayGridMonth',
               }}
-              windowResize={(arg) => {
-                const api = arg.view.calendar
-                const width = window.innerWidth
-                if (width < 768 && arg.view.type !== 'timeGridDay') {
-                  api.changeView('timeGridDay')
-                }
-              }}
               events={filteredEvents}
               selectable
               selectMirror
               unselectAuto={false}
-              selectMinDistance={5}
+              selectMinDistance={isMobile ? 0 : 5}
+              longPressDelay={isMobile ? 300 : 0}
               select={(info) => {
                 if (!primaryAmenityId) return
                 setSelectedId(null)
