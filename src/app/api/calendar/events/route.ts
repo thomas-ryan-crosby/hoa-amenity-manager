@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
     bookings.map(async (booking) => {
       const [amenity, resident, inspection] = await Promise.all([
         getAmenityById(booking.amenityId),
-        getResidentById(booking.residentId),
+        booking.residentId ? getResidentById(booking.residentId) : Promise.resolve(null),
         getInspectionReport(booking.id),
       ])
 

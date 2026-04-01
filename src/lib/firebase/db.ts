@@ -567,12 +567,24 @@ export async function getBookingWithRelations(
 
   const [amenity, resident] = await Promise.all([
     getAmenityById(booking.amenityId),
-    getResidentById(booking.residentId),
+    booking.residentId ? getResidentById(booking.residentId) : Promise.resolve(null),
   ])
 
   if (!amenity) throw new Error(`Amenity ${booking.amenityId} not found for booking ${id}`)
-  if (!resident) throw new Error(`Resident ${booking.residentId} not found for booking ${id}`)
-  return { booking, amenity, resident }
+
+  // For book-on-behalf with no linked resident, create a placeholder
+  const resolvedResident: Resident = resident ?? {
+    id: '',
+    firebaseUid: '',
+    name: booking.bookedByName ?? 'Guest',
+    email: booking.bookedByEmail ?? '',
+    phone: booking.bookedByPhone ?? null,
+    unitNumber: '',
+    stripeCustomerId: null,
+    status: 'approved' as const,
+    createdAt: booking.createdAt,
+  }
+  return { booking, amenity, resident: resolvedResident }
 }
 
 export async function getBookingsByResident(
