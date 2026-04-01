@@ -68,6 +68,10 @@ export async function getConflictingBookings(
         notes: data.notes ?? null,
         stripePaymentIntentId: data.stripePaymentIntentId ?? null,
         stripeDepositIntentId: data.stripeDepositIntentId ?? null,
+        bookedByName: data.bookedByName ?? null,
+        bookedByStaffId: data.bookedByStaffId ?? null,
+        feeWaived: data.feeWaived ?? false,
+        anonymous: data.anonymous ?? false,
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
         updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
       })

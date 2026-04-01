@@ -80,6 +80,7 @@ export function BookingCalendar() {
   const [selection, setSelection] = useState<SelectionState | null>(null)
   const [guestCount, setGuestCount] = useState(1)
   const [notes, setNotes] = useState('')
+  const [anonymous, setAnonymous] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -89,6 +90,7 @@ export function BookingCalendar() {
   function clearSelection() {
     setSelection(null)
     setError(null)
+    setAnonymous(false)
     calendarRef.current?.getApi().unselect()
   }
 
@@ -196,6 +198,7 @@ export function BookingCalendar() {
           endDatetime: selection.end,
           guestCount,
           notes: notes.trim() || undefined,
+          anonymous,
         }),
       })
 
@@ -499,6 +502,17 @@ export function BookingCalendar() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
+            </label>
+
+            <label className="flex items-center gap-3 text-sm text-stone-700">
+              <input
+                type="checkbox"
+                checked={anonymous}
+                onChange={(e) => setAnonymous(e.target.checked)}
+                className="rounded"
+              />
+              Book anonymously
+              <span className="text-xs text-stone-400">(your name won't show on the public calendar)</span>
             </label>
 
             {error ? (

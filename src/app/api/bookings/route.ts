@@ -15,6 +15,7 @@ const CreateBookingSchema = z.object({
   endDatetime: z.string().refine((s) => !isNaN(Date.parse(s)), 'Invalid date'),
   guestCount: z.number().int().positive(),
   notes: z.string().optional(),
+  anonymous: z.boolean().optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { amenityId, startDatetime, endDatetime, guestCount, notes } = parsed.data
+  const { amenityId, startDatetime, endDatetime, guestCount, notes, anonymous } = parsed.data
 
   const booking = await createBookingWithAuditLog(
     {
@@ -72,6 +73,7 @@ export async function POST(req: NextRequest) {
       endDatetime: new Date(endDatetime),
       guestCount,
       notes: notes ?? null,
+      anonymous: anonymous ?? false,
     },
     'api',
     'BOOKING_CREATED',

@@ -1,6 +1,6 @@
 'use client'
 
-import { MouseEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -24,12 +24,21 @@ type CalendarEvent = {
     guestCount?: number
     status: string
     turnWindowId?: string
+    bookedByName?: string
+    feeWaived?: boolean
+    anonymous?: boolean
   }
 }
 
 type Amenity = {
   id: string
   name: string
+}
+
+type Resident = {
+  id: string
+  name: string
+  email: string
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -68,18 +77,36 @@ export function AdminCalendar() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
+  const calendarRef = useRef<FullCalendar>(null)
+
+  // "Book on behalf" states
+  const [adminSelection, setAdminSelection] = useState<{amenityId: string, start: string, end: string} | null>(null)
+  const [bookingForm, setBookingForm] = useState({
+    residentId: '',
+    bookedByName: '',
+    guestCount: 1,
+    notes: '',
+    feeWaived: false,
+    anonymous: false,
+  })
+  const [residents, setResidents] = useState<Resident[]>([])
+  const [nameMode, setNameMode] = useState<'resident' | 'manual'>('resident')
+  const [adminSubmitting, setAdminSubmitting] = useState(false)
 
   async function loadEvents() {
     try {
-      const [eventsRes, amenitiesRes] = await Promise.all([
+      const [eventsRes, amenitiesRes, residentsRes] = await Promise.all([
         fetch('/api/calendar/events?role=admin'),
         fetch('/api/amenities'),
+        fetch('/api/admin/residents'),
       ])
       const eventsData = await eventsRes.json()
       const amenitiesData = await amenitiesRes.json()
+      const residentsData = await residentsRes.json()
       setEvents(eventsData.events ?? [])
       const amenityList = amenitiesData.amenities ?? []
       setAmenities(amenityList)
+      setResidents(residentsData.residents ?? [])
       setSelectedAmenities((prev) => {
         if (prev.size === 0 && amenityList.length) {
           return new Set([amenityList[0].id])
@@ -112,6 +139,26 @@ export function AdminCalendar() {
 
   const isTurnWindow = selectedEvent?.extendedProps.type === 'turn-window'
   const isBooking = selectedEvent?.extendedProps.type === 'booking'
+
+  // Determine which amenity to use for calendar selection (first selected amenity)
+  const primaryAmenityId = useMemo(() => {
+    const arr = Array.from(selectedAmenities)
+    return arr.length > 0 ? arr[0] : ''
+  }, [selectedAmenities])
+
+  function clearAdminSelection() {
+    setAdminSelection(null)
+    setBookingForm({
+      residentId: '',
+      bookedByName: '',
+      guestCount: 1,
+      notes: '',
+      feeWaived: false,
+      anonymous: false,
+    })
+    setNameMode('resident')
+    calendarRef.current?.getApi().unselect()
+  }
 
   function handleAmenityClick(amenityId: string, e: MouseEvent) {
     if (e.shiftKey) {
@@ -240,6 +287,50 @@ export function AdminCalendar() {
     }
   }
 
+  async function handleAdminBookingSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!adminSelection) return
+
+    setAdminSubmitting(true)
+    setError(null)
+
+    try {
+      const body: Record<string, unknown> = {
+        amenityId: adminSelection.amenityId,
+        startDatetime: adminSelection.start,
+        endDatetime: adminSelection.end,
+        guestCount: bookingForm.guestCount,
+        notes: bookingForm.notes.trim() || undefined,
+        feeWaived: bookingForm.feeWaived,
+        anonymous: bookingForm.anonymous,
+      }
+
+      if (nameMode === 'resident' && bookingForm.residentId) {
+        body.residentId = bookingForm.residentId
+      } else if (nameMode === 'manual' && bookingForm.bookedByName.trim()) {
+        body.bookedByName = bookingForm.bookedByName.trim()
+      }
+
+      const res = await fetch('/api/admin/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error ?? 'Unable to create booking.')
+      }
+
+      clearAdminSelection()
+      await loadEvents()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to create booking.')
+    } finally {
+      setAdminSubmitting(false)
+    }
+  }
+
   if (loading) {
     return <div className="h-[640px] animate-pulse rounded-3xl bg-stone-100" />
   }
@@ -338,6 +429,7 @@ export function AdminCalendar() {
         {viewMode === 'calendar' ? (
           <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
             <FullCalendar
+              ref={calendarRef}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
               initialView="rolling3Day"
               views={{
@@ -354,10 +446,34 @@ export function AdminCalendar() {
                 right: 'timeGridDay,rolling3Day,dayGridMonth',
               }}
               events={filteredEvents}
+              selectable
+              selectMirror
+              unselectAuto={false}
+              selectMinDistance={5}
+              select={(info) => {
+                if (!primaryAmenityId) return
+                setSelectedId(null)
+                setAdminSelection({
+                  amenityId: primaryAmenityId,
+                  start: info.startStr,
+                  end: info.endStr,
+                })
+                setBookingForm({
+                  residentId: '',
+                  bookedByName: '',
+                  guestCount: 1,
+                  notes: '',
+                  feeWaived: false,
+                  anonymous: false,
+                })
+                setNameMode('resident')
+                setError(null)
+              }}
               editable={false}
               eventStartEditable
               eventDurationEditable
               eventClick={(info) => {
+                clearAdminSelection()
                 setSelectedId(info.event.id)
                 setDenialReason('')
                 setError(null)
@@ -412,6 +528,7 @@ export function AdminCalendar() {
                     }`}
                     style={{ borderLeftWidth: '4px', borderLeftColor: event.color ?? '#9CA3AF' }}
                     onClick={() => {
+                      clearAdminSelection()
                       setSelectedId(event.id)
                       setDenialReason('')
                       setError(null)
@@ -452,13 +569,145 @@ export function AdminCalendar() {
 
       <aside className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
-          {isTurnWindow ? 'Cleaning Window' : 'Booking Review'}
+          {adminSelection && !selectedEvent ? 'Book on Behalf' : isTurnWindow ? 'Cleaning Window' : 'Booking Review'}
         </p>
         <h2 className="mt-2 text-2xl font-semibold text-stone-900">
-          {selectedEvent ? selectedEvent.extendedProps.amenityName : 'Select an event'}
+          {adminSelection && !selectedEvent
+            ? amenities.find((a) => a.id === adminSelection.amenityId)?.name ?? 'New Booking'
+            : selectedEvent
+              ? selectedEvent.extendedProps.amenityName
+              : 'Select an event'}
         </h2>
 
-        {selectedEvent && isTurnWindow ? (
+        {/* "Book on behalf" form when admin selects a time slot */}
+        {adminSelection && !selectedEvent ? (
+          <form className="mt-5 space-y-4" onSubmit={handleAdminBookingSubmit}>
+            <div className="flex items-start justify-between rounded-2xl bg-stone-50 p-4 text-sm text-stone-700">
+              <div>
+                <p><strong>Time:</strong> {formatDateRange(adminSelection.start, adminSelection.end)}</p>
+                <p><strong>Amenity:</strong> {amenities.find((a) => a.id === adminSelection.amenityId)?.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={clearAdminSelection}
+                className="ml-2 shrink-0 rounded-full p-1 text-stone-400 hover:bg-stone-200 hover:text-stone-600"
+                aria-label="Cancel"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Name mode radio */}
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium text-stone-700">Resident</legend>
+              <label className="flex items-center gap-2 text-sm text-stone-700">
+                <input
+                  type="radio"
+                  name="nameMode"
+                  value="resident"
+                  checked={nameMode === 'resident'}
+                  onChange={() => setNameMode('resident')}
+                />
+                Link to resident
+              </label>
+              <label className="flex items-center gap-2 text-sm text-stone-700">
+                <input
+                  type="radio"
+                  name="nameMode"
+                  value="manual"
+                  checked={nameMode === 'manual'}
+                  onChange={() => setNameMode('manual')}
+                />
+                Enter name manually
+              </label>
+            </fieldset>
+
+            {nameMode === 'resident' ? (
+              <label className="block text-sm font-medium text-stone-700">
+                Select resident
+                <select
+                  className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none transition focus:border-amber-500"
+                  value={bookingForm.residentId}
+                  onChange={(e) => setBookingForm((prev) => ({ ...prev, residentId: e.target.value }))}
+                >
+                  <option value="">-- Choose a resident --</option>
+                  {residents.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} ({r.email})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <label className="block text-sm font-medium text-stone-700">
+                Name
+                <input
+                  className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none transition focus:border-amber-500"
+                  type="text"
+                  placeholder="Guest or resident name"
+                  value={bookingForm.bookedByName}
+                  onChange={(e) => setBookingForm((prev) => ({ ...prev, bookedByName: e.target.value }))}
+                />
+              </label>
+            )}
+
+            <label className="block text-sm font-medium text-stone-700">
+              Guest count
+              <input
+                className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none transition focus:border-amber-500"
+                min={1}
+                type="number"
+                value={bookingForm.guestCount}
+                onChange={(e) => setBookingForm((prev) => ({ ...prev, guestCount: Number(e.target.value) }))}
+              />
+            </label>
+
+            <label className="block text-sm font-medium text-stone-700">
+              Notes
+              <textarea
+                className="mt-2 min-h-20 w-full rounded-2xl border border-stone-300 px-4 py-3 outline-none transition focus:border-amber-500"
+                placeholder="Any additional context"
+                value={bookingForm.notes}
+                onChange={(e) => setBookingForm((prev) => ({ ...prev, notes: e.target.value }))}
+              />
+            </label>
+
+            <label className="flex items-center gap-3 text-sm text-stone-700">
+              <input
+                type="checkbox"
+                checked={bookingForm.feeWaived}
+                onChange={(e) => setBookingForm((prev) => ({ ...prev, feeWaived: e.target.checked }))}
+                className="rounded"
+              />
+              Waive booking fees
+            </label>
+
+            <label className="flex items-center gap-3 text-sm text-stone-700">
+              <input
+                type="checkbox"
+                checked={bookingForm.anonymous}
+                onChange={(e) => setBookingForm((prev) => ({ ...prev, anonymous: e.target.checked }))}
+                className="rounded"
+              />
+              Book anonymously
+              <span className="text-xs text-stone-400">(name hidden on public calendar)</span>
+            </label>
+
+            {error && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+            )}
+
+            <button
+              className="w-full rounded-full bg-amber-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:bg-amber-300"
+              disabled={adminSubmitting || (nameMode === 'resident' ? !bookingForm.residentId : !bookingForm.bookedByName.trim())}
+              type="submit"
+            >
+              {adminSubmitting ? 'Creating booking...' : 'Create booking'}
+            </button>
+          </form>
+        ) : selectedEvent && isTurnWindow ? (
           <div className="mt-5 space-y-4">
             <div className="rounded-2xl bg-stone-50 p-4 text-sm leading-6 text-stone-700">
               <p><strong>Amenity:</strong> {selectedEvent.extendedProps.amenityName}</p>
@@ -528,6 +777,25 @@ export function AdminCalendar() {
               </p>
             </div>
 
+            {/* Badges for special booking flags */}
+            <div className="flex flex-wrap gap-2">
+              {selectedEvent.extendedProps.feeWaived && (
+                <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+                  Fee waived
+                </span>
+              )}
+              {selectedEvent.extendedProps.anonymous && (
+                <span className="inline-flex items-center rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-semibold text-violet-800">
+                  Anonymous
+                </span>
+              )}
+              {selectedEvent.extendedProps.bookedByName && (
+                <span className="inline-flex items-center rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800">
+                  Booked by: {selectedEvent.extendedProps.bookedByName}
+                </span>
+              )}
+            </div>
+
             {selectedEvent.extendedProps.status === 'PENDING_APPROVAL' ? (
               <>
                 <label className="block text-sm font-medium text-stone-700">
@@ -579,7 +847,7 @@ export function AdminCalendar() {
           </div>
         ) : (
           <div className="mt-5 rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-4 py-6 text-sm leading-6 text-stone-600">
-            Click any event to inspect details. Drag cleaning blocks to adjust turn windows.
+            Click any event to inspect details, or drag a time slot to book on behalf of a resident. Drag cleaning blocks to adjust turn windows.
           </div>
         )}
       </aside>

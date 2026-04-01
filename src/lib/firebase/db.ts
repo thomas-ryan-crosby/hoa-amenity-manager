@@ -104,6 +104,12 @@ export interface Booking {
   stripeDepositIntentId: string | null
   createdAt: Date
   updatedAt: Date
+  // PM book-on-behalf
+  bookedByName: string | null       // generic name if not a platform user
+  bookedByStaffId: string | null    // PM who created the booking
+  feeWaived: boolean
+  // Privacy
+  anonymous: boolean                // masks resident info on public calendar
 }
 
 export interface AuditLog {
@@ -508,6 +514,10 @@ function bookingFromDoc(doc: FirebaseFirestore.DocumentSnapshot): Booking | null
     notes: data.notes ?? null,
     stripePaymentIntentId: data.stripePaymentIntentId ?? null,
     stripeDepositIntentId: data.stripeDepositIntentId ?? null,
+    bookedByName: data.bookedByName ?? null,
+    bookedByStaffId: data.bookedByStaffId ?? null,
+    feeWaived: data.feeWaived ?? false,
+    anonymous: data.anonymous ?? false,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   }
@@ -526,6 +536,10 @@ function bookingFromQueryDoc(doc: FirebaseFirestore.QueryDocumentSnapshot): Book
     notes: data.notes ?? null,
     stripePaymentIntentId: data.stripePaymentIntentId ?? null,
     stripeDepositIntentId: data.stripeDepositIntentId ?? null,
+    bookedByName: data.bookedByName ?? null,
+    bookedByStaffId: data.bookedByStaffId ?? null,
+    feeWaived: data.feeWaived ?? false,
+    anonymous: data.anonymous ?? false,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   }
@@ -783,7 +797,7 @@ export async function countRecentInspectionsByStaff(
 // ---------------------------------------------------------------------------
 
 export async function createBookingWithAuditLog(
-  bookingData: Omit<Booking, 'id' | 'createdAt' | 'updatedAt' | 'stripePaymentIntentId' | 'stripeDepositIntentId'> & Partial<Pick<Booking, 'stripePaymentIntentId' | 'stripeDepositIntentId'>>,
+  bookingData: Omit<Booking, 'id' | 'createdAt' | 'updatedAt' | 'stripePaymentIntentId' | 'stripeDepositIntentId' | 'bookedByName' | 'bookedByStaffId' | 'feeWaived' | 'anonymous'> & Partial<Pick<Booking, 'stripePaymentIntentId' | 'stripeDepositIntentId' | 'bookedByName' | 'bookedByStaffId' | 'feeWaived' | 'anonymous'>>,
   agent: string,
   event: string,
 ): Promise<Booking> {
@@ -796,6 +810,10 @@ export async function createBookingWithAuditLog(
     ...bookingData,
     stripePaymentIntentId: bookingData.stripePaymentIntentId ?? null,
     stripeDepositIntentId: bookingData.stripeDepositIntentId ?? null,
+    bookedByName: bookingData.bookedByName ?? null,
+    bookedByStaffId: bookingData.bookedByStaffId ?? null,
+    feeWaived: bookingData.feeWaived ?? false,
+    anonymous: bookingData.anonymous ?? false,
     startDatetime: Timestamp.fromDate(bookingData.startDatetime),
     endDatetime: Timestamp.fromDate(bookingData.endDatetime),
     createdAt: nowTs,
@@ -819,6 +837,10 @@ export async function createBookingWithAuditLog(
     ...bookingData,
     stripePaymentIntentId: bookingData.stripePaymentIntentId ?? null,
     stripeDepositIntentId: bookingData.stripeDepositIntentId ?? null,
+    bookedByName: bookingData.bookedByName ?? null,
+    bookedByStaffId: bookingData.bookedByStaffId ?? null,
+    feeWaived: bookingData.feeWaived ?? false,
+    anonymous: bookingData.anonymous ?? false,
     createdAt: now,
     updatedAt: now,
   }

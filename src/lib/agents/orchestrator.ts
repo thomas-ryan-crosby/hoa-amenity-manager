@@ -110,7 +110,8 @@ export async function handleNewBooking(bookingId: string): Promise<void> {
     (amenity.autoApproveThreshold === null ||
       booking.guestCount > amenity.autoApproveThreshold)
 
-  const isFreeAmenity = amenity.rentalFee === 0 && amenity.depositAmount === 0
+  const isFeeWaived = booking.feeWaived ?? false
+  const isFreeAmenity = isFeeWaived || (amenity.rentalFee === 0 && amenity.depositAmount === 0)
 
   if (needsApproval) {
     await transitionBookingStatus(bookingId, 'PENDING_APPROVAL', 'orchestrator', {
@@ -164,7 +165,8 @@ export async function handleApproval(bookingId: string): Promise<void> {
   console.log(`[Orchestrator] Handling approval: ${bookingId}`)
 
   const { booking, amenity, resident } = await getBookingWithRelations(bookingId)
-  const isFreeAmenity = amenity.rentalFee === 0 && amenity.depositAmount === 0
+  const isFeeWaived = booking.feeWaived ?? false
+  const isFreeAmenity = isFeeWaived || (amenity.rentalFee === 0 && amenity.depositAmount === 0)
 
   if (isFreeAmenity) {
     // Free amenity — confirm immediately after approval

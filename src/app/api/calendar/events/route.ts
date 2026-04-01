@@ -102,13 +102,22 @@ export async function GET(req: NextRequest) {
         !inspection
 
       const titlePrefix = isWaitlisted ? '[Waitlisted] ' : ''
+      const isAnonymous = booking.anonymous ?? false
+      const displayName = booking.bookedByName
+        ? booking.bookedByName
+        : (resident?.name ?? 'Unknown')
+      const displayUnit = resident?.unitNumber ?? ''
+
+      // Public view masks anonymous bookings
+      const publicName = isAnonymous && !isAdmin && !isJanitorial ? 'Reserved' : displayName
+      const publicUnit = isAnonymous && !isAdmin && !isJanitorial ? '' : displayUnit
 
       return {
         id: booking.id,
         resourceId: booking.amenityId,
         title: isJanitorial
           ? `${amenity?.name ?? 'Unknown'} setup / inspection`
-          : `${titlePrefix}${amenity?.name ?? 'Unknown'} - ${resident?.name ?? 'Unknown'} (Unit ${resident?.unitNumber ?? '?'})`,
+          : `${titlePrefix}${amenity?.name ?? 'Unknown'} - ${publicName}${publicUnit ? ` (Unit ${publicUnit})` : ''}`,
         start: booking.startDatetime instanceof Date ? booking.startDatetime.toISOString() : booking.startDatetime,
         end: booking.endDatetime instanceof Date ? booking.endDatetime.toISOString() : booking.endDatetime,
         color: isWaitlisted
@@ -125,10 +134,13 @@ export async function GET(req: NextRequest) {
           type: 'booking' as const,
           amenityId: booking.amenityId,
           amenityName: amenity?.name ?? 'Unknown',
-          residentName: resident?.name ?? 'Unknown',
-          residentEmail: resident?.email ?? '',
-          unitNumber: resident?.unitNumber ?? '',
+          residentName: (isAdmin || isJanitorial) ? displayName : publicName,
+          residentEmail: (isAdmin || isJanitorial) ? (resident?.email ?? '') : (isAnonymous ? '' : (resident?.email ?? '')),
+          unitNumber: (isAdmin || isJanitorial) ? displayUnit : publicUnit,
           guestCount: booking.guestCount,
+          bookedByName: booking.bookedByName,
+          feeWaived: booking.feeWaived ?? false,
+          anonymous: isAnonymous,
           status: booking.status,
           inspectionStatus: inspection?.status ?? null,
           inspectionNeeded,
