@@ -9,8 +9,14 @@ interface ReminderJobData {
 
 let worker: Worker | null = null
 
-export function startWorker(): Worker {
+export function startWorker(): Worker | null {
   if (worker) return worker
+
+  const connection = getRedisConnection()
+  if (!connection) {
+    console.log('[Worker] No Redis configured — worker not started')
+    return null
+  }
 
   worker = new Worker<ReminderJobData>(
     QUEUE_NAME,
@@ -38,7 +44,7 @@ export function startWorker(): Worker {
       }
     },
     {
-      connection: getRedisConnection(),
+      connection,
       concurrency: 5,
     },
   )

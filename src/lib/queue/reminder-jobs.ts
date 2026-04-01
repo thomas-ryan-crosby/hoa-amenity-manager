@@ -3,10 +3,10 @@ import IORedis from 'ioredis'
 
 let connection: IORedis | null = null
 
-function getRedisConnection(): IORedis {
+function getRedisConnection(): IORedis | null {
+  if (!process.env.REDIS_URL) return null
   if (!connection) {
-    const url = process.env.REDIS_URL || 'redis://localhost:6379'
-    connection = new IORedis(url, { maxRetriesPerRequest: null })
+    connection = new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: null })
   }
   return connection
 }
@@ -15,9 +15,11 @@ const QUEUE_NAME = 'booking-reminders'
 
 let queue: Queue | null = null
 
-function getQueue(): Queue {
+function getQueue(): Queue | null {
+  const conn = getRedisConnection()
+  if (!conn) return null
   if (!queue) {
-    queue = new Queue(QUEUE_NAME, { connection: getRedisConnection() })
+    queue = new Queue(QUEUE_NAME, { connection: conn })
   }
   return queue
 }
@@ -28,10 +30,16 @@ export async function scheduleReminder(
   bookingId: string,
   startDatetime: Date,
 ): Promise<void> {
+  const q = getQueue()
+  if (!q) {
+    console.log(`[Queue] Skipping 48hr reminder for ${bookingId} (no Redis)`)
+    return
+  }
+
   const fortyEightHoursMs = 48 * 60 * 60 * 1000
   const delay = startDatetime.getTime() - fortyEightHoursMs - Date.now()
 
-  await getQueue().add(
+  await q.add(
     'send-48hr-reminder',
     { bookingId },
     {
@@ -51,10 +59,16 @@ export async function schedulePostEventFollowup(
   bookingId: string,
   endDatetime: Date,
 ): Promise<void> {
+  const q = getQueue()
+  if (!q) {
+    console.log(`[Queue] Skipping post-event followup for ${bookingId} (no Redis)`)
+    return
+  }
+
   const twoHoursMs = 2 * 60 * 60 * 1000
   const delay = endDatetime.getTime() + twoHoursMs - Date.now()
 
-  await getQueue().add(
+  await q.add(
     'post-event-followup',
     { bookingId },
     {
@@ -72,6 +86,8 @@ export async function schedulePostEventFollowup(
 
 export async function cancelScheduledJobs(bookingId: string): Promise<void> {
   const q = getQueue()
+  if (!q) return
+
   const reminderJob = await q.getJob(`reminder-48hr-${bookingId}`)
   const followupJob = await q.getJob(`followup-${bookingId}`)
 
