@@ -131,6 +131,17 @@ export async function GET(req: NextRequest) {
               : isPaymentPending
                 ? '#8B5CF6'
                 : '#10B981',
+        backgroundColor: isWaitlisted
+          ? WAITLISTED_COLOR
+          : isEarlyStage
+            ? '#D4D4D8'
+            : isPending
+              ? PENDING_COLOR
+              : isPaymentPending
+                ? '#8B5CF6'
+                : '#10B981',
+        borderColor: 'transparent',
+        textColor: isEarlyStage ? '#44403c' : '#ffffff',
         editable: false,
         extendedProps: {
           type: 'booking' as const,
@@ -164,7 +175,10 @@ export async function GET(req: NextRequest) {
         id: `linked-${event.id}-${linkedId}`,
         resourceId: linkedId,
         title: `Blocked: ${event.extendedProps.amenityName}`,
-        color: '#E7E5E4', // stone-200 — clearly a "blocked" indicator
+        color: '#E7E5E4',
+        backgroundColor: '#E7E5E4',
+        borderColor: 'transparent',
+        textColor: '#57534e',
         editable: false,
         extendedProps: {
           ...event.extendedProps,
@@ -184,6 +198,9 @@ export async function GET(req: NextRequest) {
     start: string
     end: string
     color: string
+    backgroundColor: string
+    borderColor: string
+    textColor: string
     editable: boolean
     extendedProps: {
       type: 'turn-window'
@@ -225,6 +242,9 @@ export async function GET(req: NextRequest) {
         start: start instanceof Date ? start.toISOString() : String(start),
         end: end instanceof Date ? end.toISOString() : String(end),
         color: tw.status === 'COMPLETED' ? '#A1A1AA' : '#78716C',
+        backgroundColor: tw.status === 'COMPLETED' ? '#A1A1AA' : '#78716C',
+        borderColor: 'transparent',
+        textColor: '#ffffff',
         editable: (isJanitorial || isAdmin) && tw.status !== 'COMPLETED',
         extendedProps: {
           type: 'turn-window' as const,
@@ -252,6 +272,9 @@ export async function GET(req: NextRequest) {
         resourceId: linkedId,
         title: `Blocked: Cleaning (${twEvent.extendedProps.amenityName})`,
         color: '#E7E5E4',
+        backgroundColor: '#E7E5E4',
+        borderColor: 'transparent',
+        textColor: '#57534e',
         editable: false,
         extendedProps: {
           ...twEvent.extendedProps,
