@@ -77,13 +77,14 @@ body {
   font-size: 0.72rem;
 }
 
-/* Month view: make events pill-shaped and readable */
+/* Month view: compact pills */
 .fc-daygrid-event {
   padding: 1px 5px !important;
   margin-bottom: 1px !important;
+  cursor: pointer;
 }
 
-/* Hide the dot in month view — the colored pill is enough */
+/* Hide the dot — the colored pill is enough */
 .fc-daygrid-event-dot {
   display: none !important;
 }
@@ -93,6 +94,20 @@ body {
   color: #059669;
   font-weight: 600;
   font-size: 0.75rem;
+}
+
+/* Day numbers in month view — make them look clickable */
+.fc .fc-daygrid-day-number {
+  cursor: pointer;
+}
+
+.fc .fc-daygrid-day-number:hover {
+  color: #059669;
+}
+
+/* Month view day cells — click to navigate */
+.fc .fc-daygrid-day-frame {
+  cursor: pointer;
 }
 
 /* Today column */

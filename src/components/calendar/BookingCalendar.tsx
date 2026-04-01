@@ -456,8 +456,13 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               unselectAuto={false}
               selectMinDistance={isMobile ? 0 : 5}
               longPressDelay={isMobile ? 300 : 0}
+              selectAllow={(info) => {
+                // Block all-day selections from month view — navigate to day instead
+                return !info.allDay
+              }}
               select={(info) => {
                 if (!primaryAmenityId) return
+                if (info.allDay) return // safety check
                 setSelection({
                   amenityId: primaryAmenityId,
                   start: info.startStr,
@@ -465,6 +470,16 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                 })
                 setGuestCount(1)
                 setNotes('')
+              }}
+              dateClick={(info) => {
+                // In month view, clicking a day navigates to that day's time grid
+                if (info.view.type === 'dayGridMonth') {
+                  calendarRef.current?.getApi().changeView('timeGridDay', info.dateStr)
+                }
+              }}
+              navLinks
+              navLinkDayClick={(date) => {
+                calendarRef.current?.getApi().changeView('timeGridDay', date)
               }}
               eventOverlap
               selectOverlap

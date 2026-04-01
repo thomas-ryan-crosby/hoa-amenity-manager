@@ -510,8 +510,18 @@ export function AdminCalendar() {
               unselectAuto={false}
               selectMinDistance={isMobile ? 0 : 5}
               longPressDelay={isMobile ? 300 : 0}
+              selectAllow={(info) => !info.allDay}
+              dateClick={(info) => {
+                if (info.view.type === 'dayGridMonth') {
+                  calendarRef.current?.getApi().changeView('timeGridDay', info.dateStr)
+                }
+              }}
+              navLinks
+              navLinkDayClick={(date) => {
+                calendarRef.current?.getApi().changeView('timeGridDay', date)
+              }}
               select={(info) => {
-                if (!primaryAmenityId) return
+                if (!primaryAmenityId || info.allDay) return
                 setSelectedId(null)
                 setAdminSelection({
                   amenityId: primaryAmenityId,
