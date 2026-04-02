@@ -42,6 +42,7 @@ type Amenity = {
   name: string
   areaId: string | null
   sortOrder: number
+  isDefault?: boolean
 }
 
 type Resident = {
@@ -134,7 +135,8 @@ export function AdminCalendar() {
       setAreas(amenitiesData.areas ?? [])
       setSelectedAmenities((prev) => {
         if (prev.size === 0 && amenityList.length) {
-          return new Set([amenityList[0].id])
+          const defaultAmenity = amenityList.find((a: Amenity) => a.isDefault)
+          return new Set([defaultAmenity?.id ?? amenityList[0].id])
         }
         return prev
       })
