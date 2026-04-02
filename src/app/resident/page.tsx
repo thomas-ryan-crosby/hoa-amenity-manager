@@ -1,12 +1,16 @@
 'use client'
 
+import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { BookingCalendar } from '@/components/calendar/BookingCalendar'
+import { Tutorial } from '@/components/Tutorial'
+import { HelpButton } from '@/components/HelpButton'
 
 function ResidentContent() {
   const searchParams = useSearchParams()
   const modifyBookingId = searchParams.get('modify')
+  const [showTutorial, setShowTutorial] = useState(false)
 
   return (
     <main className="min-h-screen bg-stone-50 px-6 py-8">
@@ -33,6 +37,9 @@ function ResidentContent() {
 
         <BookingCalendar modifyBookingId={modifyBookingId} />
       </div>
+
+      <Tutorial externalOpen={showTutorial} onClose={() => setShowTutorial(false)} />
+      <HelpButton onOpen={() => setShowTutorial(true)} />
     </main>
   )
 }
