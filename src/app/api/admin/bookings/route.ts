@@ -10,6 +10,7 @@ import * as orchestrator from '@/lib/agents/orchestrator'
 
 const AdminBookingSchema = z.object({
   amenityId: z.string().min(1),
+  additionalAmenityIds: z.array(z.string()).optional(),
   startDatetime: z.string().refine((s) => !isNaN(Date.parse(s)), 'Invalid date'),
   endDatetime: z.string().refine((s) => !isNaN(Date.parse(s)), 'Invalid date'),
   guestCount: z.number().int().positive(),
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { amenityId, startDatetime, endDatetime, guestCount, notes, residentId, bookedByName, bookedByEmail, bookedByPhone, sendCommsToBookee, feeWaived, anonymous } = parsed.data
+  const { amenityId, additionalAmenityIds, startDatetime, endDatetime, guestCount, notes, residentId, bookedByName, bookedByEmail, bookedByPhone, sendCommsToBookee, feeWaived, anonymous } = parsed.data
 
   // Determine the resident
   let actualResidentId = residentId ?? ''
@@ -74,9 +75,46 @@ export async function POST(req: NextRequest) {
     'BOOKING_CREATED_BY_PM',
   )
 
-  orchestrator.handleNewBooking(booking.id).catch((err) => {
-    console.error(`[Orchestrator] Error handling PM booking ${booking.id}:`, err)
-  })
+  // Create additional bookings for bundled amenities
+  const additionalBookingIds: string[] = []
+  if (additionalAmenityIds?.length) {
+    for (const addId of additionalAmenityIds) {
+      const addBooking = await createBookingWithAuditLog(
+        {
+          residentId: actualResidentId,
+          amenityId: addId,
+          status: 'INQUIRY_RECEIVED',
+          startDatetime: new Date(startDatetime),
+          endDatetime: new Date(endDatetime),
+          guestCount,
+          notes: notes ? `[Bundled booking] ${notes}` : '[Bundled booking]',
+          bookedByName: bookedByName ?? null,
+          bookedByEmail: bookedByEmail || null,
+          bookedByPhone: bookedByPhone || null,
+          bookedByStaffId: authState.userId,
+          sendCommsToBookee: sendCommsToBookee ?? false,
+          feeWaived: feeWaived ?? false,
+          anonymous: anonymous ?? false,
+        },
+        'admin',
+        'BOOKING_CREATED_BY_PM_BUNDLED',
+      )
+      additionalBookingIds.push(addBooking.id)
+    }
+  }
 
-  return NextResponse.json({ bookingId: booking.id, status: booking.status }, { status: 201 })
+  // Run orchestration sequentially
+  async function runOrchestration() {
+    try { await orchestrator.handleNewBooking(booking.id) } catch (err) {
+      console.error(`[Orchestrator] Error handling PM booking ${booking.id}:`, err)
+    }
+    for (const addId of additionalBookingIds) {
+      try { await orchestrator.handleNewBooking(addId) } catch (err) {
+        console.error(`[Orchestrator] Error handling PM booking ${addId}:`, err)
+      }
+    }
+  }
+  runOrchestration() // fire-and-forget
+
+  return NextResponse.json({ bookingId: booking.id, additionalBookingIds, status: booking.status }, { status: 201 })
 }

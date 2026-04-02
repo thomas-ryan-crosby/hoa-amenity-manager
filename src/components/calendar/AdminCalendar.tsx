@@ -43,6 +43,9 @@ type Amenity = {
   areaId: string | null
   sortOrder: number
   isDefault?: boolean
+  rentalFee?: number
+  depositAmount?: number
+  suggestedAmenityIds?: string[]
 }
 
 type Resident = {
@@ -110,6 +113,7 @@ export function AdminCalendar() {
   const [residents, setResidents] = useState<Resident[]>([])
   const [nameMode, setNameMode] = useState<'resident' | 'manual'>('resident')
   const [adminSubmitting, setAdminSubmitting] = useState(false)
+  const [adminAdditionalAmenities, setAdminAdditionalAmenities] = useState<string[]>([])
 
   // Detect mobile
   useEffect(() => {
@@ -213,6 +217,7 @@ export function AdminCalendar() {
 
   function clearAdminSelection() {
     setAdminSelection(null)
+    setAdminAdditionalAmenities([])
     setBookingForm({
       residentId: '',
       bookedByName: '',
@@ -370,6 +375,7 @@ export function AdminCalendar() {
     try {
       const body: Record<string, unknown> = {
         amenityId: adminSelection.amenityId,
+        additionalAmenityIds: adminAdditionalAmenities.length > 0 ? adminAdditionalAmenities : undefined,
         startDatetime: adminSelection.start,
         endDatetime: adminSelection.end,
         guestCount: bookingForm.guestCount,
@@ -854,6 +860,36 @@ export function AdminCalendar() {
               />
             </label>
 
+            {/* Suggested amenities */}
+            {(() => {
+              const selectedAmenity = amenities.find((a) => a.id === adminSelection.amenityId)
+              const suggestions = selectedAmenity?.suggestedAmenityIds?.length
+                ? amenities.filter((a) => selectedAmenity.suggestedAmenityIds!.includes(a.id))
+                : []
+              return suggestions.length > 0 ? (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-sm font-semibold text-emerald-800">Also book together:</p>
+                  <div className="mt-2 space-y-2">
+                    {suggestions.map((a) => (
+                      <label key={a.id} className="flex items-center gap-2 text-sm text-stone-700">
+                        <input
+                          type="checkbox"
+                          checked={adminAdditionalAmenities.includes(a.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) setAdminAdditionalAmenities((p) => [...p, a.id])
+                            else setAdminAdditionalAmenities((p) => p.filter((id) => id !== a.id))
+                          }}
+                          className="rounded"
+                        />
+                        {a.name}
+                        {(a.rentalFee ?? 0) > 0 && <span className="text-xs text-stone-400">(${a.rentalFee})</span>}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null
+            })()}
+
             <label className="flex items-center gap-3 text-sm text-stone-700">
               <input
                 type="checkbox"
@@ -872,15 +908,55 @@ export function AdminCalendar() {
                 className="rounded"
               />
               Book anonymously
-              <span className="text-xs text-stone-400">(name hidden on public calendar)</span>
             </label>
+
+            {/* Booking summary */}
+            {(() => {
+              const primary = amenities.find((a) => a.id === adminSelection.amenityId)
+              if (!primary) return null
+              const additional = amenities.filter((a) => adminAdditionalAmenities.includes(a.id))
+              const allBooked = [primary, ...additional]
+              const totalFee = bookingForm.feeWaived ? 0 : allBooked.reduce((s, a) => s + (a.rentalFee ?? 0), 0)
+              const totalDeposit = bookingForm.feeWaived ? 0 : allBooked.reduce((s, a) => s + (a.depositAmount ?? 0), 0)
+              return (
+                <div className="rounded-2xl border border-stone-200 bg-white p-4 text-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-stone-400 mb-2">Booking Summary</p>
+                  <div className="space-y-1">
+                    {allBooked.map((a) => (
+                      <div key={a.id} className="flex justify-between">
+                        <span className="font-medium text-stone-900">{a.name}</span>
+                        {bookingForm.feeWaived ? (
+                          <span className="text-emerald-600 text-xs font-medium">Waived</span>
+                        ) : (a.rentalFee ?? 0) > 0 ? (
+                          <span className="text-stone-600">${a.rentalFee}</span>
+                        ) : (
+                          <span className="text-emerald-600 text-xs font-medium">Free</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-2 border-t border-stone-100 pt-2 text-xs text-stone-500">
+                    <div className="flex justify-between">
+                      <span>Time</span>
+                      <span className="text-stone-700">{formatDateRange(adminSelection.start, adminSelection.end)}</span>
+                    </div>
+                    {!bookingForm.feeWaived && totalFee > 0 && (
+                      <div className="flex justify-between font-semibold text-stone-900 text-sm pt-1 mt-1 border-t border-stone-100">
+                        <span>Total</span>
+                        <span>${totalFee + totalDeposit}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
 
             {error && (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
             )}
 
             <button
-              className="w-full rounded-full bg-amber-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:bg-amber-300"
+              className="w-full rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-300"
               disabled={adminSubmitting || (nameMode === 'resident' ? !bookingForm.residentId : !bookingForm.bookedByName.trim())}
               type="submit"
             >
@@ -1054,8 +1130,8 @@ export function AdminCalendar() {
             <button
               className={`w-full rounded-full px-4 py-3 text-sm font-semibold transition ${
                 sidebarMode === 'book-on-behalf'
-                  ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
-                  : 'bg-stone-900 text-white hover:bg-stone-800'
+                  ? 'bg-emerald-600 text-white'
+                  : 'border border-stone-300 text-stone-700 hover:bg-stone-50'
               }`}
               onClick={() => setSidebarMode(sidebarMode === 'book-on-behalf' ? 'idle' : 'book-on-behalf')}
               type="button"
@@ -1066,7 +1142,7 @@ export function AdminCalendar() {
             <button
               className={`w-full rounded-full px-4 py-3 text-sm font-semibold transition ${
                 sidebarMode === 'cleaning-block'
-                  ? 'bg-stone-700 text-white ring-2 ring-stone-400'
+                  ? 'bg-emerald-600 text-white'
                   : 'border border-stone-300 text-stone-700 hover:bg-stone-50'
               }`}
               onClick={() => setSidebarMode(sidebarMode === 'cleaning-block' ? 'idle' : 'cleaning-block')}
