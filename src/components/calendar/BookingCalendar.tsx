@@ -7,6 +7,70 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import { formatCurrency, formatDateTime, formatDateRange } from '@/lib/format'
 
+function BookingSummary({
+  primaryAmenity,
+  additionalAmenities,
+  allAmenities,
+  startStr,
+  endStr,
+}: {
+  primaryAmenity: { name: string; rentalFee: number; depositAmount: number }
+  additionalAmenities: string[]
+  allAmenities: Array<{ id: string; name: string; rentalFee: number; depositAmount: number }>
+  startStr: string
+  endStr: string
+}) {
+  const additional = allAmenities.filter((a) => additionalAmenities.includes(a.id))
+  const allBooked = [primaryAmenity, ...additional]
+  const totalFee = allBooked.reduce((sum, a) => sum + a.rentalFee, 0)
+  const totalDeposit = allBooked.reduce((sum, a) => sum + a.depositAmount, 0)
+  const isFree = totalFee === 0 && totalDeposit === 0
+
+  return (
+    <div className="rounded-2xl border border-stone-200 bg-white p-4 text-sm">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-stone-400 mb-2">Booking Summary</p>
+
+      <div className="space-y-1.5">
+        {allBooked.map((a, i) => (
+          <div key={i} className="flex items-center justify-between">
+            <span className="font-medium text-stone-900">{a.name}</span>
+            {a.rentalFee > 0 ? (
+              <span className="text-stone-600">{formatCurrency(a.rentalFee)}</span>
+            ) : (
+              <span className="text-emerald-600 text-xs font-medium">Free</span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 border-t border-stone-100 pt-3 space-y-1 text-xs text-stone-500">
+        <div className="flex justify-between">
+          <span>Date & time</span>
+          <span className="text-stone-700 text-right">{formatDateRange(startStr, endStr)}</span>
+        </div>
+        {!isFree && (
+          <>
+            <div className="flex justify-between">
+              <span>Rental fee</span>
+              <span className="text-stone-700">{formatCurrency(totalFee)}</span>
+            </div>
+            {totalDeposit > 0 && (
+              <div className="flex justify-between">
+                <span>Security deposit</span>
+                <span className="text-stone-700">{formatCurrency(totalDeposit)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-semibold text-stone-900 text-sm pt-1 border-t border-stone-100 mt-1">
+              <span>Total</span>
+              <span>{formatCurrency(totalFee + totalDeposit)}</span>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 type Area = {
   id: string
   name: string
@@ -375,6 +439,14 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
             </div>
           )}
 
+          <BookingSummary
+            primaryAmenity={amenityInfo}
+            additionalAmenities={additionalAmenities}
+            allAmenities={amenities}
+            startStr={selection.start}
+            endStr={selection.end}
+          />
+
           {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
           <div className="flex gap-3">
@@ -733,6 +805,14 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                 </label>
               </div>
             )}
+
+            <BookingSummary
+              primaryAmenity={amenityInfo}
+              additionalAmenities={additionalAmenities}
+              allAmenities={amenities}
+              startStr={selection.start}
+              endStr={selection.end}
+            />
 
             {error ? (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
