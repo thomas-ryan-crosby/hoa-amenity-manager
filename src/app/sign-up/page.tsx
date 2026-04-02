@@ -53,8 +53,8 @@ export default function SignUpPage() {
         console.error('Session creation failed:', sessionRes.status)
       }
 
-      // Hard redirect so the browser sends the new cookie on the next request
-      window.location.href = '/'
+      // Hard redirect to booking page
+      window.location.href = '/resident'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign up failed')
     } finally {

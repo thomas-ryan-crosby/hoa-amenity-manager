@@ -1,6 +1,15 @@
-import Link from 'next/link'
+export const dynamic = 'force-dynamic'
 
-export default function Home() {
+import Link from 'next/link'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+
+export default async function Home() {
+  const cookieStore = await cookies()
+  const session = cookieStore.get('__session')?.value
+  if (session) {
+    redirect('/resident')
+  }
   return (
     <main className="min-h-screen bg-stone-50">
       {/* Hero */}
