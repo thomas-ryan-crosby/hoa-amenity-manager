@@ -28,7 +28,7 @@ export function NavBar() {
               <Link href="/resident" className="hover:text-stone-900">
                 Book
               </Link>
-              <Link href="/resident/bookings" className="hover:text-stone-900">
+              <Link href="/resident/bookings" data-tutorial="nav-my-bookings" className="hover:text-stone-900">
                 My Bookings
               </Link>
               {(role === 'property_manager' || role === 'board' || role === 'janitorial') && (

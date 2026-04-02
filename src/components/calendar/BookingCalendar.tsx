@@ -405,7 +405,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
       <div>
         {/* Amenity tabs grouped by area + view toggle */}
         <div className="mb-1 flex flex-wrap items-center gap-2">
-          <div className="flex flex-1 flex-wrap items-center gap-x-4 gap-y-2">
+          <div data-tutorial="amenity-tabs" className="flex flex-1 flex-wrap items-center gap-x-4 gap-y-2">
             {amenityGroups.map((group) => (
               <div key={group.area?.id ?? '_ungrouped'} className="flex flex-wrap items-center gap-1.5">
                 <span className="mr-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-400">
@@ -430,7 +430,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
           </div>
 
           {/* View toggle */}
-          <div className="flex overflow-hidden rounded-full border border-stone-200">
+          <div data-tutorial="view-toggle" className="flex overflow-hidden rounded-full border border-stone-200">
             <button
               className={`px-4 py-2 text-sm font-medium transition ${
                 viewMode === 'calendar'
@@ -466,7 +466,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
           Tip: Shift+click to view multiple amenities together
         </p>
 
-        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-600">
+        <div data-tutorial="color-legend" className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-600">
           <span className="flex items-center gap-1.5">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#EC4899]" /> New request
           </span>
@@ -491,7 +491,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         </div>
 
         {viewMode === 'calendar' ? (
-          <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-2 sm:p-4 shadow-sm">
+          <div data-tutorial="calendar-grid" className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-2 sm:p-4 shadow-sm">
             <FullCalendar
               ref={calendarRef}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
@@ -605,7 +605,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         )}
       </div>
 
-      <aside className="hidden xl:block rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+      <aside data-tutorial="booking-form" className="hidden xl:block rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
         <div className="mb-4">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
             Request Booking
