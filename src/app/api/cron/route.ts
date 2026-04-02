@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date()
-  const results = { reminders: 0, followups: 0, errors: 0 }
+  const results = { reminders: 0, followups: 0, access: 0, errors: 0 }
 
   // --- 48-hour reminders ---
   // Find CONFIRMED bookings starting within the next 48 hours
@@ -61,6 +61,41 @@ export async function GET(req: NextRequest) {
     console.error('[Cron] Reminder query failed:', err)
   }
 
+  // --- Access instructions (1hr before) ---
+  const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000)
+
+  try {
+    const accessSnap = await adminDb
+      .collection('bookings')
+      .where('status', 'in', ['CONFIRMED', 'REMINDER_SENT'])
+      .get()
+
+    for (const doc of accessSnap.docs) {
+      const data = doc.data()
+      if (data.accessInstructionsSent) continue
+
+      const startTime = data.startDatetime instanceof Timestamp
+        ? data.startDatetime.toDate()
+        : new Date(data.startDatetime)
+
+      if (startTime <= oneHourFromNow && startTime > now) {
+        try {
+          await residentAgent.sendAccessInstructions(doc.id)
+          await adminDb.collection('bookings').doc(doc.id).update({
+            accessInstructionsSent: true,
+          })
+          results.access++
+          console.log(`[Cron] Access instructions sent for booking ${doc.id}`)
+        } catch (err) {
+          results.errors++
+          console.error(`[Cron] Access instructions failed for ${doc.id}:`, err)
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[Cron] Access instructions query failed:', err)
+  }
+
   // --- Post-event follow-ups ---
   // Find bookings that ended 2+ hours ago and haven't been followed up
   const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000)
@@ -99,7 +134,7 @@ export async function GET(req: NextRequest) {
     console.error('[Cron] Followup query failed:', err)
   }
 
-  console.log(`[Cron] Complete: ${results.reminders} reminders, ${results.followups} followups, ${results.errors} errors`)
+  console.log(`[Cron] Complete: ${results.reminders} reminders, ${results.access} access instructions, ${results.followups} followups, ${results.errors} errors`)
 
   return NextResponse.json({
     ok: true,

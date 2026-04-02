@@ -47,6 +47,11 @@ type Amenity = {
   blackoutDates: BlackoutDate[]
   areaId: string | null
   sortOrder: number
+  isDefault: boolean
+  hasRules: boolean
+  rules: string | null
+  hasAccessInstructions: boolean
+  accessInstructions: string | null
 }
 
 type AmenityForm = {
@@ -71,6 +76,11 @@ type AmenityForm = {
   suggestedAmenityIds: string[]
   areaId: string
   sortOrder: number
+  isDefault: boolean
+  hasRules: boolean
+  rules: string
+  hasAccessInstructions: boolean
+  accessInstructions: string
 }
 
 const emptyAmenityForm: AmenityForm = {
@@ -95,6 +105,11 @@ const emptyAmenityForm: AmenityForm = {
   suggestedAmenityIds: [],
   areaId: '',
   sortOrder: 0,
+  isDefault: false,
+  hasRules: false,
+  rules: '',
+  hasAccessInstructions: false,
+  accessInstructions: '',
 }
 
 function toAmenityForm(amenity: Amenity | null): AmenityForm {
@@ -121,6 +136,11 @@ function toAmenityForm(amenity: Amenity | null): AmenityForm {
     suggestedAmenityIds: amenity.suggestedAmenityIds ?? [],
     areaId: amenity.areaId ?? '',
     sortOrder: amenity.sortOrder ?? 0,
+    isDefault: amenity.isDefault ?? false,
+    hasRules: amenity.hasRules ?? false,
+    rules: amenity.rules ?? '',
+    hasAccessInstructions: amenity.hasAccessInstructions ?? false,
+    accessInstructions: amenity.accessInstructions ?? '',
   }
 }
 
@@ -212,18 +232,7 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
   const [chatMessage, setChatMessage] = useState('')
   const [chatReply, setChatReply] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
-  const [defaultAmenityId, setDefaultAmenityId] = useState<string | null>(null)
-
-  async function toggleDefault(amenityId: string) {
-    const newDefault = defaultAmenityId === amenityId ? null : amenityId
-    setDefaultAmenityId(newDefault)
-    await fetch('/api/admin/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ defaultAmenityId: newDefault }),
-    })
-    setNotice(newDefault ? 'Default amenity set.' : 'Default amenity cleared.')
-  }
+  const [isDirty, setIsDirty] = useState(false)
 
   // Area management state
   const [areaFormName, setAreaFormName] = useState('')
@@ -232,8 +241,10 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
 
   const selectedAmenity = amenities.find((a) => a.id === selectedAmenityId) ?? null
   const f = amenityForm
-  const set = (patch: Partial<AmenityForm>) =>
+  const set = (patch: Partial<AmenityForm>) => {
     setAmenityForm((c) => ({ ...c, ...patch }))
+    setIsDirty(true)
+  }
 
   // Group amenities by area
   function getGroupedAmenities() {
@@ -259,25 +270,24 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
   }
 
   async function loadData() {
-    const [aRes, sRes, areasRes, settingsRes] = await Promise.all([
+    const [aRes, sRes, areasRes] = await Promise.all([
       fetch('/api/admin/amenities'),
       fetch('/api/admin/staff'),
       fetch('/api/admin/areas'),
-      fetch('/api/admin/settings'),
     ])
     const aData = await aRes.json()
     const sData = await sRes.json()
     const areasData = await areasRes.json()
-    const settingsData = settingsRes.ok ? await settingsRes.json() : {}
     setAmenities(aData.amenities ?? [])
     setStaff(sData.staff ?? [])
     setAreas(areasData.areas ?? [])
-    setDefaultAmenityId(settingsData.settings?.defaultAmenityId ?? null)
   }
 
   function selectAmenity(amenity: Amenity | null) {
+    if (isDirty && !confirm('You have unsaved changes. Discard them?')) return
     setSelectedAmenityId(amenity?.id ?? null)
     setAmenityForm(toAmenityForm(amenity))
+    setIsDirty(false)
   }
 
   async function saveAmenity(event: FormEvent<HTMLFormElement>) {
@@ -304,6 +314,11 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
       suggestedAmenityIds: f.suggestedAmenityIds,
       areaId: f.areaId || null,
       sortOrder: f.sortOrder,
+      isDefault: f.isDefault,
+      hasRules: f.hasRules,
+      rules: f.hasRules ? (f.rules || null) : null,
+      hasAccessInstructions: f.hasAccessInstructions,
+      accessInstructions: f.hasAccessInstructions ? (f.accessInstructions || null) : null,
     }
 
     const url = selectedAmenity ? `/api/admin/amenities/${selectedAmenity.id}` : '/api/admin/amenities'
@@ -316,6 +331,7 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
     const data = await res.json()
     if (!res.ok) { setNotice(data.error ?? 'Unable to save amenity.'); return }
     setNotice(selectedAmenity ? 'Amenity updated.' : 'Amenity created.')
+    setIsDirty(false)
     await loadData()
     if (!selectedAmenity) setAmenityForm({ ...emptyAmenityForm })
   }
@@ -513,14 +529,7 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
                           type="button"
                         >
                           <div className="flex items-center gap-1.5 truncate">
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); toggleDefault(a.id) }}
-                              className={`shrink-0 ${defaultAmenityId === a.id ? 'text-amber-400' : selectedAmenityId === a.id ? 'text-stone-500' : 'text-stone-300'} hover:text-amber-400`}
-                              title={defaultAmenityId === a.id ? 'Default amenity (click to unset)' : 'Set as default amenity'}
-                            >
-                              {defaultAmenityId === a.id ? '★' : '☆'}
-                            </button>
+                            {a.isDefault && <span className="shrink-0 text-amber-400">★</span>}
                             <span className="truncate font-medium">{a.name}</span>
                           </div>
                           <div className="truncate text-xs opacity-80">
@@ -549,6 +558,11 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
             </h2>
 
             <form className="mt-5 space-y-5" onSubmit={saveAmenity}>
+              <label className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+                <input type="checkbox" checked={f.isDefault} onChange={(e) => set({ isDefault: e.target.checked })} className="rounded" />
+                ★ Set as default amenity on booking calendar
+              </label>
+
               {/* -- Basic info -- */}
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="text-sm font-medium text-stone-700 md:col-span-2">
@@ -695,6 +709,34 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
                       <option value="48">48 hours (2 days)</option>
                       <option value="72">72 hours (3 days)</option>
                     </select>
+                  </label>
+                </div>
+              )}
+
+              {/* -- Rules toggle -- */}
+              <div className="border-t border-stone-200 pt-5">
+                <Toggle checked={f.hasRules} onChange={(v) => set({ hasRules: v })} label="Booking rules" tip="When enabled, residents must accept these rules before they can submit a booking request." />
+              </div>
+
+              {f.hasRules && (
+                <div className="rounded-2xl bg-stone-50 p-4">
+                  <label className="text-sm font-medium text-stone-700">
+                    Rules text
+                    <textarea className="mt-2 min-h-32 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-stone-900" placeholder="Enter the rules residents must accept..." value={f.rules} onChange={(e) => set({ rules: e.target.value })} />
+                  </label>
+                </div>
+              )}
+
+              {/* -- Access instructions toggle -- */}
+              <div className="border-t border-stone-200 pt-5">
+                <Toggle checked={f.hasAccessInstructions} onChange={(v) => set({ hasAccessInstructions: v })} label="Access instructions" tip="When enabled, access instructions are sent to the resident 1 hour before their booking starts. Use this for gate codes, key locations, etc." />
+              </div>
+
+              {f.hasAccessInstructions && (
+                <div className="rounded-2xl bg-stone-50 p-4">
+                  <label className="text-sm font-medium text-stone-700">
+                    Instructions
+                    <textarea className="mt-2 min-h-32 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-stone-900" placeholder="Gate code, key location, WiFi password, etc." value={f.accessInstructions} onChange={(e) => set({ accessInstructions: e.target.value })} />
                   </label>
                 </div>
               )}

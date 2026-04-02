@@ -6,6 +6,7 @@ import {
   getBlackoutDates,
   createAmenity,
   addAuditLog,
+  setDefaultAmenity,
 } from '@/lib/firebase/db'
 
 const AmenitySchema = z.object({
@@ -28,6 +29,11 @@ const AmenitySchema = z.object({
   suggestedAmenityIds: z.array(z.string()).optional(),
   areaId: z.string().nullable().optional(),
   sortOrder: z.number().int().min(0).optional(),
+  isDefault: z.boolean().optional(),
+  hasRules: z.boolean().optional(),
+  rules: z.string().nullable().optional(),
+  hasAccessInstructions: z.boolean().optional(),
+  accessInstructions: z.string().nullable().optional(),
 })
 
 export async function GET() {
@@ -85,7 +91,16 @@ export async function POST(req: NextRequest) {
     suggestedAmenityIds: parsed.data.suggestedAmenityIds ?? [],
     areaId: parsed.data.areaId ?? null,
     sortOrder: parsed.data.sortOrder ?? 0,
+    isDefault: parsed.data.isDefault ?? false,
+    hasRules: parsed.data.hasRules ?? false,
+    rules: parsed.data.rules ?? null,
+    hasAccessInstructions: parsed.data.hasAccessInstructions ?? false,
+    accessInstructions: parsed.data.accessInstructions ?? null,
   })
+
+  if (parsed.data.isDefault) {
+    await setDefaultAmenity(amenity.id)
+  }
 
   await addAuditLog(amenity.id, 'admin', 'AMENITY_CREATED', {
     amenityName: parsed.data.name,

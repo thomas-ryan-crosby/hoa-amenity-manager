@@ -65,9 +65,14 @@ export interface Amenity {
   defaultTurnTimeHours: number
   parentAmenityId: string | null
   childAmenityIds: string[]
-  suggestedAmenityIds: string[]    // "book together" suggestions (e.g. clubroom + pool)
+  suggestedAmenityIds: string[]
   areaId: string | null
   sortOrder: number
+  isDefault: boolean               // starred as default on booking calendar
+  hasRules: boolean                // requires rule acceptance before booking
+  rules: string | null             // rules text shown to residents
+  hasAccessInstructions: boolean   // sends access info before booking
+  accessInstructions: string | null // access info sent 1hr before event
 }
 
 export interface TurnWindow {
@@ -247,11 +252,31 @@ export async function createAmenity(
     parentAmenityId: data.parentAmenityId ?? null,
     childAmenityIds: data.childAmenityIds ?? [],
     suggestedAmenityIds: data.suggestedAmenityIds ?? [],
+    isDefault: data.isDefault ?? false,
+    hasRules: data.hasRules ?? false,
+    rules: data.rules ?? null,
+    hasAccessInstructions: data.hasAccessInstructions ?? false,
+    accessInstructions: data.accessInstructions ?? null,
     areaId: data.areaId ?? null,
     sortOrder: data.sortOrder ?? 0,
   }
   const ref = await amenitiesCol().add(fullData)
   return { id: ref.id, ...fullData }
+}
+
+/**
+ * If setting isDefault=true, clear isDefault on all other amenities first.
+ */
+export async function setDefaultAmenity(amenityId: string | null): Promise<void> {
+  const all = await getAllAmenities()
+  await Promise.all(
+    all
+      .filter((a) => a.isDefault)
+      .map((a) => amenitiesCol().doc(a.id).update({ isDefault: false })),
+  )
+  if (amenityId) {
+    await amenitiesCol().doc(amenityId).update({ isDefault: true })
+  }
 }
 
 export async function updateAmenity(id: string, data: Partial<Amenity>): Promise<void> {

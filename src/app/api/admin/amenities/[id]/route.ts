@@ -9,6 +9,7 @@ import {
   linkAmenities,
   unlinkAmenity,
   addAuditLog,
+  setDefaultAmenity,
 } from '@/lib/firebase/db'
 
 const AmenityUpdateSchema = z.object({
@@ -31,6 +32,11 @@ const AmenityUpdateSchema = z.object({
   suggestedAmenityIds: z.array(z.string()).optional(),
   areaId: z.string().nullable().optional(),
   sortOrder: z.number().int().min(0).optional(),
+  isDefault: z.boolean().optional(),
+  hasRules: z.boolean().optional(),
+  rules: z.string().nullable().optional(),
+  hasAccessInstructions: z.boolean().optional(),
+  accessInstructions: z.string().nullable().optional(),
 })
 
 export async function PUT(
@@ -98,6 +104,13 @@ export async function PUT(
     }
   }
 
+  // Handle default amenity flag
+  if (parsed.data.isDefault) {
+    await setDefaultAmenity(id)
+  } else if (existing?.isDefault && parsed.data.isDefault === false) {
+    await setDefaultAmenity(null)
+  }
+
   await updateAmenity(id, {
     ...parsed.data,
     description: parsed.data.description ?? null,
@@ -107,6 +120,11 @@ export async function PUT(
     suggestedAmenityIds: [...newSuggested],
     areaId: parsed.data.areaId ?? null,
     sortOrder: parsed.data.sortOrder ?? 0,
+    isDefault: parsed.data.isDefault ?? false,
+    hasRules: parsed.data.hasRules ?? false,
+    rules: parsed.data.rules ?? null,
+    hasAccessInstructions: parsed.data.hasAccessInstructions ?? false,
+    accessInstructions: parsed.data.accessInstructions ?? null,
   })
 
   await addAuditLog(id, 'admin', 'AMENITY_UPDATED', {

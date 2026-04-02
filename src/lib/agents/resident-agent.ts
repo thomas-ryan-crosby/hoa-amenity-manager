@@ -157,6 +157,22 @@ export async function send48hrReminder(bookingId: string): Promise<void> {
   )
 }
 
+export async function sendAccessInstructions(bookingId: string): Promise<void> {
+  const booking = await getBooking(bookingId)
+  if (!booking.amenity.hasAccessInstructions || !booking.amenity.accessInstructions) return
+  await sendToRecipients(booking,
+    `Access instructions for ${booking.amenity.name}`,
+    `
+      <p>Hi ${booking.resident.name},</p>
+      <p>Your booking for <strong>${booking.amenity.name}</strong> is coming up in 1 hour. Here are your access instructions:</p>
+      <div style="background: #fafaf9; border-radius: 12px; padding: 16px; margin: 16px 0;">
+        <pre style="white-space: pre-wrap; font-family: sans-serif; color: #1c1917; margin: 0;">${booking.amenity.accessInstructions}</pre>
+      </div>
+      ${bookingSummaryHtml(booking)}
+    `,
+  )
+}
+
 export async function sendPostEventFollowUp(bookingId: string): Promise<void> {
   const booking = await getBooking(bookingId)
   await sendToRecipients(booking, `Thanks for using ${booking.amenity.name}`,

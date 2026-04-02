@@ -24,6 +24,9 @@ type Amenity = {
   suggestedAmenityIds: string[]
   areaId: string | null
   sortOrder: number
+  hasRules: boolean
+  rules: string | null
+  isDefault: boolean
 }
 
 type CalendarEventExtendedProps = {
@@ -86,6 +89,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [additionalAmenities, setAdditionalAmenities] = useState<string[]>([])
+  const [rulesAccepted, setRulesAccepted] = useState(false)
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
   const [isMobile, setIsMobile] = useState(false)
   const calendarRef = useRef<FullCalendar>(null)
@@ -95,6 +99,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
     setError(null)
     setAnonymous(false)
     setAdditionalAmenities([])
+    setRulesAccepted(false)
     calendarRef.current?.getApi().unselect()
   }
 
@@ -130,9 +135,8 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         setAmenities(amenitiesData.amenities ?? [])
         setAreas(amenitiesData.areas ?? [])
         if (amenitiesData.amenities?.length) {
-          const defaultId = amenitiesData.defaultAmenityId
-          const defaultExists = defaultId && amenitiesData.amenities.some((a: { id: string }) => a.id === defaultId)
-          setSelectedAmenities(new Set([defaultExists ? defaultId : amenitiesData.amenities[0].id]))
+          const defaultAmenity = amenitiesData.amenities.find((a: Amenity) => a.isDefault)
+          setSelectedAmenities(new Set([defaultAmenity?.id ?? amenitiesData.amenities[0].id]))
         }
       } catch (loadError) {
         console.error('Failed to load booking calendar', loadError)
@@ -372,12 +376,23 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
             Book anonymously
           </label>
 
+          {amenityInfo.hasRules && amenityInfo.rules && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm">
+              <p className="font-semibold text-amber-800 mb-2">Booking Rules</p>
+              <div className="text-amber-700 whitespace-pre-wrap mb-3">{amenityInfo.rules}</div>
+              <label className="flex items-center gap-2 text-amber-800 font-medium">
+                <input type="checkbox" checked={rulesAccepted} onChange={(e) => setRulesAccepted(e.target.checked)} className="rounded" />
+                I accept the booking rules
+              </label>
+            </div>
+          )}
+
           {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
           <div className="flex gap-3">
             <button
               className="flex-1 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white disabled:bg-emerald-300"
-              disabled={submitting}
+              disabled={submitting || (amenityInfo.hasRules && !!amenityInfo.rules && !rulesAccepted)}
               type="submit"
             >
               {submitting ? 'Submitting...' : 'Confirm Booking'}
@@ -720,6 +735,17 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               <span className="text-xs text-stone-400">(your name won't show on the public calendar)</span>
             </label>
 
+            {amenityInfo.hasRules && amenityInfo.rules && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm">
+                <p className="font-semibold text-amber-800 mb-2">Booking Rules</p>
+                <div className="text-amber-700 whitespace-pre-wrap mb-3">{amenityInfo.rules}</div>
+                <label className="flex items-center gap-2 text-amber-800 font-medium">
+                  <input type="checkbox" checked={rulesAccepted} onChange={(e) => setRulesAccepted(e.target.checked)} className="rounded" />
+                  I accept the booking rules
+                </label>
+              </div>
+            )}
+
             {error ? (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {error}
@@ -728,7 +754,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
 
             <button
               className="w-full rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-300"
-              disabled={submitting}
+              disabled={submitting || (amenityInfo.hasRules && !!amenityInfo.rules && !rulesAccepted)}
               type="submit"
             >
               {submitting ? 'Submitting request...' : 'Request Booking'}

@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server'
-import { getAllAmenities, getAllAreas, getSettings } from '@/lib/firebase/db'
+import { getAllAmenities, getAllAreas } from '@/lib/firebase/db'
 
 export async function GET() {
-  const [amenities, areas, settings] = await Promise.all([
+  const [amenities, areas] = await Promise.all([
     getAllAmenities(),
     getAllAreas(),
-    getSettings(),
   ])
 
   const sortedAmenities = amenities
@@ -20,12 +19,14 @@ export async function GET() {
       suggestedAmenityIds: a.suggestedAmenityIds ?? [],
       areaId: a.areaId ?? null,
       sortOrder: a.sortOrder ?? 0,
+      hasRules: a.hasRules ?? false,
+      rules: a.rules ?? null,
+      isDefault: a.isDefault ?? false,
     }))
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
 
   return NextResponse.json({
     amenities: sortedAmenities,
     areas,
-    defaultAmenityId: settings.defaultAmenityId ?? null,
   })
 }
