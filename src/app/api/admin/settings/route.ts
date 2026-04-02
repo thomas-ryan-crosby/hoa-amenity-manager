@@ -6,6 +6,7 @@ import { getSettings, updateSettings } from '@/lib/firebase/db'
 const SettingsSchema = z.object({
   pmEmail: z.string().email().optional(),
   orgName: z.string().min(1).optional(),
+  defaultAmenityId: z.string().nullable().optional(),
 })
 
 export async function GET() {

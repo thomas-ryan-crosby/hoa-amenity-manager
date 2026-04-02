@@ -1017,12 +1017,14 @@ export interface SystemSettings {
   pmEmail: string
   approvalJwtSecret: string
   orgName: string
+  defaultAmenityId: string | null
 }
 
 const DEFAULT_SETTINGS: SystemSettings = {
   pmEmail: '',
   approvalJwtSecret: '',
   orgName: 'Sanctuary HOA',
+  defaultAmenityId: null,
 }
 
 export async function getSettings(): Promise<SystemSettings> {

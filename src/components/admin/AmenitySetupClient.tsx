@@ -212,6 +212,18 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
   const [chatMessage, setChatMessage] = useState('')
   const [chatReply, setChatReply] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
+  const [defaultAmenityId, setDefaultAmenityId] = useState<string | null>(null)
+
+  async function toggleDefault(amenityId: string) {
+    const newDefault = defaultAmenityId === amenityId ? null : amenityId
+    setDefaultAmenityId(newDefault)
+    await fetch('/api/admin/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ defaultAmenityId: newDefault }),
+    })
+    setNotice(newDefault ? 'Default amenity set.' : 'Default amenity cleared.')
+  }
 
   // Area management state
   const [areaFormName, setAreaFormName] = useState('')
@@ -247,17 +259,20 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
   }
 
   async function loadData() {
-    const [aRes, sRes, areasRes] = await Promise.all([
+    const [aRes, sRes, areasRes, settingsRes] = await Promise.all([
       fetch('/api/admin/amenities'),
       fetch('/api/admin/staff'),
       fetch('/api/admin/areas'),
+      fetch('/api/admin/settings'),
     ])
     const aData = await aRes.json()
     const sData = await sRes.json()
     const areasData = await areasRes.json()
+    const settingsData = settingsRes.ok ? await settingsRes.json() : {}
     setAmenities(aData.amenities ?? [])
     setStaff(sData.staff ?? [])
     setAreas(areasData.areas ?? [])
+    setDefaultAmenityId(settingsData.settings?.defaultAmenityId ?? null)
   }
 
   function selectAmenity(amenity: Amenity | null) {
@@ -497,7 +512,17 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
                           onClick={() => selectAmenity(a)}
                           type="button"
                         >
-                          <div className="truncate font-medium">{a.name}</div>
+                          <div className="flex items-center gap-1.5 truncate">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); toggleDefault(a.id) }}
+                              className={`shrink-0 ${defaultAmenityId === a.id ? 'text-amber-400' : selectedAmenityId === a.id ? 'text-stone-500' : 'text-stone-300'} hover:text-amber-400`}
+                              title={defaultAmenityId === a.id ? 'Default amenity (click to unset)' : 'Set as default amenity'}
+                            >
+                              {defaultAmenityId === a.id ? '★' : '☆'}
+                            </button>
+                            <span className="truncate font-medium">{a.name}</span>
+                          </div>
                           <div className="truncate text-xs opacity-80">
                             {a.rentalFee > 0 ? `$${a.rentalFee} + $${a.depositAmount} deposit` : 'Free'}
                             {a.requiresApproval ? ' \u00b7 Approval required' : ' \u00b7 Auto-approved'}

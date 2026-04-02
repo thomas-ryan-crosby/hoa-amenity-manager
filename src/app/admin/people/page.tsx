@@ -9,6 +9,7 @@ type Resident = {
   phone: string | null
   unitNumber: string
   status: 'pending' | 'approved' | 'denied'
+  role: string
   createdAt: string
 }
 
@@ -90,6 +91,7 @@ export default function PeoplePage() {
         body: JSON.stringify({ role }),
       })
       if (res.ok) {
+        setResidents((prev) => prev.map((r) => r.id === id ? { ...r, role } : r))
         setNotice('Role updated. The user will see the change on their next sign-in.')
       }
     } catch (err) {
@@ -213,6 +215,11 @@ export default function PeoplePage() {
                         <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLES[person.status]}`}>
                           {person.status}
                         </span>
+                        {person.status === 'approved' && person.role !== 'resident' && (
+                          <span className="rounded-full bg-stone-800 px-2.5 py-0.5 text-xs font-semibold text-white">
+                            {person.role.replaceAll('_', ' ')}
+                          </span>
+                        )}
                       </div>
                       <p className="mt-1 text-sm text-stone-600 break-all">{person.email}</p>
                       <div className="mt-2 flex flex-wrap gap-3 text-xs text-stone-500">
@@ -261,7 +268,7 @@ export default function PeoplePage() {
                       {person.status === 'approved' && (
                         <select
                           className="w-full sm:w-auto rounded-full border border-stone-300 px-3 py-2 text-sm text-stone-900"
-                          defaultValue="resident"
+                          value={person.role}
                           onChange={(e) => changeRole(person.id, e.target.value)}
                           disabled={busy === person.id}
                         >

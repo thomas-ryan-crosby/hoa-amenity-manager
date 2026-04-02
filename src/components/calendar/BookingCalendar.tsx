@@ -130,7 +130,9 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         setAmenities(amenitiesData.amenities ?? [])
         setAreas(amenitiesData.areas ?? [])
         if (amenitiesData.amenities?.length) {
-          setSelectedAmenities(new Set([amenitiesData.amenities[0].id]))
+          const defaultId = amenitiesData.defaultAmenityId
+          const defaultExists = defaultId && amenitiesData.amenities.some((a: { id: string }) => a.id === defaultId)
+          setSelectedAmenities(new Set([defaultExists ? defaultId : amenitiesData.amenities[0].id]))
         }
       } catch (loadError) {
         console.error('Failed to load booking calendar', loadError)
