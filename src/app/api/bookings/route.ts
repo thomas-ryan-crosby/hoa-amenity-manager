@@ -120,15 +120,22 @@ export async function POST(req: NextRequest) {
     console.error(`[Email] Booking received notification failed:`, err)
   })
 
-  // Kick off orchestration for all bookings
-  orchestrator.handleNewBooking(booking.id).catch((err) => {
-    console.error(`[Orchestrator] Error handling booking ${booking.id}:`, err)
-  })
-  for (const addId of additionalBookingIds) {
-    orchestrator.handleNewBooking(addId).catch((err) => {
-      console.error(`[Orchestrator] Error handling booking ${addId}:`, err)
-    })
+  // Kick off orchestration sequentially (parallel can cause conflicts)
+  async function runOrchestration() {
+    try {
+      await orchestrator.handleNewBooking(booking.id)
+    } catch (err) {
+      console.error(`[Orchestrator] Error handling booking ${booking.id}:`, err)
+    }
+    for (const addId of additionalBookingIds) {
+      try {
+        await orchestrator.handleNewBooking(addId)
+      } catch (err) {
+        console.error(`[Orchestrator] Error handling booking ${addId}:`, err)
+      }
+    }
   }
+  runOrchestration() // fire-and-forget but sequential internally
 
   return NextResponse.json(
     {

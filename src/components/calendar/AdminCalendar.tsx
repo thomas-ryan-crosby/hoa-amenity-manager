@@ -92,6 +92,8 @@ export function AdminCalendar() {
   const [isMobile, setIsMobile] = useState(false)
   const calendarRef = useRef<FullCalendar>(null)
 
+  // Sidebar mode: 'idle' | 'book-on-behalf' | 'cleaning-block'
+  const [sidebarMode, setSidebarMode] = useState<'idle' | 'book-on-behalf' | 'cleaning-block'>('idle')
   // "Book on behalf" states
   const [adminSelection, setAdminSelection] = useState<{amenityId: string, start: string, end: string} | null>(null)
   const [bookingForm, setBookingForm] = useState({
@@ -546,6 +548,7 @@ export function AdminCalendar() {
               select={(info) => {
                 if (!primaryAmenityId || info.allDay) return
                 setSelectedId(null)
+                if (sidebarMode === 'idle') setSidebarMode('book-on-behalf')
                 setAdminSelection({
                   amenityId: primaryAmenityId,
                   start: info.startStr,
@@ -665,18 +668,65 @@ export function AdminCalendar() {
 
       <aside className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
-          {adminSelection && !selectedEvent ? 'Book on Behalf' : isTurnWindow ? 'Cleaning Window' : 'Booking Review'}
+          {adminSelection && !selectedEvent && sidebarMode === 'cleaning-block'
+            ? 'Add Cleaning Block'
+            : adminSelection && !selectedEvent
+              ? 'Book on Behalf'
+              : isTurnWindow ? 'Cleaning Window' : 'Booking Review'}
         </p>
         <h2 className="mt-2 text-2xl font-semibold text-stone-900">
           {adminSelection && !selectedEvent
-            ? amenities.find((a) => a.id === adminSelection.amenityId)?.name ?? 'New Booking'
+            ? amenities.find((a) => a.id === adminSelection.amenityId)?.name ?? 'Select'
             : selectedEvent
               ? selectedEvent.extendedProps.amenityName
               : 'Select an event'}
         </h2>
 
-        {/* "Book on behalf" form when admin selects a time slot */}
-        {adminSelection && !selectedEvent ? (
+        {/* Standalone cleaning block form */}
+        {adminSelection && !selectedEvent && sidebarMode === 'cleaning-block' ? (
+          <form className="mt-5 space-y-4" onSubmit={async (e) => {
+            e.preventDefault()
+            setBusy(true)
+            setError(null)
+            try {
+              const res = await fetch('/api/admin/turn-windows', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  amenityId: adminSelection.amenityId,
+                  startDatetime: adminSelection.start,
+                  endDatetime: adminSelection.end,
+                }),
+              })
+              if (!res.ok) throw new Error((await res.json()).error ?? 'Failed')
+              setAdminSelection(null)
+              setSidebarMode('idle')
+              calendarRef.current?.getApi().unselect()
+              await loadEvents()
+            } catch (err) {
+              setError(err instanceof Error ? err.message : 'Failed to create cleaning block')
+            } finally {
+              setBusy(false)
+            }
+          }}>
+            <div className="rounded-2xl bg-stone-50 p-4 text-sm text-stone-700">
+              <p><strong>Amenity:</strong> {amenities.find((a) => a.id === adminSelection.amenityId)?.name}</p>
+              <p><strong>Time:</strong> {formatDateRange(adminSelection.start, adminSelection.end)}</p>
+            </div>
+            <p className="text-sm text-stone-500">
+              This creates a standalone cleaning/maintenance block that is not tied to any booking.
+            </p>
+            {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+            <div className="flex gap-3">
+              <button className="flex-1 rounded-full bg-stone-900 px-4 py-3 text-sm font-semibold text-white disabled:bg-stone-400" disabled={busy} type="submit">
+                {busy ? 'Creating...' : 'Create cleaning block'}
+              </button>
+              <button className="rounded-full border border-stone-300 px-4 py-3 text-sm font-semibold text-stone-600" type="button" onClick={() => { setAdminSelection(null); setSidebarMode('idle'); calendarRef.current?.getApi().unselect() }}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : adminSelection && !selectedEvent ? (
           <form className="mt-5 space-y-4" onSubmit={handleAdminBookingSubmit}>
             <div className="flex items-start justify-between rounded-2xl bg-stone-50 p-4 text-sm text-stone-700">
               <div>
@@ -992,8 +1042,23 @@ export function AdminCalendar() {
             )}
           </div>
         ) : (
-          <div className="mt-5 rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-4 py-6 text-sm leading-6 text-stone-600">
-            Click any event to inspect details, or drag a time slot to book on behalf of a resident. Drag cleaning blocks to adjust turn windows.
+          <div className="mt-5 space-y-3">
+            <p className="text-sm text-stone-500">Select an event on the calendar, or choose an action:</p>
+            <button
+              className="w-full rounded-full bg-stone-900 px-4 py-3 text-sm font-semibold text-white"
+              onClick={() => { setSidebarMode('book-on-behalf'); setAdminSelection(null) }}
+              type="button"
+            >
+              Book on behalf
+            </button>
+            <button
+              className="w-full rounded-full border border-stone-300 px-4 py-3 text-sm font-semibold text-stone-700 hover:bg-stone-50"
+              onClick={() => { setSidebarMode('cleaning-block'); setAdminSelection(null); setSelectedId(null) }}
+              type="button"
+            >
+              Add cleaning block
+            </button>
+            <p className="text-xs text-stone-400">Drag a time slot on the calendar after selecting an action.</p>
           </div>
         )}
       </aside>
