@@ -1043,22 +1043,47 @@ export function AdminCalendar() {
           </div>
         ) : (
           <div className="mt-5 space-y-3">
-            <p className="text-sm text-stone-500">Select an event on the calendar, or choose an action:</p>
+            <p className="text-sm text-stone-500">
+              {sidebarMode === 'idle'
+                ? 'Select an event on the calendar, or choose an action:'
+                : sidebarMode === 'book-on-behalf'
+                  ? 'Now drag a time slot on the calendar to book on behalf of a resident.'
+                  : 'Now drag a time slot on the calendar to add a cleaning block.'}
+            </p>
+
             <button
-              className="w-full rounded-full bg-stone-900 px-4 py-3 text-sm font-semibold text-white"
-              onClick={() => { setSidebarMode('book-on-behalf'); setAdminSelection(null) }}
+              className={`w-full rounded-full px-4 py-3 text-sm font-semibold transition ${
+                sidebarMode === 'book-on-behalf'
+                  ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
+                  : 'bg-stone-900 text-white hover:bg-stone-800'
+              }`}
+              onClick={() => setSidebarMode(sidebarMode === 'book-on-behalf' ? 'idle' : 'book-on-behalf')}
               type="button"
             >
-              Book on behalf
+              {sidebarMode === 'book-on-behalf' ? '✓ Book on behalf — drag a slot' : 'Book on behalf'}
             </button>
+
             <button
-              className="w-full rounded-full border border-stone-300 px-4 py-3 text-sm font-semibold text-stone-700 hover:bg-stone-50"
-              onClick={() => { setSidebarMode('cleaning-block'); setAdminSelection(null); setSelectedId(null) }}
+              className={`w-full rounded-full px-4 py-3 text-sm font-semibold transition ${
+                sidebarMode === 'cleaning-block'
+                  ? 'bg-stone-700 text-white ring-2 ring-stone-400'
+                  : 'border border-stone-300 text-stone-700 hover:bg-stone-50'
+              }`}
+              onClick={() => setSidebarMode(sidebarMode === 'cleaning-block' ? 'idle' : 'cleaning-block')}
               type="button"
             >
-              Add cleaning block
+              {sidebarMode === 'cleaning-block' ? '✓ Cleaning block — drag a slot' : 'Add cleaning block'}
             </button>
-            <p className="text-xs text-stone-400">Drag a time slot on the calendar after selecting an action.</p>
+
+            {sidebarMode !== 'idle' && (
+              <button
+                className="w-full text-xs text-stone-400 hover:text-stone-600"
+                onClick={() => setSidebarMode('idle')}
+                type="button"
+              >
+                Cancel
+              </button>
+            )}
           </div>
         )}
       </aside>
