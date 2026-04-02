@@ -221,6 +221,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amenityId: selection.amenityId,
+          additionalAmenityIds: additionalAmenities.length > 0 ? additionalAmenities : undefined,
           startDatetime: selection.start,
           endDatetime: selection.end,
           guestCount,
@@ -233,22 +234,6 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
 
       if (!response.ok) {
         throw new Error(data.error ?? 'Unable to submit booking request.')
-      }
-
-      // Create additional bookings for suggested amenities
-      for (const additionalId of additionalAmenities) {
-        await fetch('/api/bookings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amenityId: additionalId,
-            startDatetime: selection.start,
-            endDatetime: selection.end,
-            guestCount,
-            notes: notes ? `[Booked with ${amenityInfo?.name}] ${notes}` : `[Booked with ${amenityInfo?.name}]`,
-            anonymous,
-          }),
-        })
       }
 
       // Reload events to reflect the new booking (or waitlist entry)
@@ -265,11 +250,14 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         await fetch(`/api/bookings/${modifyBookingId}/cancel`, { method: 'POST' }).catch(() => {})
       }
 
+      const amenityLabel = data.amenityNames?.length > 1
+        ? data.amenityNames.join(' + ')
+        : amenityInfo?.name ?? 'amenity'
       const statusMsg = modifyBookingId
         ? 'Booking modified! Your original booking has been cancelled.'
         : data.status === 'WAITLISTED'
           ? 'Your booking has been waitlisted because the slot already has an active booking. You will be notified if it opens up.'
-          : 'Booking request submitted!'
+          : `Booking request submitted for ${amenityLabel}!`
       alert(statusMsg)
 
       // If modifying, redirect back to bookings

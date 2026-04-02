@@ -4,6 +4,7 @@ import { requireUser } from '@/lib/auth'
 import {
   getResidentByFirebaseUid,
   getBookingsByResident,
+  getAmenityById,
   createBookingWithAuditLog,
 } from '@/lib/firebase/db'
 import * as orchestrator from '@/lib/agents/orchestrator'
@@ -11,6 +12,7 @@ import * as residentAgent from '@/lib/agents/resident-agent'
 
 const CreateBookingSchema = z.object({
   amenityId: z.string().min(1),
+  additionalAmenityIds: z.array(z.string()).optional(),
   startDatetime: z.string().refine((s) => !isNaN(Date.parse(s)), 'Invalid date'),
   endDatetime: z.string().refine((s) => !isNaN(Date.parse(s)), 'Invalid date'),
   guestCount: z.number().int().positive(),
@@ -62,8 +64,9 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { amenityId, startDatetime, endDatetime, guestCount, notes, anonymous } = parsed.data
+  const { amenityId, additionalAmenityIds, startDatetime, endDatetime, guestCount, notes, anonymous } = parsed.data
 
+  // Create the primary booking
   const booking = await createBookingWithAuditLog(
     {
       residentId: resident.id,
@@ -79,18 +82,61 @@ export async function POST(req: NextRequest) {
     'BOOKING_CREATED',
   )
 
-  // Send booking received email immediately
-  residentAgent.notifyBookingReceived(booking.id).catch((err) => {
-    console.error(`[Email] Booking received notification failed for ${booking.id}:`, err)
+  // Create additional bookings for suggested amenities
+  const additionalBookingIds: string[] = []
+  if (additionalAmenityIds?.length) {
+    for (const addId of additionalAmenityIds) {
+      const addBooking = await createBookingWithAuditLog(
+        {
+          residentId: resident.id,
+          amenityId: addId,
+          status: 'INQUIRY_RECEIVED',
+          startDatetime: new Date(startDatetime),
+          endDatetime: new Date(endDatetime),
+          guestCount,
+          notes: notes ? `[Bundled booking] ${notes}` : '[Bundled booking]',
+          anonymous: anonymous ?? false,
+        },
+        'api',
+        'BOOKING_CREATED_BUNDLED',
+      )
+      additionalBookingIds.push(addBooking.id)
+    }
+  }
+
+  // Send ONE combined booking received email
+  const allAmenityIds = [amenityId, ...(additionalAmenityIds ?? [])]
+  const amenityNames = await Promise.all(
+    allAmenityIds.map(async (id) => {
+      const a = await getAmenityById(id)
+      return a?.name ?? 'Unknown'
+    }),
+  )
+
+  residentAgent.notifyBookingReceivedMultiple(
+    booking.id,
+    amenityNames,
+  ).catch((err) => {
+    console.error(`[Email] Booking received notification failed:`, err)
   })
 
-  // Kick off async orchestration (fire-and-forget)
+  // Kick off orchestration for all bookings
   orchestrator.handleNewBooking(booking.id).catch((err) => {
-    console.error(`[Orchestrator] Error handling new booking ${booking.id}:`, err)
+    console.error(`[Orchestrator] Error handling booking ${booking.id}:`, err)
   })
+  for (const addId of additionalBookingIds) {
+    orchestrator.handleNewBooking(addId).catch((err) => {
+      console.error(`[Orchestrator] Error handling booking ${addId}:`, err)
+    })
+  }
 
   return NextResponse.json(
-    { bookingId: booking.id, status: booking.status },
+    {
+      bookingId: booking.id,
+      additionalBookingIds,
+      status: booking.status,
+      amenityNames,
+    },
     { status: 201 },
   )
 }

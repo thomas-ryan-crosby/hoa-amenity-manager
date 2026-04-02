@@ -47,6 +47,23 @@ export async function notifyBookingReceived(bookingId: string): Promise<void> {
   )
 }
 
+export async function notifyBookingReceivedMultiple(bookingId: string, amenityNames: string[]): Promise<void> {
+  const booking = await getBooking(bookingId)
+  const amenityList = amenityNames.map((n) => `<li><strong>${n}</strong></li>`).join('')
+  await sendToRecipients(booking,
+    `Booking request received for ${amenityNames.join(' + ')}`,
+    `
+      <p>Hi ${booking.resident.name},</p>
+      <p>We've received your booking request for the following amenities:</p>
+      <ul style="padding-left: 18px; line-height: 1.8;">${amenityList}</ul>
+      <p><strong>When:</strong> ${formatDateRange(booking.startDatetime, booking.endDatetime)}</p>
+      <p><strong>Guests:</strong> ${booking.guestCount}</p>
+      <p>Each amenity will be processed separately. You'll receive updates as they are reviewed and confirmed.</p>
+      <p style="color: #78716c; font-size: 13px;">You can check the status of your bookings anytime in the booking portal.</p>
+    `,
+  )
+}
+
 export async function notifyCancelled(bookingId: string, reason?: string): Promise<void> {
   const booking = await getBooking(bookingId)
   await sendToRecipients(booking, `Booking cancelled for ${booking.amenity.name}`,
