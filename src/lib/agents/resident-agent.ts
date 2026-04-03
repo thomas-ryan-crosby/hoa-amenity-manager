@@ -35,6 +35,11 @@ function bookingSummaryHtml(booking: Awaited<ReturnType<typeof getBooking>>) {
   `
 }
 
+function accessNoticeHtml(amenity: { hasAccessInstructions?: boolean }): string {
+  if (!amenity.hasAccessInstructions) return ''
+  return '<p style="color: #059669; font-size: 13px; margin-top: 12px;">📋 This amenity has access instructions (gate codes, keys, etc.) that will be sent to you <strong>1 hour before</strong> your booking starts.</p>'
+}
+
 export async function notifyBookingReceived(bookingId: string): Promise<void> {
   const booking = await getBooking(bookingId)
   await sendToRecipients(booking, `Booking request received for ${booking.amenity.name}`,
@@ -42,6 +47,7 @@ export async function notifyBookingReceived(bookingId: string): Promise<void> {
       <p>Hi ${booking.resident.name},</p>
       <p>We've received your booking request for <strong>${booking.amenity.name}</strong>. We'll notify you once it's been reviewed.</p>
       ${bookingSummaryHtml(booking)}
+      ${accessNoticeHtml(booking.amenity)}
       <p style="color: #78716c; font-size: 13px;">You can check the status of your booking anytime in the booking portal.</p>
     `,
   )
@@ -59,6 +65,7 @@ export async function notifyBookingReceivedMultiple(bookingId: string, amenityNa
       <p><strong>When:</strong> ${formatDateRange(booking.startDatetime, booking.endDatetime)}</p>
       <p><strong>Guests:</strong> ${booking.guestCount}</p>
       <p>Each amenity will be processed separately. You'll receive updates as they are reviewed and confirmed.</p>
+      ${accessNoticeHtml(booking.amenity)}
       <p style="color: #78716c; font-size: 13px;">You can check the status of your bookings anytime in the booking portal.</p>
     `,
   )
@@ -158,6 +165,7 @@ export async function sendConfirmation(bookingId: string): Promise<void> {
       <p>Hi ${booking.resident.name},</p>
       <p>Your booking is confirmed! We look forward to hosting your event.</p>
       ${bookingSummaryHtml(booking)}
+      ${accessNoticeHtml(booking.amenity)}
     `,
   )
 }

@@ -103,6 +103,7 @@ type CalendarEventExtendedProps = {
   status: string
   inspectionStatus: string | null
   inspectionNeeded: boolean
+  type?: string
 }
 
 type CalendarEvent = {
@@ -153,9 +154,13 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [additionalAmenities, setAdditionalAmenities] = useState<string[]>([])
-  const [rulesAccepted, setRulesAccepted] = useState(false)
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
   const [isMobile, setIsMobile] = useState(false)
+  const [showRulesModal, setShowRulesModal] = useState(false)
+  const [rulesAcceptedInModal, setRulesAcceptedInModal] = useState(false)
+  const [showQuickBook, setShowQuickBook] = useState(false)
+  const [quickBookStart, setQuickBookStart] = useState('')
+  const [quickBookEnd, setQuickBookEnd] = useState('')
   const calendarRef = useRef<FullCalendar>(null)
 
   function clearSelection() {
@@ -163,7 +168,8 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
     setError(null)
     setAnonymous(false)
     setAdditionalAmenities([])
-    setRulesAccepted(false)
+    setShowRulesModal(false)
+    setRulesAcceptedInModal(false)
     calendarRef.current?.getApi().unselect()
   }
 
@@ -271,9 +277,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
     }
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-
+  async function doSubmit() {
     if (!selection) return
 
     setSubmitting(true)
@@ -340,6 +344,20 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
     }
   }
 
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!selection || !amenityInfo) return
+
+    // If amenity has rules and user hasn't accepted yet, show rules modal
+    if (amenityInfo.hasRules && amenityInfo.rules && !showRulesModal) {
+      setShowRulesModal(true)
+      setRulesAcceptedInModal(false)
+      return
+    }
+
+    await doSubmit()
+  }
+
   // Determine which amenity to use for calendar selection (first selected amenity)
   const primaryAmenityId = useMemo(() => {
     const arr = Array.from(selectedAmenities)
@@ -349,6 +367,93 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   if (loading) {
     return <div className="h-[640px] animate-pulse rounded-3xl bg-stone-100" />
   }
+
+  // Rules acceptance modal
+  const rulesModal = showRulesModal && amenityInfo?.rules ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowRulesModal(false)}>
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold text-stone-900">Booking Rules &mdash; {amenityInfo.name}</h3>
+        <div className="mt-3 max-h-60 overflow-y-auto rounded-xl bg-stone-50 p-4 text-sm text-stone-700 whitespace-pre-wrap">
+          {amenityInfo.rules}
+        </div>
+        <label className="mt-4 flex items-center gap-2 text-sm font-medium text-stone-700">
+          <input
+            type="checkbox"
+            checked={rulesAcceptedInModal}
+            onChange={(e) => setRulesAcceptedInModal(e.target.checked)}
+            className="rounded"
+          />
+          I accept the booking rules
+        </label>
+        <div className="mt-4 flex gap-3">
+          <button
+            className="flex-1 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:bg-emerald-300"
+            disabled={!rulesAcceptedInModal}
+            onClick={() => {
+              setShowRulesModal(false)
+              doSubmit()
+            }}
+          >
+            Confirm &amp; Submit
+          </button>
+          <button
+            className="rounded-full border border-stone-300 px-4 py-3 text-sm font-semibold text-stone-600"
+            onClick={() => setShowRulesModal(false)}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null
+
+  // Quick book time picker modal
+  const quickBookModal = showQuickBook ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowQuickBook(false)}>
+      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold text-stone-900">Set booking time</h3>
+        <div className="mt-4 space-y-3">
+          <label className="block text-sm font-medium text-stone-700">
+            Start
+            <input
+              type="datetime-local"
+              className="mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900"
+              value={quickBookStart.slice(0, 16)}
+              onChange={(e) => setQuickBookStart(e.target.value)}
+            />
+          </label>
+          <label className="block text-sm font-medium text-stone-700">
+            End
+            <input
+              type="datetime-local"
+              className="mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900"
+              value={quickBookEnd.slice(0, 16)}
+              onChange={(e) => setQuickBookEnd(e.target.value)}
+            />
+          </label>
+        </div>
+        <div className="mt-4 flex gap-3">
+          <button
+            className="flex-1 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white"
+            onClick={() => {
+              setSelection({ amenityId: primaryAmenityId, start: quickBookStart, end: quickBookEnd })
+              setGuestCount(1)
+              setNotes('')
+              setShowQuickBook(false)
+            }}
+          >
+            Set time
+          </button>
+          <button
+            className="rounded-full border border-stone-300 px-4 py-3 text-sm font-semibold text-stone-600"
+            onClick={() => setShowQuickBook(false)}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null
 
   // Mobile booking modal
   const mobileModal = isMobile && selection && amenityInfo ? (
@@ -428,17 +533,6 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
             Book anonymously
           </label>
 
-          {amenityInfo.hasRules && amenityInfo.rules && (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm">
-              <p className="font-semibold text-amber-800 mb-2">Booking Rules</p>
-              <div className="text-amber-700 whitespace-pre-wrap mb-3">{amenityInfo.rules}</div>
-              <label className="flex items-center gap-2 text-amber-800 font-medium">
-                <input type="checkbox" checked={rulesAccepted} onChange={(e) => setRulesAccepted(e.target.checked)} className="rounded" />
-                I accept the booking rules
-              </label>
-            </div>
-          )}
-
           <BookingSummary
             primaryAmenity={amenityInfo}
             additionalAmenities={additionalAmenities}
@@ -452,7 +546,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
           <div className="flex gap-3">
             <button
               className="flex-1 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white disabled:bg-emerald-300"
-              disabled={submitting || (amenityInfo.hasRules && !!amenityInfo.rules && !rulesAccepted)}
+              disabled={submitting}
               type="submit"
             >
               {submitting ? 'Submitting...' : 'Confirm Booking'}
@@ -472,6 +566,8 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
 
   return (
     <>
+    {rulesModal}
+    {quickBookModal}
     {mobileModal}
     <div className="grid gap-6 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div>
@@ -530,7 +626,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
 
         {isMobile && (
           <div className="mb-3 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
-            <strong>How to book:</strong> Tap and hold on a time slot, then drag to set your duration. A confirmation window will appear.
+            <strong>How to book:</strong> Tap and hold on a time slot, then drag to set your duration. Tap an event to join the waitlist for that time slot. A confirmation window will appear.
           </div>
         )}
 
@@ -606,7 +702,32 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               dateClick={(info) => {
                 if (info.view.type === 'dayGridMonth') {
                   calendarRef.current?.getApi().changeView('rolling3Day', info.dateStr)
+                  return
                 }
+
+                if (!primaryAmenityId) return
+
+                // Single click: pre-fill with 1-hour block starting from click
+                const clickDate = new Date(info.dateStr)
+                const endDate = new Date(clickDate.getTime() + 60 * 60 * 1000)
+
+                setQuickBookStart(info.dateStr)
+                setQuickBookEnd(endDate.toISOString())
+                setShowQuickBook(true)
+              }}
+              eventClick={(info) => {
+                // When user clicks an existing booking, pre-fill with same time to join waitlist
+                if (!primaryAmenityId) return
+                const event = info.event
+                if (event.extendedProps?.type === 'turn-window') return // don't book over cleaning
+
+                setSelection({
+                  amenityId: primaryAmenityId,
+                  start: event.startStr,
+                  end: event.endStr,
+                })
+                setGuestCount(1)
+                setNotes('')
               }}
               navLinks
               navLinkDayClick={(date) => {
@@ -795,17 +916,6 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               <span className="text-xs text-stone-400">(your name won't show on the public calendar)</span>
             </label>
 
-            {amenityInfo.hasRules && amenityInfo.rules && (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm">
-                <p className="font-semibold text-amber-800 mb-2">Booking Rules</p>
-                <div className="text-amber-700 whitespace-pre-wrap mb-3">{amenityInfo.rules}</div>
-                <label className="flex items-center gap-2 text-amber-800 font-medium">
-                  <input type="checkbox" checked={rulesAccepted} onChange={(e) => setRulesAccepted(e.target.checked)} className="rounded" />
-                  I accept the booking rules
-                </label>
-              </div>
-            )}
-
             <BookingSummary
               primaryAmenity={amenityInfo}
               additionalAmenities={additionalAmenities}
@@ -822,7 +932,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
 
             <button
               className="w-full rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-300"
-              disabled={submitting || (amenityInfo.hasRules && !!amenityInfo.rules && !rulesAccepted)}
+              disabled={submitting}
               type="submit"
             >
               {submitting ? 'Submitting request...' : 'Request Booking'}
