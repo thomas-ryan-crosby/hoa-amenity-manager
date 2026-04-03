@@ -161,6 +161,16 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   const [loading, setLoading] = useState(true)
   const [additionalAmenities, setAdditionalAmenities] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
+  const [eventDetail, setEventDetail] = useState<{
+    title: string
+    start: string
+    end: string
+    amenityName: string
+    residentName: string
+    guestCount: number
+    status: string
+    type: string
+  } | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [showRulesModal, setShowRulesModal] = useState(false)
   const [rulesAcceptedInModal, setRulesAcceptedInModal] = useState(false)
@@ -599,6 +609,68 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
     {rulesModal}
     {quickBookModal}
     {mobileModal}
+
+    {/* Event detail popup */}
+    {eventDetail && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEventDetail(null)}>
+        <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-stone-900">{eventDetail.amenityName}</h3>
+            <button onClick={() => setEventDetail(null)} className="rounded-full p-1 text-stone-400 hover:bg-stone-100">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="space-y-2 text-sm text-stone-700">
+            <div className="flex justify-between">
+              <span className="text-stone-500">When</span>
+              <span className="font-medium text-right">{formatDateRange(eventDetail.start, eventDetail.end)}</span>
+            </div>
+            {eventDetail.residentName && (
+              <div className="flex justify-between">
+                <span className="text-stone-500">Reserved by</span>
+                <span className="font-medium">{eventDetail.residentName}</span>
+              </div>
+            )}
+            {eventDetail.guestCount > 0 && (
+              <div className="flex justify-between">
+                <span className="text-stone-500">Guests</span>
+                <span className="font-medium">{eventDetail.guestCount}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-stone-500">Status</span>
+              <span className="font-medium">{eventDetail.status.replaceAll('_', ' ')}</span>
+            </div>
+          </div>
+
+          {eventDetail.type === 'booking' && primaryAmenityId && (
+            <button
+              className="mt-5 w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
+              onClick={() => {
+                setSelection({
+                  amenityId: primaryAmenityId,
+                  start: eventDetail.start,
+                  end: eventDetail.end,
+                })
+                setGuestCount(1)
+                setNotes('')
+                setEventDetail(null)
+              }}
+            >
+              Book this time slot (waitlist)
+            </button>
+          )}
+
+          {eventDetail.type === 'turn-window' && (
+            <p className="mt-4 text-xs text-stone-400 text-center">This is a cleaning/maintenance window and cannot be booked.</p>
+          )}
+        </div>
+      </div>
+    )}
+
     <div className="grid gap-6 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div>
         {/* Amenity tabs grouped by area + view toggle */}
@@ -770,18 +842,19 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                 setShowQuickBook(true)
               }}
               eventClick={(info) => {
-                // When user clicks an existing booking, pre-fill with same time to join waitlist
-                if (!primaryAmenityId) return
                 const event = info.event
-                if (event.extendedProps?.type === 'turn-window') return // don't book over cleaning
+                const props = event.extendedProps ?? {}
 
-                setSelection({
-                  amenityId: primaryAmenityId,
+                setEventDetail({
+                  title: event.title,
                   start: event.startStr,
                   end: event.endStr,
+                  amenityName: props.amenityName ?? '',
+                  residentName: props.residentName ?? '',
+                  guestCount: props.guestCount ?? 0,
+                  status: props.status ?? '',
+                  type: props.type ?? 'booking',
                 })
-                setGuestCount(1)
-                setNotes('')
               }}
               navLinks
               navLinkDayClick={(date) => {
