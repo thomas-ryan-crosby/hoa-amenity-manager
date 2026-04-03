@@ -165,6 +165,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   const [showRulesModal, setShowRulesModal] = useState(false)
   const [rulesAcceptedInModal, setRulesAcceptedInModal] = useState(false)
   const [showQuickBook, setShowQuickBook] = useState(false)
+  const quickBookActiveRef = useRef(false)
   const [quickBookStart, setQuickBookStart] = useState('')
   const [quickBookEnd, setQuickBookEnd] = useState('')
   const calendarRef = useRef<FullCalendar>(null)
@@ -423,11 +424,11 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   }
 
   const quickBookModal = showQuickBook ? (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => { setShowQuickBook(false); calendarRef.current?.getApi().unselect() }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => { setShowQuickBook(false); quickBookActiveRef.current = false; calendarRef.current?.getApi().unselect() }}>
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-stone-900">Set booking time</h3>
-          <button onClick={() => { setShowQuickBook(false); calendarRef.current?.getApi().unselect() }} className="rounded-full p-1 text-stone-400 hover:bg-stone-100">
+          <button onClick={() => { setShowQuickBook(false); quickBookActiveRef.current = false; calendarRef.current?.getApi().unselect() }} className="rounded-full p-1 text-stone-400 hover:bg-stone-100">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
@@ -468,13 +469,14 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               setGuestCount(1)
               setNotes('')
               setShowQuickBook(false)
+              quickBookActiveRef.current = false
             }}
           >
             Confirm time
           </button>
           <button
             className="rounded-full border border-stone-300 px-4 py-3 text-sm font-semibold text-stone-600"
-            onClick={() => { setShowQuickBook(false); calendarRef.current?.getApi().unselect() }}
+            onClick={() => { setShowQuickBook(false); quickBookActiveRef.current = false; calendarRef.current?.getApi().unselect() }}
           >
             Cancel
           </button>
@@ -710,7 +712,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               selectable
               selectMirror
               unselectAuto={false}
-              selectMinDistance={isMobile ? 0 : 5}
+              selectMinDistance={isMobile ? 0 : 1}
               longPressDelay={isMobile ? 300 : 0}
               selectAllow={(info) => {
                 // Block all-day selections from month view — navigate to day instead
@@ -719,7 +721,26 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               select={(info) => {
                 if (!primaryAmenityId) return
                 if (info.allDay) return
-                if (showQuickBook) return // programmatic select from click — modal handles it
+                if (quickBookActiveRef.current) return // programmatic select — modal handles it
+
+                // Check if this is a "click" (very short selection) vs a real drag
+                const startMs = new Date(info.startStr).getTime()
+                const endMs = new Date(info.endStr).getTime()
+                const durationMin = (endMs - startMs) / (1000 * 60)
+
+                // FullCalendar creates a 30-min slot on click. If duration <= 30 min,
+                // treat as a click and open the time picker with a 1-hour block
+                if (durationMin <= 30) {
+                  const clickDate = new Date(info.startStr)
+                  const endDate = new Date(clickDate.getTime() + 60 * 60 * 1000)
+                  quickBookActiveRef.current = true
+                  calendarRef.current?.getApi().select(clickDate, endDate)
+                  setQuickBookStart(toLocalDatetime(clickDate))
+                  setQuickBookEnd(toLocalDatetime(endDate))
+                  setShowQuickBook(true)
+                  return
+                }
+
                 setSelection({
                   amenityId: primaryAmenityId,
                   start: info.startStr,
