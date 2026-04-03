@@ -94,6 +94,53 @@ export function AdminCalendar() {
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
   const [isMobile, setIsMobile] = useState(false)
   const calendarRef = useRef<FullCalendar>(null)
+  const calendarWrapperRef = useRef<HTMLDivElement>(null)
+
+  // Swipe navigation
+  useEffect(() => {
+    const el = calendarWrapperRef.current
+    if (!el) return
+
+    let touchStartX = 0
+    let touchStartY = 0
+
+    function onTouchStart(e: TouchEvent) {
+      if (e.touches.length === 1) { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY }
+    }
+    function onTouchEnd(e: TouchEvent) {
+      if (e.changedTouches.length !== 1) return
+      const dx = e.changedTouches[0].clientX - touchStartX
+      const dy = e.changedTouches[0].clientY - touchStartY
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 60) {
+        const api = calendarRef.current?.getApi()
+        if (api) { dx > 0 ? api.prev() : api.next() }
+      }
+    }
+
+    let wheelTimeout: ReturnType<typeof setTimeout> | null = null
+    let accDx = 0
+    function onWheel(e: WheelEvent) {
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 5) return
+      e.preventDefault()
+      accDx += e.deltaX
+      if (wheelTimeout) clearTimeout(wheelTimeout)
+      wheelTimeout = setTimeout(() => {
+        const api = calendarRef.current?.getApi()
+        if (api) { if (accDx > 80) api.next(); else if (accDx < -80) api.prev() }
+        accDx = 0
+      }, 150)
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchend', onTouchEnd, { passive: true })
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchend', onTouchEnd)
+      el.removeEventListener('wheel', onWheel)
+      if (wheelTimeout) clearTimeout(wheelTimeout)
+    }
+  }, [])
 
   // Sidebar mode: 'idle' | 'book-on-behalf' | 'cleaning-block'
   const [sidebarMode, setSidebarMode] = useState<'idle' | 'book-on-behalf' | 'cleaning-block'>('idle')
@@ -516,7 +563,7 @@ export function AdminCalendar() {
         </div>
 
         {viewMode === 'calendar' ? (
-          <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-2 sm:p-4 shadow-sm">
+          <div ref={calendarWrapperRef} className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-2 sm:p-4 shadow-sm">
             <FullCalendar
               ref={calendarRef}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
