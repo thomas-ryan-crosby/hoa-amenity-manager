@@ -7,6 +7,12 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import { formatCurrency, formatDateTime, formatDateRange } from '@/lib/format'
 
+/** Convert a Date to a local `YYYY-MM-DDTHH:MM` string for datetime-local inputs */
+function toLocalDatetime(d: Date): string {
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 function BookingSummary({
   primaryAmenity,
   additionalAmenities,
@@ -733,14 +739,13 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                 // Single click: create 1-hour blue block on calendar + open time picker
                 const clickDate = new Date(info.dateStr)
                 const endDate = new Date(clickDate.getTime() + 60 * 60 * 1000)
-                const startStr = clickDate.toISOString()
-                const endStr = endDate.toISOString()
 
                 // Show the blue selection block on the calendar
                 calendarRef.current?.getApi().select(clickDate, endDate)
 
-                setQuickBookStart(startStr)
-                setQuickBookEnd(endStr)
+                // Use local datetime strings for the picker inputs
+                setQuickBookStart(toLocalDatetime(clickDate))
+                setQuickBookEnd(toLocalDatetime(endDate))
                 setShowQuickBook(true)
               }}
               eventClick={(info) => {
