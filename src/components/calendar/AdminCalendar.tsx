@@ -96,50 +96,18 @@ export function AdminCalendar() {
   const calendarRef = useRef<FullCalendar>(null)
   const calendarWrapperRef = useRef<HTMLDivElement>(null)
 
-  // Swipe navigation
+  // Keyboard arrow navigation
   useEffect(() => {
-    const el = calendarWrapperRef.current
-    if (!el) return
-
-    let touchStartX = 0
-    let touchStartY = 0
-
-    function onTouchStart(e: TouchEvent) {
-      if (e.touches.length === 1) { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY }
+    function onKeyDown(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      const api = calendarRef.current?.getApi()
+      if (!api) return
+      if (e.key === 'ArrowLeft') { e.preventDefault(); api.prev() }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); api.next() }
     }
-    function onTouchEnd(e: TouchEvent) {
-      if (e.changedTouches.length !== 1) return
-      const dx = e.changedTouches[0].clientX - touchStartX
-      const dy = e.changedTouches[0].clientY - touchStartY
-      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 60) {
-        const api = calendarRef.current?.getApi()
-        if (api) { dx > 0 ? api.prev() : api.next() }
-      }
-    }
-
-    let wheelTimeout: ReturnType<typeof setTimeout> | null = null
-    let accDx = 0
-    function onWheel(e: WheelEvent) {
-      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 5) return
-      e.preventDefault()
-      accDx += e.deltaX
-      if (wheelTimeout) clearTimeout(wheelTimeout)
-      wheelTimeout = setTimeout(() => {
-        const api = calendarRef.current?.getApi()
-        if (api) { if (accDx > 80) api.next(); else if (accDx < -80) api.prev() }
-        accDx = 0
-      }, 150)
-    }
-
-    el.addEventListener('touchstart', onTouchStart, { passive: true })
-    el.addEventListener('touchend', onTouchEnd, { passive: true })
-    el.addEventListener('wheel', onWheel, { passive: false })
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart)
-      el.removeEventListener('touchend', onTouchEnd)
-      el.removeEventListener('wheel', onWheel)
-      if (wheelTimeout) clearTimeout(wheelTimeout)
-    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
   // Sidebar mode: 'idle' | 'book-on-behalf' | 'cleaning-block'
@@ -563,7 +531,23 @@ export function AdminCalendar() {
         </div>
 
         {viewMode === 'calendar' ? (
-          <div ref={calendarWrapperRef} className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-2 sm:p-4 shadow-sm">
+          <div ref={calendarWrapperRef} className="relative overflow-hidden rounded-3xl border border-stone-200 bg-white p-2 sm:p-4 shadow-sm group">
+            <button
+              className="absolute left-0 top-12 bottom-0 z-10 w-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-stone-200/60 to-transparent hover:from-stone-300/80"
+              onClick={() => calendarRef.current?.getApi().prev()}
+              type="button"
+              aria-label="Previous"
+            >
+              <span className="text-stone-600 text-lg font-bold">&lsaquo;</span>
+            </button>
+            <button
+              className="absolute right-0 top-12 bottom-0 z-10 w-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-l from-stone-200/60 to-transparent hover:from-stone-300/80"
+              onClick={() => calendarRef.current?.getApi().next()}
+              type="button"
+              aria-label="Next"
+            >
+              <span className="text-stone-600 text-lg font-bold">&rsaquo;</span>
+            </button>
             <FullCalendar
               ref={calendarRef}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}

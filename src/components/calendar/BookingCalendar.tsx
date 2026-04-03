@@ -181,89 +181,23 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   const calendarRef = useRef<FullCalendar>(null)
   const calendarWrapperRef = useRef<HTMLDivElement>(null)
 
-  // Swipe navigation: two-finger trackpad on desktop, one-finger on mobile
+  // Keyboard left/right arrow navigation when calendar is focused
   useEffect(() => {
-    const el = calendarWrapperRef.current
-    if (!el) return
+    function onKeyDown(e: KeyboardEvent) {
+      // Only if no modal is open and no input is focused
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (showQuickBook || showRulesModal || eventDetail) return
 
-    let touchStartX = 0
-    let touchStartY = 0
-    let swiping = false
-
-    // Mobile: one-finger horizontal swipe
-    function onTouchStart(e: TouchEvent) {
-      if (e.touches.length === 1) {
-        touchStartX = e.touches[0].clientX
-        touchStartY = e.touches[0].clientY
-        swiping = false
-      }
-    }
-
-    function onTouchMove(e: TouchEvent) {
-      if (e.touches.length !== 1) return
-      const dx = e.touches[0].clientX - touchStartX
-      const dy = e.touches[0].clientY - touchStartY
-      // Only count as horizontal swipe if horizontal distance > vertical
-      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 30) {
-        swiping = true
-      }
-    }
-
-    function onTouchEnd() {
-      if (!swiping) return
       const api = calendarRef.current?.getApi()
       if (!api) return
-      // We don't track direction in touchEnd easily, so use touchMove direction
+
+      if (e.key === 'ArrowLeft') { e.preventDefault(); api.prev() }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); api.next() }
     }
-
-    // Better approach: track in touchEnd
-    function onTouchEndFull(e: TouchEvent) {
-      if (e.changedTouches.length !== 1) return
-      const dx = e.changedTouches[0].clientX - touchStartX
-      const dy = e.changedTouches[0].clientY - touchStartY
-      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 60) {
-        const api = calendarRef.current?.getApi()
-        if (!api) return
-        if (dx > 0) api.prev()
-        else api.next()
-      }
-    }
-
-    // Desktop: two-finger trackpad horizontal scroll (wheel event with deltaX)
-    let wheelTimeout: ReturnType<typeof setTimeout> | null = null
-    let accumulatedDeltaX = 0
-
-    function onWheel(e: WheelEvent) {
-      // Only respond to horizontal scroll (two-finger trackpad swipe)
-      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
-      if (Math.abs(e.deltaX) < 5) return
-
-      e.preventDefault()
-      accumulatedDeltaX += e.deltaX
-
-      if (wheelTimeout) clearTimeout(wheelTimeout)
-      wheelTimeout = setTimeout(() => {
-        const api = calendarRef.current?.getApi()
-        if (!api) { accumulatedDeltaX = 0; return }
-        if (accumulatedDeltaX > 80) api.next()
-        else if (accumulatedDeltaX < -80) api.prev()
-        accumulatedDeltaX = 0
-      }, 150)
-    }
-
-    el.addEventListener('touchstart', onTouchStart, { passive: true })
-    el.addEventListener('touchmove', onTouchMove, { passive: true })
-    el.addEventListener('touchend', onTouchEndFull, { passive: true })
-    el.addEventListener('wheel', onWheel, { passive: false })
-
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart)
-      el.removeEventListener('touchmove', onTouchMove)
-      el.removeEventListener('touchend', onTouchEndFull)
-      el.removeEventListener('wheel', onWheel)
-      if (wheelTimeout) clearTimeout(wheelTimeout)
-    }
-  }, [])
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [showQuickBook, showRulesModal, eventDetail])
 
   function clearSelection() {
     setSelection(null)
@@ -846,7 +780,24 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         </div>
 
         {viewMode === 'calendar' ? (
-          <div ref={calendarWrapperRef} data-tutorial="calendar-grid" className="overflow-hidden rounded-3xl border border-stone-200 bg-white p-2 sm:p-4 shadow-sm">
+          <div ref={calendarWrapperRef} data-tutorial="calendar-grid" className="relative overflow-hidden rounded-3xl border border-stone-200 bg-white p-2 sm:p-4 shadow-sm group">
+            {/* Edge navigation overlays — appear on hover */}
+            <button
+              className="absolute left-0 top-12 bottom-0 z-10 w-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-stone-200/60 to-transparent hover:from-stone-300/80"
+              onClick={() => calendarRef.current?.getApi().prev()}
+              type="button"
+              aria-label="Previous"
+            >
+              <span className="text-stone-600 text-lg font-bold">&lsaquo;</span>
+            </button>
+            <button
+              className="absolute right-0 top-12 bottom-0 z-10 w-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-l from-stone-200/60 to-transparent hover:from-stone-300/80"
+              onClick={() => calendarRef.current?.getApi().next()}
+              type="button"
+              aria-label="Next"
+            >
+              <span className="text-stone-600 text-lg font-bold">&rsaquo;</span>
+            </button>
             <FullCalendar
               ref={calendarRef}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
