@@ -142,8 +142,8 @@ body {
 
 /* Selection highlight (drag to book) */
 .fc .fc-highlight {
-  background: rgba(5, 150, 105, 0.1) !important;
-  border: 2px dashed rgba(5, 150, 105, 0.4) !important;
+  background: rgba(59, 130, 246, 0.15) !important;
+  border: 2px solid rgba(59, 130, 246, 0.5) !important;
   border-radius: 4px;
 }
 

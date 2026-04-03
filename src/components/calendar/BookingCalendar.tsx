@@ -408,18 +408,37 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   ) : null
 
   // Quick book time picker modal
+  // Update the blue selection block on the calendar when quick book times change
+  function updateCalendarSelection(start: string, end: string) {
+    const api = calendarRef.current?.getApi()
+    if (api && start && end) {
+      api.select(new Date(start), new Date(end))
+    }
+  }
+
   const quickBookModal = showQuickBook ? (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowQuickBook(false)}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => { setShowQuickBook(false); calendarRef.current?.getApi().unselect() }}>
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold text-stone-900">Set booking time</h3>
-        <div className="mt-4 space-y-3">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-stone-900">Set booking time</h3>
+          <button onClick={() => { setShowQuickBook(false); calendarRef.current?.getApi().unselect() }} className="rounded-full p-1 text-stone-400 hover:bg-stone-100">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+        <p className="text-sm text-stone-500 mb-4">Adjust the start and end time. The blue block on the calendar will update as you change the times.</p>
+        <div className="space-y-3">
           <label className="block text-sm font-medium text-stone-700">
             Start
             <input
               type="datetime-local"
               className="mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900"
               value={quickBookStart.slice(0, 16)}
-              onChange={(e) => setQuickBookStart(e.target.value)}
+              onChange={(e) => {
+                setQuickBookStart(e.target.value)
+                updateCalendarSelection(e.target.value, quickBookEnd)
+              }}
             />
           </label>
           <label className="block text-sm font-medium text-stone-700">
@@ -428,13 +447,16 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               type="datetime-local"
               className="mt-1 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900"
               value={quickBookEnd.slice(0, 16)}
-              onChange={(e) => setQuickBookEnd(e.target.value)}
+              onChange={(e) => {
+                setQuickBookEnd(e.target.value)
+                updateCalendarSelection(quickBookStart, e.target.value)
+              }}
             />
           </label>
         </div>
-        <div className="mt-4 flex gap-3">
+        <div className="mt-5 flex gap-3">
           <button
-            className="flex-1 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white"
+            className="flex-1 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
             onClick={() => {
               setSelection({ amenityId: primaryAmenityId, start: quickBookStart, end: quickBookEnd })
               setGuestCount(1)
@@ -442,11 +464,11 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               setShowQuickBook(false)
             }}
           >
-            Set time
+            Confirm time
           </button>
           <button
             className="rounded-full border border-stone-300 px-4 py-3 text-sm font-semibold text-stone-600"
-            onClick={() => setShowQuickBook(false)}
+            onClick={() => { setShowQuickBook(false); calendarRef.current?.getApi().unselect() }}
           >
             Cancel
           </button>
@@ -690,7 +712,8 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               }}
               select={(info) => {
                 if (!primaryAmenityId) return
-                if (info.allDay) return // safety check
+                if (info.allDay) return
+                if (showQuickBook) return // programmatic select from click — modal handles it
                 setSelection({
                   amenityId: primaryAmenityId,
                   start: info.startStr,
@@ -707,12 +730,17 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
 
                 if (!primaryAmenityId) return
 
-                // Single click: pre-fill with 1-hour block starting from click
+                // Single click: create 1-hour blue block on calendar + open time picker
                 const clickDate = new Date(info.dateStr)
                 const endDate = new Date(clickDate.getTime() + 60 * 60 * 1000)
+                const startStr = clickDate.toISOString()
+                const endStr = endDate.toISOString()
 
-                setQuickBookStart(info.dateStr)
-                setQuickBookEnd(endDate.toISOString())
+                // Show the blue selection block on the calendar
+                calendarRef.current?.getApi().select(clickDate, endDate)
+
+                setQuickBookStart(startStr)
+                setQuickBookEnd(endStr)
                 setShowQuickBook(true)
               }}
               eventClick={(info) => {
