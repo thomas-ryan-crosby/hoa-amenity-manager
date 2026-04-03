@@ -232,7 +232,17 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
   const [chatMessage, setChatMessage] = useState('')
   const [chatReply, setChatReply] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
+  const [noticeType, setNoticeType] = useState<'success' | 'error'>('success')
+  const [saving, setSaving] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
+
+  function showNotice(message: string, type: 'success' | 'error' = 'success') {
+    setNotice(message)
+    setNoticeType(type)
+    if (type === 'success') {
+      setTimeout(() => setNotice(null), 3000)
+    }
+  }
 
   // Area management state
   const [areaFormName, setAreaFormName] = useState('')
@@ -323,17 +333,22 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
 
     const url = selectedAmenity ? `/api/admin/amenities/${selectedAmenity.id}` : '/api/admin/amenities'
     const method = selectedAmenity ? 'PUT' : 'POST'
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    const data = await res.json()
-    if (!res.ok) { setNotice(data.error ?? 'Unable to save amenity.'); return }
-    setNotice(selectedAmenity ? 'Amenity updated.' : 'Amenity created.')
-    setIsDirty(false)
-    await loadData()
-    if (!selectedAmenity) setAmenityForm({ ...emptyAmenityForm })
+    setSaving(true)
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (!res.ok) { showNotice(data.error ?? 'Unable to save amenity.', 'error'); return }
+      showNotice(selectedAmenity ? `${f.name} saved successfully!` : `${f.name} created!`)
+      setIsDirty(false)
+      await loadData()
+      if (!selectedAmenity) setAmenityForm({ ...emptyAmenityForm })
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function deleteSelectedAmenity() {
@@ -343,10 +358,10 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
     const res = await fetch(`/api/admin/amenities/${selectedAmenity.id}`, { method: 'DELETE' })
     if (!res.ok) {
       const data = await res.json()
-      setNotice(data.error ?? 'Unable to delete amenity.')
+      showNotice(data.error ?? 'Unable to delete amenity.')
       return
     }
-    setNotice(`"${selectedAmenity.name}" deleted.`)
+    showNotice(`"${selectedAmenity.name}" deleted.`)
     setSelectedAmenityId(null)
     setAmenityForm({ ...emptyAmenityForm })
     await loadData()
@@ -354,7 +369,7 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
 
   async function addBlackoutDate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!selectedAmenity) { setNotice('Choose an amenity first.'); return }
+    if (!selectedAmenity) { showNotice('Choose an amenity first.'); return }
     const res = await fetch(`/api/admin/amenities/${selectedAmenity.id}/blackout-dates`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -366,9 +381,9 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
       }),
     })
     const data = await res.json()
-    if (!res.ok) { setNotice(data.error ?? 'Unable to add blackout date.'); return }
+    if (!res.ok) { showNotice(data.error ?? 'Unable to add blackout date.'); return }
     setBlackoutForm({ startDate: '', endDate: '', reason: '', recurring: false })
-    setNotice('Blackout date added.')
+    showNotice('Blackout date added.')
     await loadData()
   }
 
@@ -393,9 +408,9 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
       body: JSON.stringify({ name: areaFormName.trim() }),
     })
     const data = await res.json()
-    if (!res.ok) { setNotice(data.error ?? 'Unable to create area.'); return }
+    if (!res.ok) { showNotice(data.error ?? 'Unable to create area.'); return }
     setAreaFormName('')
-    setNotice('Area created.')
+    showNotice('Area created.')
     await loadData()
   }
 
@@ -408,12 +423,12 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
     })
     if (!res.ok) {
       const data = await res.json()
-      setNotice(data.error ?? 'Unable to rename area.')
+      showNotice(data.error ?? 'Unable to rename area.')
       return
     }
     setEditingAreaId(null)
     setEditingAreaName('')
-    setNotice('Area renamed.')
+    showNotice('Area renamed.')
     await loadData()
   }
 
@@ -423,10 +438,10 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
     const res = await fetch(`/api/admin/areas/${areaId}`, { method: 'DELETE' })
     if (!res.ok) {
       const data = await res.json()
-      setNotice(data.error ?? 'Unable to delete area.')
+      showNotice(data.error ?? 'Unable to delete area.')
       return
     }
-    setNotice('Area deleted.')
+    showNotice('Area deleted.')
     await loadData()
   }
 
@@ -472,9 +487,15 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
           <h1 className="mt-2 text-2xl sm:text-4xl font-semibold text-stone-900">Amenities, policies, and blackout dates</h1>
         </div>
 
+        {/* Toast notification */}
         {notice && (
-          <div className="mb-6 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700">
-            {notice}
+          <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-medium shadow-lg transition-all animate-in slide-in-from-top ${
+            noticeType === 'success'
+              ? 'bg-emerald-600 text-white'
+              : 'bg-red-600 text-white'
+          }`}>
+            {noticeType === 'success' ? '✓' : '✕'} {notice}
+            <button onClick={() => setNotice(null)} className="ml-2 opacity-70 hover:opacity-100">✕</button>
           </div>
         )}
 
@@ -811,8 +832,16 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
               </div>
 
               <div className="flex gap-3">
-                <button className="rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white" type="submit">
-                  {selectedAmenity ? 'Save changes' : 'Create amenity'}
+                <button
+                  className={`rounded-full px-6 py-3 text-sm font-semibold text-white transition ${
+                    isDirty
+                      ? 'bg-emerald-600 hover:bg-emerald-500 animate-pulse'
+                      : 'bg-stone-900 hover:bg-stone-800'
+                  }`}
+                  disabled={saving}
+                  type="submit"
+                >
+                  {saving ? 'Saving...' : selectedAmenity ? 'Save changes' : 'Create amenity'}
                 </button>
                 {selectedAmenity && (
                   <button
