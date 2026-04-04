@@ -630,6 +630,28 @@ export function AdminCalendar() {
                   info.revert()
                 }
               }}
+              slotEventOverlap
+              eventDidMount={(info) => {
+                const harness = info.el.closest('.fc-timegrid-event-harness') as HTMLElement
+                if (!harness) return
+                const container = harness.parentElement
+                if (!container) return
+                const allHarnesses = Array.from(container.querySelectorAll('.fc-timegrid-event-harness')) as HTMLElement[]
+                const myTop = harness.offsetTop
+                const myHeight = harness.offsetHeight
+                let overlapIndex = 0
+                for (const other of allHarnesses) {
+                  if (other === harness) break
+                  const otherTop = other.offsetTop
+                  const otherHeight = other.offsetHeight
+                  if (otherTop < myTop + myHeight && otherTop + otherHeight > myTop) overlapIndex++
+                }
+                const widthPercent = Math.max(40, 90 - overlapIndex * 10)
+                harness.style.width = `${widthPercent}%`
+                harness.style.left = '0'
+                harness.style.right = 'auto'
+                harness.setAttribute('data-overlap-index', String(overlapIndex))
+              }}
               slotMinTime="00:00:00"
               slotMaxTime="24:00:00"
               scrollTime="08:00:00"

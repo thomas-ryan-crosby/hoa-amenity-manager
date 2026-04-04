@@ -141,13 +141,18 @@ body {
 }
 
 /* Selection highlight (drag to book) */
-/* 10% clickable gutter on the right of every event */
+/* Cascading overlap: managed by eventDidMount in the calendar components */
+/* Base: all events get left:0, width set dynamically via data-overlap-index */
 .fc .fc-timegrid-event-harness {
-  margin-right: 10% !important;
+  left: 0 !important;
+  right: auto !important;
 }
 
-/* Overlapping events: dashed border to visually distinguish */
-.fc .fc-timegrid-event-harness-inset .fc-timegrid-event {
+/* Overlapping events get dashed border */
+.fc .fc-timegrid-event-harness[data-overlap-index="1"] .fc-timegrid-event,
+.fc .fc-timegrid-event-harness[data-overlap-index="2"] .fc-timegrid-event,
+.fc .fc-timegrid-event-harness[data-overlap-index="3"] .fc-timegrid-event,
+.fc .fc-timegrid-event-harness[data-overlap-index="4"] .fc-timegrid-event {
   border: 2px dashed rgba(255, 255, 255, 0.4) !important;
 }
 
