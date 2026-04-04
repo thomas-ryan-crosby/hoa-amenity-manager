@@ -141,15 +141,18 @@ body {
 }
 
 /* Selection highlight (drag to book) */
-/* Events: 90% width with 10% clickable gutter for new bookings */
-.fc .fc-timegrid-event-harness {
+/* All events: 90% width with 10% clickable gutter */
+.fc .fc-timegrid-event-harness,
+.fc .fc-timegrid-event-harness-inset {
+  left: 0 !important;
   right: 10% !important;
 }
 
-/* Overlapping events get dashed border and slight transparency */
+/* Overlapping events: stack on top with transparency + dashed border */
 .fc .fc-timegrid-event-harness-inset .fc-timegrid-event {
-  opacity: 0.9;
-  border: 2px dashed rgba(0, 0, 0, 0.2) !important;
+  opacity: 0.85;
+  border: 2px dashed rgba(255, 255, 255, 0.5) !important;
+  inset: 0 !important;
 }
 
 .fc .fc-highlight {

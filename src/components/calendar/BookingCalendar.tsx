@@ -897,6 +897,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                 calendarRef.current?.getApi().changeView('rolling3Day', date)
               }}
               eventOverlap
+              slotEventOverlap
               selectOverlap
               slotMinTime="00:00:00"
               slotMaxTime="24:00:00"
