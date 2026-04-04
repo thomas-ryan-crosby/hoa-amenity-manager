@@ -141,18 +141,14 @@ body {
 }
 
 /* Selection highlight (drag to book) */
-/* All events: 90% width with 10% clickable gutter */
-.fc .fc-timegrid-event-harness,
-.fc .fc-timegrid-event-harness-inset {
-  left: 0 !important;
-  right: 10% !important;
+/* 10% clickable gutter on the right of every event */
+.fc .fc-timegrid-event-harness {
+  margin-right: 10% !important;
 }
 
-/* Overlapping events: stack on top with transparency + dashed border */
+/* Overlapping events: dashed border to visually distinguish */
 .fc .fc-timegrid-event-harness-inset .fc-timegrid-event {
-  opacity: 0.85;
-  border: 2px dashed rgba(255, 255, 255, 0.5) !important;
-  inset: 0 !important;
+  border: 2px dashed rgba(255, 255, 255, 0.4) !important;
 }
 
 .fc .fc-highlight {
