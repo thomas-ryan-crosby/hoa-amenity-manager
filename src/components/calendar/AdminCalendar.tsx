@@ -630,6 +630,7 @@ export function AdminCalendar() {
                   info.revert()
                 }
               }}
+              slotEventOverlap
               slotMinTime="00:00:00"
               slotMaxTime="24:00:00"
               scrollTime="08:00:00"

@@ -141,9 +141,20 @@ body {
 }
 
 /* Selection highlight (drag to book) */
-/* Events take 80% width — leave clickable gutter for new bookings */
+/* Overlapping events: full width, semi-transparent with dashed border */
 .fc .fc-timegrid-event-harness {
-  right: 20% !important;
+  right: 0 !important;
+}
+
+/* When events overlap, FullCalendar adds inset styles. Override to keep full width */
+.fc .fc-timegrid-event-harness-inset .fc-timegrid-event {
+  opacity: 0.85;
+  border: 2px dashed rgba(0, 0, 0, 0.25) !important;
+}
+
+/* First event in a stack stays solid */
+.fc .fc-timegrid-event-harness:not(.fc-timegrid-event-harness-inset) .fc-timegrid-event {
+  opacity: 1;
 }
 
 .fc .fc-highlight {
