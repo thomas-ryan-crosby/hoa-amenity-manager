@@ -57,21 +57,21 @@ export async function POST(req: NextRequest) {
         <p style="color: #059669; font-size: 13px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;">Neighbri</p>
         <h1 style="color: #1c1917; font-size: 24px; margin-top: 8px;">Welcome, ${resident.name}!</h1>
         <p style="color: #57534e; font-size: 15px; line-height: 1.7;">
-          Thanks for creating your Neighbri account. Neighbri makes it easy to browse and book
+          Thanks for signing up for Neighbri! Neighbri makes it easy to browse and book
           amenities in your community &mdash; from clubhouses to pools, courts, and more.
         </p>
         <p style="color: #57534e; font-size: 15px; line-height: 1.7;">
-          <strong>Next step:</strong> join your community so you can start booking.
-          Select your neighborhood from the list and a property manager will review your request.
+          A property manager will review your request and you'll receive an email once
+          you've been approved. After that, you can start browsing and booking amenities.
         </p>
         <div style="margin: 24px 0; padding: 20px; background: #fafaf9; border-radius: 16px;">
           <p style="margin: 0 0 4px; color: #78716c; font-size: 13px;">YOUR ACCOUNT</p>
           <p style="margin: 0; color: #1c1917; font-size: 15px;"><strong>${resident.name}</strong></p>
           <p style="margin: 0; color: #57534e; font-size: 14px;">${resident.email}</p>
         </div>
-        <a href="${appUrl}/join"
+        <a href="${appUrl}/resident"
            style="display: inline-block; background: #059669; color: white; padding: 12px 28px; border-radius: 9999px; text-decoration: none; font-weight: 600; font-size: 14px;">
-          Join your community
+          Go to Neighbri
         </a>
         <p style="color: #a8a29e; font-size: 13px; margin-top: 32px;">
           Neighbri &mdash; Amenity booking for your community
