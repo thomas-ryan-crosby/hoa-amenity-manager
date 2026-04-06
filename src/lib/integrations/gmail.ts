@@ -16,7 +16,7 @@ function getResend(): Resend {
 }
 
 export async function sendEmail(options: EmailOptions): Promise<string> {
-  const from = process.env.EMAIL_FROM ?? 'Sanctuary Booking <bookings@sanctuaryhoa.org>'
+  const from = process.env.EMAIL_FROM ?? 'Neighbri <bookings@neighbri.com>'
 
   if (process.env.DRY_RUN === 'true') {
     console.log(`[Email DRY_RUN] To: ${options.to}, Subject: ${options.subject}`)

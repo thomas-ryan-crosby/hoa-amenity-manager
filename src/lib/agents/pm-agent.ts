@@ -30,7 +30,7 @@ export async function verifyActionToken(
 }
 
 export async function sendApprovalRequest(bookingId: string): Promise<void> {
-  const { booking, amenity, resident } = await getBookingWithRelations(bookingId)
+  const { booking, amenity, resident, communityName: rawCommunityName } = await getBookingWithRelations(bookingId)
   const settings = await getSettings()
 
   let approverEmail: string | undefined
@@ -50,22 +50,36 @@ export async function sendApprovalRequest(bookingId: string): Promise<void> {
   const approveUrl = `${baseUrl}/api/admin/approve/${approveToken}`
   const denyUrl = `${baseUrl}/api/admin/deny/${denyToken}`
 
+  const communityName = rawCommunityName ?? 'Unknown community'
+
   await sendEmail({
     to: approverEmail,
-    subject: `Approval requested: ${amenity.name}`,
+    subject: `Approval needed — ${amenity.name} at ${communityName}`,
     html: `
-      <p>A new booking request is waiting for approval.</p>
-      <ul style="padding-left: 18px; line-height: 1.6;">
-        <li><strong>Resident:</strong> ${resident.name} (${resident.email})</li>
-        <li><strong>Unit:</strong> ${resident.unitNumber}</li>
-        <li><strong>Amenity:</strong> ${amenity.name}</li>
-        <li><strong>When:</strong> ${formatDateRange(booking.startDatetime, booking.endDatetime)}</li>
-        <li><strong>Guests:</strong> ${booking.guestCount}</li>
-        <li><strong>Rental fee:</strong> ${formatCurrency(amenity.rentalFee)}</li>
-        <li><strong>Deposit:</strong> ${formatCurrency(amenity.depositAmount)}</li>
-      </ul>
-      <p><a href="${approveUrl}">Approve booking</a></p>
-      <p><a href="${denyUrl}">Deny booking</a></p>
+      <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto;">
+        <p style="color: #059669; font-size: 13px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;">Neighbri</p>
+        <h1 style="color: #1c1917; font-size: 22px; margin-top: 8px;">Booking approval requested</h1>
+        <p style="color: #57534e; font-size: 15px;">A new booking request at <strong>${communityName}</strong> is waiting for your approval.</p>
+        <div style="margin: 16px 0; padding: 16px; background: #fafaf9; border-radius: 12px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #1c1917;">
+            <tr><td style="padding: 4px 0; color: #78716c;">Community</td><td style="padding: 4px 0; font-weight: 600;">${communityName}</td></tr>
+            <tr><td style="padding: 4px 0; color: #78716c;">Resident</td><td style="padding: 4px 0;">${resident.name} (${resident.email})</td></tr>
+            <tr><td style="padding: 4px 0; color: #78716c;">Unit</td><td style="padding: 4px 0;">${resident.unitNumber}</td></tr>
+            <tr><td style="padding: 4px 0; color: #78716c;">Amenity</td><td style="padding: 4px 0; font-weight: 600;">${amenity.name}</td></tr>
+            <tr><td style="padding: 4px 0; color: #78716c;">When</td><td style="padding: 4px 0;">${formatDateRange(booking.startDatetime, booking.endDatetime)}</td></tr>
+            <tr><td style="padding: 4px 0; color: #78716c;">Guests</td><td style="padding: 4px 0;">${booking.guestCount}</td></tr>
+            ${amenity.rentalFee > 0 ? `<tr><td style="padding: 4px 0; color: #78716c;">Rental fee</td><td style="padding: 4px 0;">${formatCurrency(amenity.rentalFee)}</td></tr>` : ''}
+            ${amenity.depositAmount > 0 ? `<tr><td style="padding: 4px 0; color: #78716c;">Deposit</td><td style="padding: 4px 0;">${formatCurrency(amenity.depositAmount)}</td></tr>` : ''}
+          </table>
+        </div>
+        <p style="margin: 20px 0;">
+          <a href="${approveUrl}" style="background: #059669; color: white; padding: 10px 24px; border-radius: 9999px; text-decoration: none; display: inline-block; font-weight: 600; font-size: 14px; margin-right: 8px;">Approve</a>
+          <a href="${denyUrl}" style="background: #dc2626; color: white; padding: 10px 24px; border-radius: 9999px; text-decoration: none; display: inline-block; font-weight: 600; font-size: 14px;">Deny</a>
+        </p>
+        <p style="color: #a8a29e; font-size: 13px; margin-top: 32px; border-top: 1px solid #e7e5e4; padding-top: 16px;">
+          ${communityName} &mdash; powered by <a href="https://neighbri.com" style="color: #059669; text-decoration: none;">Neighbri</a>
+        </p>
+      </div>
     `,
   })
 }

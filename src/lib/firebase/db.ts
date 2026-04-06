@@ -664,13 +664,18 @@ export async function getBookingById(id: string): Promise<Booking | null> {
 
 export async function getBookingWithRelations(
   id: string,
-): Promise<{ booking: Booking; amenity: Amenity; resident: Resident }> {
+): Promise<{ booking: Booking; amenity: Amenity; resident: Resident; communityName: string | null }> {
   const booking = await getBookingById(id)
   if (!booking) throw new Error(`Booking ${id} not found`)
 
-  const [amenity, resident] = await Promise.all([
+  // Read communityId from the raw Firestore doc (not on the TS Booking type)
+  const snap = await bookingsCol().doc(id).get()
+  const rawCommunityId = snap.data()?.communityId as string | undefined
+
+  const [amenity, resident, community] = await Promise.all([
     getAmenityById(booking.amenityId),
     booking.residentId ? getResidentById(booking.residentId) : Promise.resolve(null),
+    rawCommunityId ? getCommunityById(rawCommunityId) : Promise.resolve(null),
   ])
 
   if (!amenity) throw new Error(`Amenity ${booking.amenityId} not found for booking ${id}`)
@@ -687,7 +692,7 @@ export async function getBookingWithRelations(
     status: 'approved' as const,
     createdAt: booking.createdAt,
   }
-  return { booking, amenity, resident: resolvedResident }
+  return { booking, amenity, resident: resolvedResident, communityName: community?.name ?? null }
 }
 
 export async function getBookingsByResident(
