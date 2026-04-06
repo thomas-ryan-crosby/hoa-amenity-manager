@@ -916,7 +916,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                 api.getEvents().forEach((other) => {
                   if (other.id === info.event.id) return
                   if (!other.start || !other.end) return
-                  if (other.id >= info.event.id) return
+                  if (other.id <= info.event.id) return
                   const oStart = other.start.getTime()
                   const oEnd = other.end.getTime()
                   if (oStart < myEnd && oEnd > myStart) overlapIndex++

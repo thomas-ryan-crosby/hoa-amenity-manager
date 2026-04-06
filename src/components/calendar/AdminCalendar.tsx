@@ -645,7 +645,7 @@ export function AdminCalendar() {
                 let overlapIndex = 0
                 api.getEvents().forEach((other) => {
                   if (other.id === info.event.id || !other.start || !other.end) return
-                  if (other.id >= info.event.id) return
+                  if (other.id <= info.event.id) return
                   if (other.start.getTime() < myEnd && other.end.getTime() > myStart) overlapIndex++
                 })
 
