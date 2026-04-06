@@ -46,6 +46,12 @@ export function NavBar() {
                   </Link>
                 </>
               )}
+              {/* Super-admin internal link — gated by property_manager for now; real superAdmin check coming */}
+              {role === 'property_manager' && (
+                <Link href="/internal" className="text-purple-600 hover:text-purple-800">
+                  Internal
+                </Link>
+              )}
             </div>
           )}
         </div>
@@ -154,6 +160,16 @@ export function NavBar() {
                     People
                   </Link>
                 </>
+              )}
+              {/* Super-admin internal link — gated by property_manager for now */}
+              {role === 'property_manager' && (
+                <Link
+                  href="/internal"
+                  className="block rounded-xl px-4 py-2.5 text-sm text-purple-600 hover:bg-purple-50"
+                  onClick={closeMobile}
+                >
+                  Internal
+                </Link>
               )}
               <Link
                 href="/account"

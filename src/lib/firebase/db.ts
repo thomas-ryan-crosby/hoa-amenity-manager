@@ -147,6 +147,50 @@ export interface Staff {
   role: StaffRole
 }
 
+export interface Community {
+  id: string
+  name: string
+  slug: string
+  address: string | null
+  city: string | null
+  state: string | null
+  zip: string | null
+  logoUrl: string | null
+  contactEmail: string | null
+  contactPhone: string | null
+  plan: 'free' | 'standard' | 'premium'
+  isActive: boolean
+  maxAmenities: number
+  maxMembers: number
+  createdAt: Date
+  createdBy: string
+}
+
+export interface CommunityMember {
+  id: string
+  communityId: string
+  userId: string        // Firebase UID
+  residentId: string    // Reference to residents collection
+  role: 'resident' | 'property_manager' | 'janitorial' | 'board'
+  status: 'pending' | 'approved' | 'denied'
+  unitNumber: string
+  joinedAt: Date
+  approvedBy: string | null
+  approvedAt: Date | null
+}
+
+export interface CommunityInvite {
+  id: string
+  communityId: string
+  code: string
+  createdBy: string
+  createdAt: Date
+  expiresAt: Date | null
+  maxUses: number | null
+  useCount: number
+  isActive: boolean
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -177,6 +221,9 @@ const staffCol = () => adminDb.collection('staff')
 const auditLogsCol = () => adminDb.collection('auditLogs')
 const inspectionReportsCol = () => adminDb.collection('inspectionReports')
 const turnWindowsCol = () => adminDb.collection('turnWindows')
+const communitiesCol = () => adminDb.collection('communities')
+const communityMembersCol = () => adminDb.collection('communityMembers')
+const communityInvitesCol = () => adminDb.collection('communityInvites')
 
 // ---------------------------------------------------------------------------
 // RESIDENTS
@@ -1032,6 +1079,170 @@ export async function completeTurnWindow(id: string): Promise<void> {
     status: 'COMPLETED',
     completedAt: Timestamp.fromDate(new Date()),
   })
+}
+
+// ---------------------------------------------------------------------------
+// COMMUNITIES
+// ---------------------------------------------------------------------------
+
+export async function getAllCommunities(): Promise<Community[]> {
+  const snap = await communitiesCol().orderBy('name').get()
+  return snap.docs.map((d) => {
+    const data = d.data()
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt ? toDate(data.createdAt) : new Date(),
+    } as Community
+  })
+}
+
+export async function getCommunityById(id: string): Promise<Community | null> {
+  const doc = await communitiesCol().doc(id).get()
+  if (!doc.exists) return null
+  const data = doc.data()!
+  return { id: doc.id, ...data, createdAt: data.createdAt ? toDate(data.createdAt) : new Date() } as Community
+}
+
+export async function getCommunityBySlug(slug: string): Promise<Community | null> {
+  const snap = await communitiesCol().where('slug', '==', slug).limit(1).get()
+  if (snap.empty) return null
+  const doc = snap.docs[0]
+  const data = doc.data()
+  return { id: doc.id, ...data, createdAt: data.createdAt ? toDate(data.createdAt) : new Date() } as Community
+}
+
+export async function createCommunity(data: Omit<Community, 'id'>): Promise<Community> {
+  const ref = await communitiesCol().add({
+    ...data,
+    createdAt: Timestamp.fromDate(data.createdAt ?? new Date()),
+  })
+  return { id: ref.id, ...data }
+}
+
+export async function updateCommunity(id: string, data: Partial<Community>): Promise<void> {
+  await communitiesCol().doc(id).update(data)
+}
+
+export async function deleteCommunity(id: string): Promise<void> {
+  await communitiesCol().doc(id).delete()
+}
+
+// ---------------------------------------------------------------------------
+// COMMUNITY MEMBERS
+// ---------------------------------------------------------------------------
+
+export async function getCommunityMembers(communityId: string): Promise<CommunityMember[]> {
+  const snap = await communityMembersCol().where('communityId', '==', communityId).get()
+  return snap.docs.map((d) => {
+    const data = d.data()
+    return {
+      id: d.id,
+      ...data,
+      joinedAt: data.joinedAt ? toDate(data.joinedAt) : new Date(),
+      approvedAt: data.approvedAt ? toDate(data.approvedAt) : null,
+    } as CommunityMember
+  }).sort((a, b) => {
+    if (a.status === 'pending' && b.status !== 'pending') return -1
+    if (b.status === 'pending' && a.status !== 'pending') return 1
+    return b.joinedAt.getTime() - a.joinedAt.getTime()
+  })
+}
+
+export async function getUserCommunities(userId: string): Promise<CommunityMember[]> {
+  const snap = await communityMembersCol().where('userId', '==', userId).get()
+  return snap.docs.map((d) => {
+    const data = d.data()
+    return {
+      id: d.id,
+      ...data,
+      joinedAt: data.joinedAt ? toDate(data.joinedAt) : new Date(),
+      approvedAt: data.approvedAt ? toDate(data.approvedAt) : null,
+    } as CommunityMember
+  })
+}
+
+export async function getCommunityMember(userId: string, communityId: string): Promise<CommunityMember | null> {
+  const snap = await communityMembersCol()
+    .where('userId', '==', userId)
+    .where('communityId', '==', communityId)
+    .limit(1)
+    .get()
+  if (snap.empty) return null
+  const doc = snap.docs[0]
+  const data = doc.data()
+  return {
+    id: doc.id,
+    ...data,
+    joinedAt: data.joinedAt ? toDate(data.joinedAt) : new Date(),
+    approvedAt: data.approvedAt ? toDate(data.approvedAt) : null,
+  } as CommunityMember
+}
+
+export async function createCommunityMember(data: Omit<CommunityMember, 'id'>): Promise<CommunityMember> {
+  const ref = await communityMembersCol().add({
+    ...data,
+    joinedAt: Timestamp.fromDate(data.joinedAt ?? new Date()),
+    approvedAt: data.approvedAt ? Timestamp.fromDate(data.approvedAt) : null,
+  })
+  return { id: ref.id, ...data }
+}
+
+export async function updateCommunityMember(id: string, data: Partial<CommunityMember>): Promise<void> {
+  const update: Record<string, unknown> = { ...data }
+  if (data.approvedAt) update.approvedAt = Timestamp.fromDate(data.approvedAt)
+  if (data.joinedAt) update.joinedAt = Timestamp.fromDate(data.joinedAt)
+  await communityMembersCol().doc(id).update(update)
+}
+
+// ---------------------------------------------------------------------------
+// COMMUNITY INVITES
+// ---------------------------------------------------------------------------
+
+export async function getInviteByCode(code: string): Promise<CommunityInvite | null> {
+  const snap = await communityInvitesCol().where('code', '==', code.toUpperCase()).limit(1).get()
+  if (snap.empty) return null
+  const doc = snap.docs[0]
+  const data = doc.data()
+  return {
+    id: doc.id,
+    ...data,
+    createdAt: data.createdAt ? toDate(data.createdAt) : new Date(),
+    expiresAt: data.expiresAt ? toDate(data.expiresAt) : null,
+  } as CommunityInvite
+}
+
+export async function getCommunityInvites(communityId: string): Promise<CommunityInvite[]> {
+  const snap = await communityInvitesCol().where('communityId', '==', communityId).get()
+  return snap.docs.map((d) => {
+    const data = d.data()
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt ? toDate(data.createdAt) : new Date(),
+      expiresAt: data.expiresAt ? toDate(data.expiresAt) : null,
+    } as CommunityInvite
+  })
+}
+
+export async function createCommunityInvite(data: Omit<CommunityInvite, 'id'>): Promise<CommunityInvite> {
+  const ref = await communityInvitesCol().add({
+    ...data,
+    code: data.code.toUpperCase(),
+    createdAt: Timestamp.fromDate(data.createdAt ?? new Date()),
+    expiresAt: data.expiresAt ? Timestamp.fromDate(data.expiresAt) : null,
+  })
+  return { id: ref.id, ...data }
+}
+
+export async function incrementInviteUseCount(inviteId: string): Promise<void> {
+  await communityInvitesCol().doc(inviteId).update({
+    useCount: FieldValue.increment(1),
+  })
+}
+
+export async function deactivateInvite(inviteId: string): Promise<void> {
+  await communityInvitesCol().doc(inviteId).update({ isActive: false })
 }
 
 // ---------------------------------------------------------------------------
