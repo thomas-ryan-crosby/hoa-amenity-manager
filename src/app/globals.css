@@ -141,9 +141,9 @@ body {
 }
 
 /* Selection highlight (drag to book) */
-/* Cascading overlap: width and left set dynamically by eventDidMount */
-/* Override FullCalendar's inline positioning so our values take effect */
+/* Cascading overlap: all events anchored left, width set by eventDidMount */
 .fc .fc-timegrid-event-harness[data-overlap-index] {
+  left: 0 !important;
   right: auto !important;
 }
 

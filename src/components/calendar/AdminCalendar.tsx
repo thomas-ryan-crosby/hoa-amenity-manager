@@ -646,10 +646,9 @@ export function AdminCalendar() {
                   const otherHeight = other.offsetHeight
                   if (otherTop < myTop + myHeight && otherTop + otherHeight > myTop) overlapIndex++
                 }
-                const leftPercent = overlapIndex * 10
-                const widthPercent = Math.max(40, 90 - overlapIndex * 10)
+                const widthPercent = Math.max(50, 90 - overlapIndex * 5)
                 harness.style.width = `${widthPercent}%`
-                harness.style.left = `${leftPercent}%`
+                harness.style.left = '0'
                 harness.style.right = 'auto'
                 harness.setAttribute('data-overlap-index', String(overlapIndex))
               }}
