@@ -665,27 +665,13 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
             </div>
           </div>
 
-          {eventDetail.type === 'booking' && primaryAmenityId && (
-            <button
-              className="mt-5 w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
-              onClick={() => {
-                setSelection({
-                  amenityId: primaryAmenityId,
-                  start: eventDetail.start,
-                  end: eventDetail.end,
-                })
-                setGuestCount(1)
-                setNotes('')
-                setEventDetail(null)
-              }}
-            >
-              Book this time slot (waitlist)
-            </button>
+          {eventDetail.type === 'turn-window' && (
+            <p className="mt-4 text-xs text-stone-400 text-center">This is a cleaning/maintenance window.</p>
           )}
 
-          {eventDetail.type === 'turn-window' && (
-            <p className="mt-4 text-xs text-stone-400 text-center">This is a cleaning/maintenance window and cannot be booked.</p>
-          )}
+          <p className="mt-4 text-xs text-stone-400 text-center">
+            To book this time slot, click the whitespace next to this event or drag to select a time range.
+          </p>
         </div>
       </div>
     )}
