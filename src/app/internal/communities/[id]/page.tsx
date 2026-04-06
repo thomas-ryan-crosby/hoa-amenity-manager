@@ -7,10 +7,12 @@ import Link from 'next/link'
 type CommunityMember = {
   id: string
   userId: string
+  name: string
   email: string
-  displayName: string | null
+  phone: string | null
   role: string
   status: string
+  unitNumber?: string
   joinedAt: string
 }
 
@@ -420,9 +422,10 @@ export default function CommunityDetailPage() {
                     >
                       <div>
                         <p className="text-sm font-medium text-stone-900">
-                          {m.displayName ?? m.email}
+                          {m.name}
                         </p>
                         <p className="text-xs text-stone-500">{m.email}</p>
+                        {m.unitNumber && <p className="text-xs text-stone-400">Unit: {m.unitNumber}</p>}
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="rounded bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-600">

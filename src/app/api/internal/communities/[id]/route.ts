@@ -4,6 +4,7 @@ import { requireSuperAdmin } from '../route'
 import {
   getCommunityById,
   getCommunityMembers,
+  getResidentById,
   updateCommunity,
   deleteCommunity,
 } from '@/lib/firebase/db'
@@ -54,8 +55,23 @@ export async function GET(
 
   const members = await getCommunityMembers(id)
 
+  // Resolve resident details for each member
+  const enrichedMembers = await Promise.all(
+    members.map(async (m) => {
+      const resident = m.residentId ? await getResidentById(m.residentId) : null
+      return {
+        ...m,
+        name: resident?.name ?? 'Unknown',
+        email: resident?.email ?? '',
+        phone: resident?.phone ?? null,
+        joinedAt: m.joinedAt instanceof Date ? m.joinedAt.toISOString() : m.joinedAt,
+        approvedAt: m.approvedAt instanceof Date ? m.approvedAt.toISOString() : m.approvedAt,
+      }
+    }),
+  )
+
   return NextResponse.json({
-    community: { ...community, members },
+    community: { ...community, members: enrichedMembers },
   })
 }
 
