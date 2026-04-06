@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth'
-import { updateResident, getResidentById } from '@/lib/firebase/db'
-import { adminAuth } from '@/lib/firebase/admin'
+import { updateCommunityMember, getCommunityMembers, getResidentById } from '@/lib/firebase/db'
 import { sendEmail } from '@/lib/integrations/gmail'
+import { getActiveCommunityId } from '@/lib/community'
 
-const UpdateResidentSchema = z.object({
+const UpdateMemberSchema = z.object({
   status: z.enum(['approved', 'denied', 'pending']).optional(),
   role: z.enum(['resident', 'property_manager', 'janitorial', 'board']).optional(),
 })
@@ -19,7 +19,7 @@ export async function PUT(
 
   const { id } = await params
   const body = await req.json().catch(() => null)
-  const parsed = UpdateResidentSchema.safeParse(body)
+  const parsed = UpdateMemberSchema.safeParse(body)
 
   if (!parsed.success) {
     return NextResponse.json(
@@ -28,20 +28,33 @@ export async function PUT(
     )
   }
 
-  const resident = await getResidentById(id)
-  if (!resident) {
-    return NextResponse.json({ error: 'Resident not found' }, { status: 404 })
+  // The id param is now a communityMember ID
+  // Look it up from the community members list to get resident details
+  const communityId = await getActiveCommunityId()
+  if (!communityId) {
+    return NextResponse.json({ error: 'No active community' }, { status: 400 })
   }
 
+  const members = await getCommunityMembers(communityId)
+  const member = members.find((m) => m.id === id)
+  if (!member) {
+    return NextResponse.json({ error: 'Community member not found' }, { status: 404 })
+  }
+
+  const resident = await getResidentById(member.residentId)
+
   // Handle status change
-  if (parsed.data.status && parsed.data.status !== resident.status) {
-    await updateResident(id, { status: parsed.data.status })
-
+  if (parsed.data.status && parsed.data.status !== member.status) {
+    const updateData: Partial<{ status: string; approvedBy: string; approvedAt: Date }> = {
+      status: parsed.data.status,
+    }
     if (parsed.data.status === 'approved') {
-      // Set role on approval (default to resident if not specified)
-      const role = parsed.data.role ?? 'resident'
-      await adminAuth.setCustomUserClaims(resident.firebaseUid, { role })
+      updateData.approvedBy = authState.userId
+      updateData.approvedAt = new Date()
+    }
+    await updateCommunityMember(id, updateData as any)
 
+    if (parsed.data.status === 'approved' && resident) {
       sendEmail({
         to: resident.email,
         subject: 'Your account has been approved!',
@@ -60,7 +73,7 @@ export async function PUT(
       }).catch((err) => console.error('[Email] Approval notification failed:', err))
     }
 
-    if (parsed.data.status === 'denied') {
+    if (parsed.data.status === 'denied' && resident) {
       sendEmail({
         to: resident.email,
         subject: 'Account request update',
@@ -77,9 +90,9 @@ export async function PUT(
     }
   }
 
-  // Handle role change (works independently of status change)
-  if (parsed.data.role) {
-    await adminAuth.setCustomUserClaims(resident.firebaseUid, { role: parsed.data.role })
+  // Handle role change — update communityMember, not Firebase Auth claims
+  if (parsed.data.role && parsed.data.role !== member.role) {
+    await updateCommunityMember(id, { role: parsed.data.role })
   }
 
   return NextResponse.json({ success: true })

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireRole } from '@/lib/auth'
-import { getAllResidents } from '@/lib/firebase/db'
-import { adminAuth } from '@/lib/firebase/admin'
+import { getCommunityMembers, getResidentById } from '@/lib/firebase/db'
 import { getActiveCommunityId } from '@/lib/community'
 
 export async function GET() {
@@ -9,33 +8,30 @@ export async function GET() {
   if (!authState.ok) return authState.response
 
   const communityId = await getActiveCommunityId()
-  const residents = await getAllResidents(communityId ?? undefined)
+  if (!communityId) {
+    return NextResponse.json({ residents: [] })
+  }
 
-  // Fetch Firebase Auth roles for each resident
+  const members = await getCommunityMembers(communityId)
+
+  // Resolve resident details for each community member
   const residentsWithRoles = await Promise.all(
-    residents.map(async (r) => {
-      let role = 'resident'
-      if (r.firebaseUid) {
-        try {
-          const user = await adminAuth.getUser(r.firebaseUid)
-          role = (user.customClaims?.role as string) ?? 'resident'
-        } catch {
-          // User may have been deleted from Auth
-        }
-      }
+    members.map(async (m) => {
+      const resident = await getResidentById(m.residentId)
       return {
-        ...r,
-        role,
-        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
+        // Use communityMember ID so the PUT endpoint can find it
+        id: m.id,
+        residentId: m.residentId,
+        name: resident?.name ?? '',
+        email: resident?.email ?? '',
+        phone: resident?.phone ?? null,
+        unitNumber: m.unitNumber || resident?.unitNumber || '',
+        status: m.status,
+        role: m.role,
+        createdAt: m.joinedAt instanceof Date ? m.joinedAt.toISOString() : m.joinedAt,
       }
     }),
   )
-
-  residentsWithRoles.sort((a, b) => {
-    if (a.status === 'pending' && b.status !== 'pending') return -1
-    if (b.status === 'pending' && a.status !== 'pending') return 1
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  })
 
   return NextResponse.json({ residents: residentsWithRoles })
 }

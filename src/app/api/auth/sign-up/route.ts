@@ -31,10 +31,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ resident: existing })
   }
 
-  // Set default role
+  // Set a minimal default role claim — per-community roles live in communityMembers
   await adminAuth.setCustomUserClaims(decoded.uid, { role: 'resident' })
 
-  // Create resident record — pending approval
+  // Create resident record (status kept for backward compat but communities use communityMember.status)
   const resident = await createResident({
     firebaseUid: decoded.uid,
     name: parsed.data.name,
@@ -57,18 +57,18 @@ export async function POST(req: NextRequest) {
       <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto;">
         <h1 style="color: #1c1917; font-size: 24px;">Welcome, ${resident.name}!</h1>
         <p style="color: #57534e; font-size: 15px; line-height: 1.7;">
-          Your account has been created and is <strong>pending approval</strong> by a property manager.
-          You'll receive another email once your account is approved and you can start booking amenities.
+          Your account has been created. <strong>Join a community to get started</strong> &mdash;
+          ask your property manager for an invite code, then enter it on the Join page.
         </p>
         <div style="margin: 24px 0; padding: 20px; background: #fafaf9; border-radius: 16px;">
           <p style="margin: 0 0 4px; color: #78716c; font-size: 13px;">YOUR ACCOUNT</p>
           <p style="margin: 0; color: #1c1917; font-size: 15px;"><strong>${resident.name}</strong></p>
           <p style="margin: 0; color: #57534e; font-size: 14px;">${resident.email}</p>
-          <p style="margin: 4px 0 0; color: #F59E0B; font-size: 13px; font-weight: 600;">Status: Pending approval</p>
         </div>
-        <p style="color: #57534e; font-size: 14px;">
-          In the meantime, you can browse available amenities and check the calendar.
-        </p>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://neighbri.com'}/join"
+           style="display: inline-block; background: #059669; color: white; padding: 12px 28px; border-radius: 9999px; text-decoration: none; font-weight: 600; font-size: 14px;">
+          Join a community
+        </a>
         <p style="color: #a8a29e; font-size: 13px; margin-top: 32px;">
           ${orgName} Amenity Booking System
         </p>

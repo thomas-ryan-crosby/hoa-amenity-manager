@@ -28,7 +28,7 @@ export default function SignUpPage() {
       // Get initial token
       const idToken = await user.getIdToken()
 
-      // Create resident record + send welcome email + set role claim
+      // Create resident record + send welcome email
       const res = await fetch('/api/auth/sign-up', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -53,8 +53,8 @@ export default function SignUpPage() {
         console.error('Session creation failed:', sessionRes.status)
       }
 
-      // Hard redirect to booking page
-      window.location.href = '/resident'
+      // Redirect to join page so the user can enter an invite code
+      window.location.href = '/join'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign up failed')
     } finally {
