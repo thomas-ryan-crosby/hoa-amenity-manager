@@ -223,6 +223,19 @@ export function AdminCalendar() {
 
   const isTurnWindow = selectedEvent?.extendedProps.type === 'turn-window'
   const isBooking = selectedEvent?.extendedProps.type === 'booking'
+  const isLinkedEvent = selectedId?.startsWith('linked-') ?? false
+
+  // Extract real booking ID from linked event IDs like "linked-{bookingId}-{amenityId}"
+  function getRealBookingId(): string | null {
+    if (!selectedEvent) return null
+    if (!isLinkedEvent) return selectedEvent.id
+    const parts = selectedEvent.id.split('-')
+    // linked-{bookingId}-{amenityId} — bookingId may itself contain dashes
+    // but amenityId is the last segment
+    parts.shift() // remove "linked"
+    parts.pop()   // remove linked amenityId
+    return parts.join('-') || null
+  }
 
   // Determine which amenity to use for calendar selection (first selected amenity)
   const primaryAmenityId = useMemo(() => {
@@ -269,11 +282,12 @@ export function AdminCalendar() {
   }
 
   async function approveBooking() {
-    if (!selectedEvent) return
+    const bookingId = getRealBookingId()
+    if (!bookingId) return
     setBusy(true)
     setError(null)
     try {
-      const res = await fetch(`/api/admin/bookings/${selectedEvent.id}/approve`, {
+      const res = await fetch(`/api/admin/bookings/${bookingId}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ feeWaived: waiveFee }),
@@ -290,11 +304,12 @@ export function AdminCalendar() {
   }
 
   async function denyBooking() {
-    if (!selectedEvent) return
+    const bookingId = getRealBookingId()
+    if (!bookingId) return
     setBusy(true)
     setError(null)
     try {
-      const res = await fetch(`/api/admin/bookings/${selectedEvent.id}/deny`, {
+      const res = await fetch(`/api/admin/bookings/${bookingId}/deny`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: denialReason }),
@@ -311,12 +326,13 @@ export function AdminCalendar() {
   }
 
   async function cancelBooking() {
-    if (!selectedEvent) return
+    const bookingId = getRealBookingId()
+    if (!bookingId) return
     if (!confirm('Cancel this booking? The resident will be notified and any applicable refund will be processed.')) return
     setBusy(true)
     setError(null)
     try {
-      const res = await fetch(`/api/admin/bookings/${selectedEvent.id}/cancel`, { method: 'POST' })
+      const res = await fetch(`/api/admin/bookings/${bookingId}/cancel`, { method: 'POST' })
       if (!res.ok) throw new Error((await res.json()).error ?? 'Unable to cancel.')
       await loadEvents()
       setSelectedId(null)
