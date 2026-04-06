@@ -114,6 +114,9 @@ export function NavBar() {
                   <Link href="/admin/people" className="hover:text-stone-900">
                     People
                   </Link>
+                  <Link href="/admin/insights" className="hover:text-stone-900">
+                    Insights
+                  </Link>
                 </>
               )}
               {/* Super-admin internal link — gated by property_manager for now; real superAdmin check coming */}
@@ -231,6 +234,13 @@ export function NavBar() {
                     onClick={closeMobile}
                   >
                     People
+                  </Link>
+                  <Link
+                    href="/admin/insights"
+                    className="block rounded-xl px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50"
+                    onClick={closeMobile}
+                  >
+                    Insights
                   </Link>
                 </>
               )}
