@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth'
-import { updateCommunityMember, getCommunityMembers, getResidentById, getCommunityById } from '@/lib/firebase/db'
+import { updateCommunityMember, getCommunityMembers, getResidentById, getCommunityById, updateResident } from '@/lib/firebase/db'
 import { sendEmail } from '@/lib/integrations/gmail'
 import { getActiveCommunityId } from '@/lib/community'
 
@@ -58,6 +58,11 @@ export async function PUT(
       updateData.approvedAt = new Date()
     }
     await updateCommunityMember(id, updateData as any)
+
+    // Sync resident record status for backward compatibility
+    if (resident) {
+      await updateResident(member.residentId, { status: parsed.data.status as 'pending' | 'approved' | 'denied' })
+    }
 
     if (parsed.data.status === 'approved' && resident) {
       sendEmail({
