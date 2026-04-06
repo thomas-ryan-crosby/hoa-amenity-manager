@@ -8,6 +8,8 @@ import {
   updateCommunity,
   deleteCommunity,
 } from '@/lib/firebase/db'
+import { adminDb } from '@/lib/firebase/admin'
+import { Timestamp } from 'firebase-admin/firestore'
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -53,7 +55,12 @@ export async function GET(
     )
   }
 
-  const members = await getCommunityMembers(id)
+  // Fetch members, amenities, bookings in parallel
+  const [members, amenitiesSnap, bookingsSnap] = await Promise.all([
+    getCommunityMembers(id),
+    adminDb.collection('amenities').where('communityId', '==', id).get(),
+    adminDb.collection('bookings').where('communityId', '==', id).get(),
+  ])
 
   // Resolve resident details for each member
   const enrichedMembers = await Promise.all(
@@ -70,8 +77,66 @@ export async function GET(
     }),
   )
 
+  // Stats
+  const bookings = bookingsSnap.docs.map((d) => d.data())
+  const bookingsByStatus: Record<string, number> = {}
+  for (const b of bookings) {
+    const s = (b.status as string) ?? 'UNKNOWN'
+    bookingsByStatus[s] = (bookingsByStatus[s] ?? 0) + 1
+  }
+
+  // Recent bookings for this community (last 15)
+  const recentBookingsSnap = await adminDb
+    .collection('bookings')
+    .where('communityId', '==', id)
+    .orderBy('createdAt', 'desc')
+    .limit(15)
+    .get()
+
+  const recentBookings = recentBookingsSnap.docs.map((d) => {
+    const data = d.data()
+    return {
+      id: d.id,
+      amenityId: data.amenityId,
+      residentId: data.residentId,
+      status: data.status,
+      startDatetime:
+        data.startDatetime instanceof Timestamp
+          ? data.startDatetime.toDate().toISOString()
+          : data.startDatetime,
+      endDatetime:
+        data.endDatetime instanceof Timestamp
+          ? data.endDatetime.toDate().toISOString()
+          : data.endDatetime,
+      createdAt:
+        data.createdAt instanceof Timestamp
+          ? data.createdAt.toDate().toISOString()
+          : data.createdAt,
+      bookedByName: data.bookedByName ?? null,
+    }
+  })
+
+  // Amenity names for display
+  const amenities = amenitiesSnap.docs.map((d) => ({
+    id: d.id,
+    name: d.data().name as string,
+  }))
+
   return NextResponse.json({
-    community: { ...community, members: enrichedMembers },
+    community: {
+      ...community,
+      members: enrichedMembers,
+      stats: {
+        memberCount: members.length,
+        approvedMembers: members.filter((m) => m.status === 'approved').length,
+        pendingMembers: members.filter((m) => m.status === 'pending').length,
+        amenityCount: amenitiesSnap.size,
+        bookingCount: bookingsSnap.size,
+        bookingsByStatus,
+      },
+      amenities,
+      recentBookings,
+    },
   })
 }
 
