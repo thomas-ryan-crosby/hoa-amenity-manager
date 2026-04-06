@@ -922,9 +922,10 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                   }
                 }
 
+                const leftPercent = overlapIndex * 10
                 const widthPercent = Math.max(40, 90 - overlapIndex * 10)
                 harness.style.width = `${widthPercent}%`
-                harness.style.left = '0'
+                harness.style.left = `${leftPercent}%`
                 harness.style.right = 'auto'
                 harness.setAttribute('data-overlap-index', String(overlapIndex))
               }}
