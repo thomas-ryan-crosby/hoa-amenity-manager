@@ -550,7 +550,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
 
         {amenityInfo && amenityInfo.suggestedAmenityIds?.length > 0 && (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 mb-4">
-            <p className="text-sm font-semibold text-emerald-800">Also available for this time:</p>
+            <p className="text-sm font-semibold text-emerald-800">Want to book similar amenities at this time?</p>
             <div className="mt-2 space-y-2">
               {amenities
                 .filter((a) => amenityInfo.suggestedAmenityIds.includes(a.id))
@@ -977,7 +977,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         )}
       </div>
 
-      <aside data-tutorial="booking-form" className="hidden xl:block rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+      <aside data-tutorial="booking-form" className="hidden xl:block sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
         <div className="mb-4">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
             Request Booking
