@@ -77,50 +77,128 @@ export async function GET(
     }),
   )
 
-  // Stats
-  const bookings = bookingsSnap.docs.map((d) => d.data())
-  const bookingsByStatus: Record<string, number> = {}
-  for (const b of bookings) {
-    const s = (b.status as string) ?? 'UNKNOWN'
-    bookingsByStatus[s] = (bookingsByStatus[s] ?? 0) + 1
-  }
+  // Amenity lookup
+  const amenityMap = new Map<string, string>()
+  amenitiesSnap.docs.forEach((d) => amenityMap.set(d.id, d.data().name as string))
 
-  // Recent bookings for this community (last 15)
-  const recentBookingsSnap = await adminDb
-    .collection('bookings')
-    .where('communityId', '==', id)
-    .orderBy('createdAt', 'desc')
-    .limit(15)
-    .get()
+  // Parse bookings with dates
+  const now = new Date()
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
 
-  const recentBookings = recentBookingsSnap.docs.map((d) => {
+  const bookings = bookingsSnap.docs.map((d) => {
     const data = d.data()
+    const start = data.startDatetime instanceof Timestamp
+      ? data.startDatetime.toDate()
+      : new Date(data.startDatetime as string)
+    const created = data.createdAt instanceof Timestamp
+      ? data.createdAt.toDate()
+      : new Date(data.createdAt as string)
     return {
       id: d.id,
-      amenityId: data.amenityId,
-      residentId: data.residentId,
-      status: data.status,
-      startDatetime:
-        data.startDatetime instanceof Timestamp
-          ? data.startDatetime.toDate().toISOString()
-          : data.startDatetime,
-      endDatetime:
-        data.endDatetime instanceof Timestamp
-          ? data.endDatetime.toDate().toISOString()
-          : data.endDatetime,
-      createdAt:
-        data.createdAt instanceof Timestamp
-          ? data.createdAt.toDate().toISOString()
-          : data.createdAt,
-      bookedByName: data.bookedByName ?? null,
+      amenityId: data.amenityId as string,
+      status: data.status as string,
+      startDatetime: start,
+      createdAt: created,
     }
   })
 
-  // Amenity names for display
-  const amenities = amenitiesSnap.docs.map((d) => ({
-    id: d.id,
-    name: d.data().name as string,
-  }))
+  // Active bookings (not cancelled/denied)
+  const activeStatuses = new Set([
+    'INQUIRY_RECEIVED', 'AVAILABILITY_CHECKING', 'PENDING_APPROVAL',
+    'APPROVED', 'PAYMENT_PENDING', 'CONFIRMED', 'REMINDER_SENT',
+    'IN_PROGRESS', 'COMPLETED', 'CLOSED', 'WAITLISTED',
+  ])
+  const activeBookings = bookings.filter((b) => activeStatuses.has(b.status))
+
+  // --- Usage Insights ---
+
+  // 1. Most popular amenities (by booking count)
+  const amenityBookingCounts: Record<string, number> = {}
+  for (const b of activeBookings) {
+    amenityBookingCounts[b.amenityId] = (amenityBookingCounts[b.amenityId] ?? 0) + 1
+  }
+  const popularAmenities = Object.entries(amenityBookingCounts)
+    .map(([amenityId, count]) => ({
+      amenityId,
+      name: amenityMap.get(amenityId) ?? 'Unknown',
+      bookings: count,
+    }))
+    .sort((a, b) => b.bookings - a.bookings)
+
+  // 2. Peak days of week
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  const dayOfWeekCounts = Array(7).fill(0)
+  for (const b of activeBookings) {
+    dayOfWeekCounts[b.startDatetime.getDay()]++
+  }
+  const peakDays = dayNames
+    .map((name, i) => ({ day: name, bookings: dayOfWeekCounts[i] }))
+    .sort((a, b) => b.bookings - a.bookings)
+
+  // 3. Peak hours
+  const hourCounts = Array(24).fill(0)
+  for (const b of activeBookings) {
+    hourCounts[b.startDatetime.getHours()]++
+  }
+  const peakHours = hourCounts
+    .map((count, hour) => ({
+      hour,
+      label: `${hour === 0 ? 12 : hour > 12 ? hour - 12 : hour}${hour < 12 ? 'am' : 'pm'}`,
+      bookings: count,
+    }))
+    .filter((h) => h.bookings > 0)
+    .sort((a, b) => b.bookings - a.bookings)
+
+  // 4. Bookings by month (last 6 months)
+  const monthlyBookings: { month: string; count: number }[] = []
+  for (let i = 5; i >= 0; i--) {
+    const mStart = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const mEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1)
+    const label = mStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    const count = bookings.filter(
+      (b) => b.createdAt >= mStart && b.createdAt < mEnd,
+    ).length
+    monthlyBookings.push({ month: label, count })
+  }
+
+  // 5. Booking status breakdown
+  const bookingsByStatus: Record<string, number> = {}
+  for (const b of bookings) {
+    bookingsByStatus[b.status] = (bookingsByStatus[b.status] ?? 0) + 1
+  }
+
+  // 6. This month vs last month
+  const bookingsThisMonth = bookings.filter((b) => b.createdAt >= thisMonthStart).length
+  const bookingsLastMonth = bookings.filter(
+    (b) => b.createdAt >= lastMonthStart && b.createdAt < thisMonthStart,
+  ).length
+
+  // 7. Top bookers (residents with most bookings)
+  const residentBookingCounts: Record<string, number> = {}
+  for (const b of activeBookings) {
+    // Use amenityId as a proxy — we'll resolve names from members
+  }
+  // Actually count by residentId from raw data
+  for (const d of bookingsSnap.docs) {
+    const data = d.data()
+    if (activeStatuses.has(data.status as string)) {
+      const rid = data.residentId as string
+      if (rid) residentBookingCounts[rid] = (residentBookingCounts[rid] ?? 0) + 1
+    }
+  }
+  const residentNameMap = new Map<string, string>()
+  for (const m of enrichedMembers) {
+    residentNameMap.set(m.residentId, m.name)
+  }
+  const topBookers = Object.entries(residentBookingCounts)
+    .map(([residentId, count]) => ({
+      residentId,
+      name: residentNameMap.get(residentId) ?? 'Unknown',
+      bookings: count,
+    }))
+    .sort((a, b) => b.bookings - a.bookings)
+    .slice(0, 10)
 
   return NextResponse.json({
     community: {
@@ -132,10 +210,17 @@ export async function GET(
         pendingMembers: members.filter((m) => m.status === 'pending').length,
         amenityCount: amenitiesSnap.size,
         bookingCount: bookingsSnap.size,
+        bookingsThisMonth,
+        bookingsLastMonth,
         bookingsByStatus,
       },
-      amenities,
-      recentBookings,
+      usage: {
+        popularAmenities,
+        peakDays,
+        peakHours: peakHours.slice(0, 8),
+        monthlyBookings,
+        topBookers,
+      },
     },
   })
 }

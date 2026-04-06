@@ -4,26 +4,27 @@ import { adminDb } from '@/lib/firebase/admin'
 import { Timestamp } from 'firebase-admin/firestore'
 
 // ---------------------------------------------------------------------------
-// GET — platform-wide metrics for the internal dashboard
+// GET — platform-level metrics for the internal dashboard
 // ---------------------------------------------------------------------------
+
+function toISO(val: unknown): string {
+  if (val instanceof Timestamp) return val.toDate().toISOString()
+  if (val instanceof Date) return val.toISOString()
+  return String(val ?? '')
+}
 
 export async function GET() {
   const auth = await requireSuperAdmin()
   if (!auth.ok) return auth.response
 
-  // Run all counts in parallel
-  const [
-    communitiesSnap,
-    membersSnap,
-    bookingsSnap,
-    amenitiesSnap,
-    residentsSnap,
-  ] = await Promise.all([
+  const now = new Date()
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+
+  const [communitiesSnap, membersSnap, bookingsSnap] = await Promise.all([
     adminDb.collection('communities').get(),
     adminDb.collection('communityMembers').get(),
     adminDb.collection('bookings').get(),
-    adminDb.collection('amenities').get(),
-    adminDb.collection('residents').get(),
   ])
 
   const communities = communitiesSnap.docs.map((d) => {
@@ -32,120 +33,86 @@ export async function GET() {
       id: d.id,
       name: data.name as string,
       slug: data.slug as string,
+      city: (data.city as string) ?? null,
+      state: (data.state as string) ?? null,
       plan: data.plan as string,
       isActive: data.isActive as boolean,
+      createdAt: toISO(data.createdAt),
     }
   })
-  const members = membersSnap.docs.map((d) => d.data())
-  const bookings = bookingsSnap.docs.map((d) => d.data())
 
-  // Community breakdown
-  const activeCommunities = communities.filter((c) => c.isActive).length
-  const totalCommunities = communities.length
+  const members = membersSnap.docs.map((d) => {
+    const data = d.data()
+    return {
+      communityId: data.communityId as string,
+      status: data.status as string,
+      joinedAt: data.joinedAt instanceof Timestamp ? data.joinedAt.toDate() : new Date(data.joinedAt as string),
+    }
+  })
 
-  // Member breakdown
-  const totalMembers = members.length
-  const pendingMembers = members.filter((m) => m.status === 'pending').length
-  const approvedMembers = members.filter((m) => m.status === 'approved').length
+  const bookings = bookingsSnap.docs.map((d) => {
+    const data = d.data()
+    return {
+      communityId: (data.communityId ?? '') as string,
+      status: (data.status ?? '') as string,
+      createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt as string),
+    }
+  })
 
-  // Booking breakdown
+  // Platform totals
+  const totalResidents = members.filter((m) => m.status === 'approved').length
+  const totalPending = members.filter((m) => m.status === 'pending').length
   const totalBookings = bookings.length
-  const bookingsByStatus: Record<string, number> = {}
-  for (const b of bookings) {
-    const status = (b.status as string) ?? 'UNKNOWN'
-    bookingsByStatus[status] = (bookingsByStatus[status] ?? 0) + 1
-  }
+  const bookingsThisMonth = bookings.filter((b) => b.createdAt >= thisMonthStart).length
+  const bookingsLastMonth = bookings.filter(
+    (b) => b.createdAt >= lastMonthStart && b.createdAt < thisMonthStart,
+  ).length
+  const newMembersThisMonth = members.filter((m) => m.joinedAt >= thisMonthStart).length
 
-  // Per-community stats
-  const communityStats = communities.map((c) => {
-    const memberCount = members.filter((m) => m.communityId === c.id).length
-    const approvedCount = members.filter(
-      (m) => m.communityId === c.id && m.status === 'approved',
+  // Per-community summary
+  const communityOverview = communities.map((c) => {
+    const cm = members.filter((m) => m.communityId === c.id)
+    const cb = bookings.filter((b) => b.communityId === c.id)
+
+    const residents = cm.filter((m) => m.status === 'approved').length
+    const pending = cm.filter((m) => m.status === 'pending').length
+    const bThisMonth = cb.filter((b) => b.createdAt >= thisMonthStart).length
+    const bLastMonth = cb.filter(
+      (b) => b.createdAt >= lastMonthStart && b.createdAt < thisMonthStart,
     ).length
-    const pendingCount = members.filter(
-      (m) => m.communityId === c.id && m.status === 'pending',
-    ).length
-    const bookingCount = bookings.filter((b) => b.communityId === c.id).length
-    const amenityCount = amenitiesSnap.docs.filter(
-      (d) => d.data().communityId === c.id,
-    ).length
+    const newMembersMonth = cm.filter((m) => m.joinedAt >= thisMonthStart).length
 
     return {
       id: c.id,
       name: c.name,
       slug: c.slug,
+      city: c.city,
+      state: c.state,
       plan: c.plan,
       isActive: c.isActive,
-      memberCount,
-      approvedCount,
-      pendingCount,
-      bookingCount,
-      amenityCount,
-    }
-  })
-
-  // Recent activity — last 20 bookings across all communities
-  const recentBookingsSnap = await adminDb
-    .collection('bookings')
-    .orderBy('createdAt', 'desc')
-    .limit(20)
-    .get()
-
-  const recentBookings = recentBookingsSnap.docs.map((d) => {
-    const data = d.data()
-    return {
-      id: d.id,
-      amenityId: data.amenityId,
-      status: data.status,
-      communityId: data.communityId ?? null,
-      createdAt:
-        data.createdAt instanceof Timestamp
-          ? data.createdAt.toDate().toISOString()
-          : data.createdAt,
-      startDatetime:
-        data.startDatetime instanceof Timestamp
-          ? data.startDatetime.toDate().toISOString()
-          : data.startDatetime,
-    }
-  })
-
-  // Recent members — last 20 join requests
-  const recentMembersSnap = await adminDb
-    .collection('communityMembers')
-    .orderBy('joinedAt', 'desc')
-    .limit(20)
-    .get()
-
-  const recentMembers = recentMembersSnap.docs.map((d) => {
-    const data = d.data()
-    return {
-      id: d.id,
-      communityId: data.communityId,
-      userId: data.userId,
-      residentId: data.residentId,
-      role: data.role,
-      status: data.status,
-      joinedAt:
-        data.joinedAt instanceof Timestamp
-          ? data.joinedAt.toDate().toISOString()
-          : data.joinedAt,
+      residents,
+      pending,
+      totalBookings: cb.length,
+      bookingsThisMonth: bThisMonth,
+      bookingsLastMonth: bLastMonth,
+      bookingsTrend: bLastMonth > 0
+        ? Math.round(((bThisMonth - bLastMonth) / bLastMonth) * 100)
+        : bThisMonth > 0 ? 100 : 0,
+      newMembersThisMonth: newMembersMonth,
     }
   })
 
   return NextResponse.json({
-    overview: {
-      totalCommunities,
-      activeCommunities,
-      totalMembers,
-      approvedMembers,
-      pendingMembers,
+    platform: {
+      totalCommunities: communities.length,
+      activeCommunities: communities.filter((c) => c.isActive).length,
+      totalResidents,
+      totalPending,
       totalBookings,
-      totalAmenities: amenitiesSnap.size,
-      totalResidents: residentsSnap.size,
+      bookingsThisMonth,
+      bookingsLastMonth,
+      newMembersThisMonth,
     },
-    bookingsByStatus,
-    communityStats,
-    recentBookings,
-    recentMembers,
+    communities: communityOverview,
   })
 }
