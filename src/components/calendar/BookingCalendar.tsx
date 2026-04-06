@@ -900,32 +900,32 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               slotEventOverlap
               selectOverlap
               eventDidMount={(info) => {
-                // Cascading staircase: 1st=90%, 2nd=80%, 3rd=70%, etc.
+                // Use event time data to calculate overlap index
                 const harness = info.el.closest('.fc-timegrid-event-harness') as HTMLElement
                 if (!harness) return
-                const container = harness.parentElement
-                if (!container) return
 
-                // Find all harnesses in this column that overlap with this event
-                const allHarnesses = Array.from(container.querySelectorAll('.fc-timegrid-event-harness')) as HTMLElement[]
-                const myTop = harness.offsetTop
-                const myHeight = harness.offsetHeight
+                const myStart = info.event.start?.getTime() ?? 0
+                const myEnd = info.event.end?.getTime() ?? 0
+                if (!myStart || !myEnd) return
 
+                const api = calendarRef.current?.getApi()
+                if (!api) return
+
+                // Count events that overlap AND were created before this one (by id)
                 let overlapIndex = 0
-                for (const other of allHarnesses) {
-                  if (other === harness) break
-                  const otherTop = other.offsetTop
-                  const otherHeight = other.offsetHeight
-                  // Check if they overlap vertically
-                  if (otherTop < myTop + myHeight && otherTop + otherHeight > myTop) {
-                    overlapIndex++
-                  }
-                }
+                api.getEvents().forEach((other) => {
+                  if (other.id === info.event.id) return
+                  if (!other.start || !other.end) return
+                  if (other.id >= info.event.id) return
+                  const oStart = other.start.getTime()
+                  const oEnd = other.end.getTime()
+                  if (oStart < myEnd && oEnd > myStart) overlapIndex++
+                })
 
                 const widthPercent = Math.max(50, 90 - overlapIndex * 5)
-                harness.style.width = `${widthPercent}%`
-                harness.style.left = '0'
-                harness.style.right = 'auto'
+                harness.style.setProperty('width', `${widthPercent}%`, 'important')
+                harness.style.setProperty('left', '0', 'important')
+                harness.style.setProperty('right', 'auto', 'important')
                 harness.setAttribute('data-overlap-index', String(overlapIndex))
               }}
               slotMinTime="00:00:00"
