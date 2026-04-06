@@ -12,7 +12,8 @@ import {
 } from '@/lib/firebase/db'
 
 const JoinSchema = z.object({
-  code: z.string().min(1),
+  code: z.string().optional(),
+  communityId: z.string().optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -22,32 +23,41 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
   const parsed = JoinSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invite code is required' }, { status: 400 })
+    return NextResponse.json({ error: 'Select a community or enter an invite code' }, { status: 400 })
   }
 
-  // Look up invite by code
-  const invite = await getInviteByCode(parsed.data.code.trim())
-  if (!invite) {
-    return NextResponse.json({ error: 'Invalid invite code' }, { status: 404 })
-  }
+  let targetCommunityId: string
 
-  // Validate invite is active
-  if (!invite.isActive) {
-    return NextResponse.json({ error: 'This invite code is no longer active' }, { status: 400 })
-  }
-
-  // Validate not expired
-  if (invite.expiresAt && invite.expiresAt < new Date()) {
-    return NextResponse.json({ error: 'This invite code has expired' }, { status: 400 })
-  }
-
-  // Validate use count
-  if (invite.maxUses !== null && invite.useCount >= invite.maxUses) {
-    return NextResponse.json({ error: 'This invite code has reached its usage limit' }, { status: 400 })
+  if (parsed.data.communityId) {
+    // Direct join by community ID (from dropdown)
+    const community = await getCommunityById(parsed.data.communityId)
+    if (!community || !community.isActive) {
+      return NextResponse.json({ error: 'Community not found' }, { status: 404 })
+    }
+    targetCommunityId = community.id
+  } else if (parsed.data.code) {
+    // Join by invite code
+    const invite = await getInviteByCode(parsed.data.code.trim())
+    if (!invite) {
+      return NextResponse.json({ error: 'Invalid invite code' }, { status: 404 })
+    }
+    if (!invite.isActive) {
+      return NextResponse.json({ error: 'This invite code is no longer active' }, { status: 400 })
+    }
+    if (invite.expiresAt && invite.expiresAt < new Date()) {
+      return NextResponse.json({ error: 'This invite code has expired' }, { status: 400 })
+    }
+    if (invite.maxUses !== null && invite.useCount >= invite.maxUses) {
+      return NextResponse.json({ error: 'This invite code has reached its usage limit' }, { status: 400 })
+    }
+    await incrementInviteUseCount(invite.id)
+    targetCommunityId = invite.communityId
+  } else {
+    return NextResponse.json({ error: 'Select a community or enter an invite code' }, { status: 400 })
   }
 
   // Check user isn't already a member
-  const existingMember = await getCommunityMember(auth.userId, invite.communityId)
+  const existingMember = await getCommunityMember(auth.userId, targetCommunityId)
   if (existingMember) {
     return NextResponse.json({ error: 'You are already a member of this community' }, { status: 409 })
   }
@@ -70,7 +80,7 @@ export async function POST(req: NextRequest) {
 
   // Create communityMember with pending status
   await createCommunityMember({
-    communityId: invite.communityId,
+    communityId: targetCommunityId,
     userId: auth.userId,
     residentId: resident.id,
     role: 'resident',
@@ -81,14 +91,11 @@ export async function POST(req: NextRequest) {
     approvedAt: null,
   })
 
-  // Increment invite use count
-  await incrementInviteUseCount(invite.id)
-
   // Get community name for response
-  const community = await getCommunityById(invite.communityId)
+  const community = await getCommunityById(targetCommunityId)
 
   return NextResponse.json({
-    communityId: invite.communityId,
+    communityId: targetCommunityId,
     communityName: community?.name ?? 'Unknown',
     status: 'pending',
   })

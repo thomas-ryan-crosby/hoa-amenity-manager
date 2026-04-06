@@ -1,51 +1,85 @@
 'use client'
 
 import { Suspense, useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
+
+type Community = {
+  id: string
+  name: string
+  slug: string
+  city: string | null
+  state: string | null
+}
 
 function JoinContent() {
   const searchParams = useSearchParams()
-  const [code, setCode] = useState('')
+  const [communities, setCommunities] = useState<Community[]>([])
+  const [selectedId, setSelectedId] = useState('')
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
-  const [communityName, setCommunityName] = useState<string | null>(null)
-  const router = useRouter()
+  const [fetching, setFetching] = useState(true)
 
-  // Auto-fill code from query param
   useEffect(() => {
-    const qCode = searchParams.get('code')
-    if (qCode) setCode(qCode)
-  }, [searchParams])
+    fetch('/api/communities/list')
+      .then((r) => r.json())
+      .then((d) => {
+        setCommunities(d.communities ?? [])
+        // Auto-select if only one community
+        if (d.communities?.length === 1) {
+          setSelectedId(d.communities[0].id)
+        }
+      })
+      .finally(() => setFetching(false))
+  }, [])
 
-  async function handleSubmit(e: React.FormEvent) {
+  // Support invite code from URL as fallback
+  const inviteCode = searchParams.get('code')
+
+  async function handleJoin(e: React.FormEvent) {
     e.preventDefault()
+    if (!selectedId && !inviteCode) return
     setLoading(true)
     setError('')
-    setCommunityName(null)
+    setSuccess('')
+
     try {
+      const body: Record<string, string> = {}
+      if (selectedId) body.communityId = selectedId
+      else if (inviteCode) body.code = inviteCode
+
       const res = await fetch('/api/communities/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code.trim() }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Unable to join')
 
-      setCommunityName(data.communityName)
+      setSuccess(`Joined ${data.communityName}! Your request is pending approval.`)
 
-      // Set active community and redirect
+      // Set active community
       await fetch('/api/communities/switch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ communityId: data.communityId }),
       })
 
-      window.location.href = '/resident'
+      // Redirect after a moment
+      setTimeout(() => { window.location.href = '/resident' }, 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to join')
     } finally {
       setLoading(false)
     }
+  }
+
+  if (fetching) {
+    return (
+      <main className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <div className="h-64 w-80 animate-pulse rounded-3xl bg-stone-100" />
+      </main>
+    )
   }
 
   return (
@@ -54,20 +88,25 @@ function JoinContent() {
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">Neighbri</p>
         <h1 className="mt-3 text-3xl font-semibold text-stone-900">Join a community</h1>
         <p className="mt-2 text-sm text-stone-500">
-          Enter the invite code from your property manager to join your community.
+          Select your community to request access. A property manager will review your request.
         </p>
 
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+        <form className="mt-6 space-y-4" onSubmit={handleJoin}>
           <label className="block text-sm font-medium text-stone-700">
-            Invite code
-            <input
-              className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900 uppercase tracking-widest text-center text-lg font-mono outline-none focus:border-emerald-500"
-              type="text"
-              placeholder="e.g. ABC123"
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
+            Community
+            <select
+              className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900 outline-none focus:border-emerald-500"
+              value={selectedId}
+              onChange={(e) => setSelectedId(e.target.value)}
               required
-            />
+            >
+              <option value="">Select a community...</option>
+              {communities.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}{c.city && c.state ? ` — ${c.city}, ${c.state}` : ''}
+                </option>
+              ))}
+            </select>
           </label>
 
           {error && (
@@ -76,24 +115,26 @@ function JoinContent() {
             </div>
           )}
 
-          {communityName && (
+          {success && (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              Joined <strong>{communityName}</strong>! Redirecting...
+              {success}
             </div>
           )}
 
           <button
             className="w-full rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:bg-emerald-300"
             type="submit"
-            disabled={loading || !code.trim()}
+            disabled={loading || (!selectedId && !inviteCode)}
           >
-            {loading ? 'Joining...' : 'Join community'}
+            {loading ? 'Joining...' : 'Request to join'}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-stone-400">
-          Don&apos;t have a code? Ask your property manager for an invite link.
-        </p>
+        {communities.length === 0 && (
+          <p className="mt-4 text-center text-sm text-stone-400">
+            No communities available yet. Contact your property manager.
+          </p>
+        )}
       </div>
     </main>
   )
