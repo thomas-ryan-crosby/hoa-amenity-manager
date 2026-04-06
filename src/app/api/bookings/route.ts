@@ -5,6 +5,7 @@ import {
   getResidentByFirebaseUid,
   getBookingsByResident,
   getAmenityById,
+  getBookingById,
   createBookingWithAuditLog,
 } from '@/lib/firebase/db'
 import * as orchestrator from '@/lib/agents/orchestrator'
@@ -125,28 +126,30 @@ export async function POST(req: NextRequest) {
     console.error(`[Email] Booking received notification failed:`, err)
   })
 
-  // Kick off orchestration sequentially (parallel can cause conflicts)
-  async function runOrchestration() {
+  // Run orchestration synchronously so turn windows, status transitions,
+  // and availability checks are all complete before we respond.
+  // This ensures the calendar shows the correct state on refetch.
+  try {
+    await orchestrator.handleNewBooking(booking.id)
+  } catch (err) {
+    console.error(`[Orchestrator] Error handling booking ${booking.id}:`, err)
+  }
+  for (const addId of additionalBookingIds) {
     try {
-      await orchestrator.handleNewBooking(booking.id)
+      await orchestrator.handleNewBooking(addId)
     } catch (err) {
-      console.error(`[Orchestrator] Error handling booking ${booking.id}:`, err)
-    }
-    for (const addId of additionalBookingIds) {
-      try {
-        await orchestrator.handleNewBooking(addId)
-      } catch (err) {
-        console.error(`[Orchestrator] Error handling booking ${addId}:`, err)
-      }
+      console.error(`[Orchestrator] Error handling booking ${addId}:`, err)
     }
   }
-  runOrchestration() // fire-and-forget but sequential internally
+
+  // Re-read the booking to get the final status after orchestration
+  const finalBooking = await getBookingById(booking.id)
 
   return NextResponse.json(
     {
       bookingId: booking.id,
       additionalBookingIds,
-      status: booking.status,
+      status: finalBooking?.status ?? booking.status,
       amenityNames,
     },
     { status: 201 },

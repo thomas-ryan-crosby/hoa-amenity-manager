@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/auth'
 import {
   getResidentById,
   getAllResidents,
+  getBookingById,
   createBookingWithAuditLog,
 } from '@/lib/firebase/db'
 import * as orchestrator from '@/lib/agents/orchestrator'
@@ -107,18 +108,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Run orchestration sequentially
-  async function runOrchestration() {
-    try { await orchestrator.handleNewBooking(booking.id) } catch (err) {
-      console.error(`[Orchestrator] Error handling PM booking ${booking.id}:`, err)
-    }
-    for (const addId of additionalBookingIds) {
-      try { await orchestrator.handleNewBooking(addId) } catch (err) {
-        console.error(`[Orchestrator] Error handling PM booking ${addId}:`, err)
-      }
+  // Run orchestration synchronously so turn windows and status are final before response
+  try { await orchestrator.handleNewBooking(booking.id) } catch (err) {
+    console.error(`[Orchestrator] Error handling PM booking ${booking.id}:`, err)
+  }
+  for (const addId of additionalBookingIds) {
+    try { await orchestrator.handleNewBooking(addId) } catch (err) {
+      console.error(`[Orchestrator] Error handling PM booking ${addId}:`, err)
     }
   }
-  runOrchestration() // fire-and-forget
 
-  return NextResponse.json({ bookingId: booking.id, additionalBookingIds, status: booking.status }, { status: 201 })
+  const finalBooking = await getBookingById(booking.id)
+
+  return NextResponse.json({ bookingId: booking.id, additionalBookingIds, status: finalBooking?.status ?? booking.status }, { status: 201 })
 }
