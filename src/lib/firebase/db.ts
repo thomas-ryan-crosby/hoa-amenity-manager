@@ -246,7 +246,31 @@ export async function createResident(data: Omit<Resident, 'id'>): Promise<Reside
   return { id: ref.id, ...data }
 }
 
-export async function getAllResidents(): Promise<Resident[]> {
+export async function getAllResidents(communityId?: string): Promise<Resident[]> {
+  if (communityId) {
+    // Query communityMembers to find residents in this community
+    const memberSnap = await communityMembersCol().where('communityId', '==', communityId).get()
+    const residentIds = memberSnap.docs
+      .map((d) => d.data().residentId as string)
+      .filter(Boolean)
+    if (residentIds.length === 0) return []
+    // Fetch residents by their IDs (Firestore 'in' supports up to 30)
+    const residents: Resident[] = []
+    for (let i = 0; i < residentIds.length; i += 30) {
+      const batch = residentIds.slice(i, i + 30)
+      const snap = await residentsCol().where('__name__', 'in', batch).get()
+      for (const d of snap.docs) {
+        const data = d.data()
+        residents.push({
+          id: d.id,
+          ...data,
+          status: data.status ?? 'approved',
+          createdAt: data.createdAt ? toDate(data.createdAt) : new Date(),
+        } as Resident)
+      }
+    }
+    return residents
+  }
   const snap = await residentsCol().get()
   return snap.docs.map((d) => {
     const data = d.data()
@@ -267,8 +291,10 @@ export async function updateResident(id: string, data: Partial<Resident>): Promi
 // AMENITIES
 // ---------------------------------------------------------------------------
 
-export async function getAllAmenities(): Promise<Amenity[]> {
-  const snap = await amenitiesCol().get()
+export async function getAllAmenities(communityId?: string): Promise<Amenity[]> {
+  let query: FirebaseFirestore.Query = amenitiesCol()
+  if (communityId) query = query.where('communityId', '==', communityId)
+  const snap = await query.get()
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Amenity)
 }
 
@@ -278,9 +304,9 @@ export async function getAmenityById(id: string): Promise<Amenity | null> {
 }
 
 export async function createAmenity(
-  data: Pick<Amenity, 'name' | 'capacity' | 'rentalFee' | 'depositAmount'> & Partial<Omit<Amenity, 'id'>>,
+  data: Pick<Amenity, 'name' | 'capacity' | 'rentalFee' | 'depositAmount'> & Partial<Omit<Amenity, 'id'>> & { communityId?: string },
 ): Promise<Amenity> {
-  const fullData: Omit<Amenity, 'id'> = {
+  const fullData: Omit<Amenity, 'id'> & { communityId?: string } = {
     name: data.name,
     description: data.description ?? null,
     capacity: data.capacity,
@@ -307,15 +333,16 @@ export async function createAmenity(
     areaId: data.areaId ?? null,
     sortOrder: data.sortOrder ?? 0,
   }
+  if (data.communityId) fullData.communityId = data.communityId
   const ref = await amenitiesCol().add(fullData)
-  return { id: ref.id, ...fullData }
+  return { id: ref.id, ...fullData } as Amenity
 }
 
 /**
  * If setting isDefault=true, clear isDefault on all other amenities first.
  */
-export async function setDefaultAmenity(amenityId: string | null): Promise<void> {
-  const all = await getAllAmenities()
+export async function setDefaultAmenity(amenityId: string | null, communityId?: string): Promise<void> {
+  const all = await getAllAmenities(communityId)
   await Promise.all(
     all
       .filter((a) => a.isDefault)
@@ -410,8 +437,10 @@ export async function deleteAmenity(id: string): Promise<void> {
 // AREAS
 // ---------------------------------------------------------------------------
 
-export async function getAllAreas(): Promise<Area[]> {
-  const snap = await areasCol().get()
+export async function getAllAreas(communityId?: string): Promise<Area[]> {
+  let query: FirebaseFirestore.Query = areasCol()
+  if (communityId) query = query.where('communityId', '==', communityId)
+  const snap = await query.get()
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() } as Area))
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
@@ -421,18 +450,18 @@ export async function getAreaById(id: string): Promise<Area | null> {
   return snapshotToDoc<Area>(await areasCol().doc(id).get())
 }
 
-export async function createArea(data: Omit<Area, 'id'>): Promise<Area> {
+export async function createArea(data: Omit<Area, 'id'> & { communityId?: string }): Promise<Area> {
   const ref = await areasCol().add(data)
-  return { id: ref.id, ...data }
+  return { id: ref.id, ...data } as Area
 }
 
 export async function updateArea(id: string, data: Partial<Area>): Promise<void> {
   await areasCol().doc(id).update(data)
 }
 
-export async function deleteArea(id: string): Promise<void> {
+export async function deleteArea(id: string, communityId?: string): Promise<void> {
   // Unset areaId on all amenities in this area
-  const amenities = await getAllAmenities()
+  const amenities = await getAllAmenities(communityId)
   await Promise.all(
     amenities
       .filter((a) => a.areaId === id)
@@ -445,11 +474,11 @@ export async function deleteArea(id: string): Promise<void> {
  * Get all amenities sorted by area order then amenity order.
  * Returns { areas, amenities, ungrouped } for easy rendering.
  */
-export async function getAmenitiesGroupedByArea(): Promise<{
+export async function getAmenitiesGroupedByArea(communityId?: string): Promise<{
   areas: (Area & { amenities: Amenity[] })[]
   ungrouped: Amenity[]
 }> {
-  const [areas, amenities] = await Promise.all([getAllAreas(), getAllAmenities()])
+  const [areas, amenities] = await Promise.all([getAllAreas(communityId), getAllAmenities(communityId)])
 
   const areaMap = new Map<string, Amenity[]>()
   const ungrouped: Amenity[] = []
@@ -663,10 +692,12 @@ export async function getBookingWithRelations(
 
 export async function getBookingsByResident(
   residentId: string,
+  communityId?: string,
 ): Promise<(Booking & { amenityName: string })[]> {
-  const snap = await bookingsCol()
+  let query: FirebaseFirestore.Query = bookingsCol()
     .where('residentId', '==', residentId)
-    .get()
+  if (communityId) query = query.where('communityId', '==', communityId)
+  const snap = await query.get()
 
   const bookings = snap.docs
     .map(bookingFromQueryDoc)
@@ -688,9 +719,11 @@ export async function getBookingsByResident(
   }))
 }
 
-export async function getBookingsByStatus(statuses: BookingStatus[]): Promise<Booking[]> {
-  const snap = await bookingsCol().where('status', 'in', statuses).get()
-  return snap.docs.map(bookingFromQueryDoc)
+export async function getBookingsByStatus(statuses: BookingStatus[], communityId?: string): Promise<Booking[]> {
+  let query: FirebaseFirestore.Query = bookingsCol().where('status', 'in', statuses)
+  if (communityId) query = query.where('communityId', '==', communityId)
+  const snap = await query.get()
+  return snap.docs.map((d) => bookingFromQueryDoc(d as FirebaseFirestore.QueryDocumentSnapshot))
 }
 
 /**
@@ -801,8 +834,10 @@ export async function getBookingAuditLogs(bookingId: string): Promise<AuditLog[]
 // STAFF
 // ---------------------------------------------------------------------------
 
-export async function getAllStaff(): Promise<Staff[]> {
-  const snap = await staffCol().get()
+export async function getAllStaff(communityId?: string): Promise<Staff[]> {
+  let query: FirebaseFirestore.Query = staffCol()
+  if (communityId) query = query.where('communityId', '==', communityId)
+  const snap = await query.get()
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Staff)
 }
 
@@ -816,9 +851,9 @@ export async function getStaffByRole(role: StaffRole): Promise<Staff[]> {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Staff)
 }
 
-export async function createStaff(data: Omit<Staff, 'id'>): Promise<Staff> {
+export async function createStaff(data: Omit<Staff, 'id'> & { communityId?: string }): Promise<Staff> {
   const ref = await staffCol().add(data)
-  return { id: ref.id, ...data }
+  return { id: ref.id, ...data } as Staff
 }
 
 export async function updateStaff(id: string, data: Partial<Staff>): Promise<void> {
@@ -1013,7 +1048,7 @@ function turnWindowFromQueryDoc(doc: FirebaseFirestore.QueryDocumentSnapshot): T
 }
 
 export async function createTurnWindow(
-  data: Omit<TurnWindow, 'id' | 'createdAt'>,
+  data: Omit<TurnWindow, 'id' | 'createdAt'> & { communityId?: string },
 ): Promise<TurnWindow> {
   const now = new Date()
   const docData = {
@@ -1026,7 +1061,7 @@ export async function createTurnWindow(
     createdAt: Timestamp.fromDate(now),
   }
   const ref = await turnWindowsCol().add(docData)
-  return { id: ref.id, ...data, createdAt: now }
+  return { id: ref.id, ...data, createdAt: now } as TurnWindow
 }
 
 export async function getTurnWindowByBookingId(bookingId: string): Promise<TurnWindow | null> {
@@ -1263,12 +1298,21 @@ const DEFAULT_SETTINGS: SystemSettings = {
   defaultAmenityId: null,
 }
 
-export async function getSettings(): Promise<SystemSettings> {
+export async function getSettings(communityId?: string): Promise<SystemSettings> {
+  if (communityId) {
+    const doc = await adminDb.collection('communities').doc(communityId).collection('settings').doc('general').get()
+    if (doc.exists) return { ...DEFAULT_SETTINGS, ...doc.data() } as SystemSettings
+  }
+  // Fallback to global settings
   const doc = await adminDb.collection('settings').doc('global').get()
   if (!doc.exists) return { ...DEFAULT_SETTINGS }
   return { ...DEFAULT_SETTINGS, ...doc.data() } as SystemSettings
 }
 
-export async function updateSettings(data: Partial<SystemSettings>): Promise<void> {
-  await adminDb.collection('settings').doc('global').set(data, { merge: true })
+export async function updateSettings(data: Partial<SystemSettings>, communityId?: string): Promise<void> {
+  if (communityId) {
+    await adminDb.collection('communities').doc(communityId).collection('settings').doc('general').set(data, { merge: true })
+  } else {
+    await adminDb.collection('settings').doc('global').set(data, { merge: true })
+  }
 }

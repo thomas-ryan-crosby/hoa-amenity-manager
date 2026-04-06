@@ -7,6 +7,7 @@ import {
   createBookingWithAuditLog,
 } from '@/lib/firebase/db'
 import * as orchestrator from '@/lib/agents/orchestrator'
+import { getActiveCommunityId } from '@/lib/community'
 
 const AdminBookingSchema = z.object({
   amenityId: z.string().min(1),
@@ -40,6 +41,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  const communityId = await getActiveCommunityId()
   const { amenityId, additionalAmenityIds, startDatetime, endDatetime, guestCount, notes, residentId, bookedByName, bookedByEmail, bookedByPhone, sendCommsToBookee, feeWaived, anonymous } = parsed.data
 
   // Determine the resident
@@ -70,6 +72,7 @@ export async function POST(req: NextRequest) {
       sendCommsToBookee: sendCommsToBookee ?? false,
       feeWaived: feeWaived ?? false,
       anonymous: anonymous ?? false,
+      ...(communityId ? { communityId } : {}),
     },
     'admin',
     'BOOKING_CREATED_BY_PM',
@@ -95,6 +98,7 @@ export async function POST(req: NextRequest) {
           sendCommsToBookee: sendCommsToBookee ?? false,
           feeWaived: feeWaived ?? false,
           anonymous: anonymous ?? false,
+          ...(communityId ? { communityId } : {}),
         },
         'admin',
         'BOOKING_CREATED_BY_PM_BUNDLED',

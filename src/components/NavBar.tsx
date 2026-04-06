@@ -1,8 +1,76 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { useCommunity } from '@/components/providers/CommunityProvider'
+
+function CommunitySwitcher() {
+  const { activeCommunity, communities, switchCommunity, loading } = useCommunity()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  if (loading || communities.length === 0) return null
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-100 transition-colors"
+      >
+        <span className="max-w-[140px] truncate">{activeCommunity?.name ?? 'Select community'}</span>
+        <svg className={`h-3.5 w-3.5 text-stone-400 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-xl border border-stone-200 bg-white py-1 shadow-lg">
+          <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+            Your communities
+          </div>
+          {communities.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => {
+                if (c.id !== activeCommunity?.id) switchCommunity(c.id)
+                setOpen(false)
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-50"
+            >
+              <span className="flex-1 truncate text-stone-800">{c.name}</span>
+              <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-500">
+                {c.role.replaceAll('_', ' ')}
+              </span>
+              {c.id === activeCommunity?.id && (
+                <svg className="h-4 w-4 flex-shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          ))}
+          <div className="border-t border-stone-100 mt-1 pt-1">
+            <Link
+              href="/communities/join"
+              className="block px-3 py-2 text-sm text-emerald-600 hover:bg-emerald-50"
+              onClick={() => setOpen(false)}
+            >
+              Join another community
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function NavBar() {
   const { user, role, loading, signOut } = useAuth()
@@ -15,13 +83,15 @@ export function NavBar() {
   return (
     <nav className="border-b border-stone-200 bg-white">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-3">
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <Link
             href="/"
             className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700"
           >
             Neighbri
           </Link>
+
+          {user && <CommunitySwitcher />}
 
           {user && (
             <div className="hidden md:flex items-center gap-4 text-sm text-stone-600">
@@ -120,6 +190,9 @@ export function NavBar() {
                 )}
               </div>
 
+              {/* Mobile community switcher */}
+              <MobileCommunitySwitcher closeMobile={closeMobile} />
+
               <Link
                 href="/resident"
                 className="block rounded-xl px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50"
@@ -209,5 +282,46 @@ export function NavBar() {
         </div>
       )}
     </nav>
+  )
+}
+
+function MobileCommunitySwitcher({ closeMobile }: { closeMobile: () => void }) {
+  const { activeCommunity, communities, switchCommunity, loading } = useCommunity()
+
+  if (loading || communities.length === 0) return null
+
+  return (
+    <div className="rounded-xl border border-stone-200 mb-2 overflow-hidden">
+      <div className="px-4 py-2 bg-stone-50 text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+        Community
+      </div>
+      {communities.map((c) => (
+        <button
+          key={c.id}
+          onClick={() => {
+            if (c.id !== activeCommunity?.id) switchCommunity(c.id)
+            closeMobile()
+          }}
+          className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-stone-50"
+        >
+          <span className="flex-1 truncate text-stone-800">{c.name}</span>
+          <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-500">
+            {c.role.replaceAll('_', ' ')}
+          </span>
+          {c.id === activeCommunity?.id && (
+            <svg className="h-4 w-4 flex-shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+        </button>
+      ))}
+      <Link
+        href="/communities/join"
+        className="block px-4 py-2.5 text-sm text-emerald-600 hover:bg-emerald-50 border-t border-stone-100"
+        onClick={closeMobile}
+      >
+        Join another community
+      </Link>
+    </div>
   )
 }

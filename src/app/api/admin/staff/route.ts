@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth'
 import { getAllStaff, createStaff } from '@/lib/firebase/db'
+import { getActiveCommunityId } from '@/lib/community'
 
 const StaffSchema = z.object({
   name: z.string().min(2),
@@ -16,7 +17,8 @@ export async function GET() {
     return authState.response
   }
 
-  const staff = await getAllStaff()
+  const communityId = await getActiveCommunityId()
+  const staff = await getAllStaff(communityId ?? undefined)
 
   return NextResponse.json({ staff })
 }
@@ -41,9 +43,11 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  const communityIdForCreate = await getActiveCommunityId()
   const staff = await createStaff({
     ...parsed.data,
     phone: parsed.data.phone ?? null,
+    ...(communityIdForCreate ? { communityId: communityIdForCreate } : {}),
   })
 
   return NextResponse.json({ staff }, { status: 201 })

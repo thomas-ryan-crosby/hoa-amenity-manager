@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { getAllAmenities, getAllAreas } from '@/lib/firebase/db'
+import { getActiveCommunityId } from '@/lib/community'
 
 export async function GET() {
+  const communityId = await getActiveCommunityId()
+
   const [amenities, areas] = await Promise.all([
-    getAllAmenities(),
-    getAllAreas(),
+    getAllAmenities(communityId ?? undefined),
+    getAllAreas(communityId ?? undefined),
   ])
 
   const sortedAmenities = amenities

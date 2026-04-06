@@ -8,6 +8,7 @@ import {
   addAuditLog,
   setDefaultAmenity,
 } from '@/lib/firebase/db'
+import { getActiveCommunityId } from '@/lib/community'
 
 const AmenitySchema = z.object({
   name: z.string().min(2),
@@ -42,7 +43,8 @@ export async function GET() {
     return authState.response
   }
 
-  const amenities = await getAllAmenities()
+  const communityId = await getActiveCommunityId()
+  const amenities = await getAllAmenities(communityId ?? undefined)
 
   const amenitiesWithBlackouts = await Promise.all(
     amenities.map(async (amenity) => {
@@ -83,6 +85,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  const communityIdForCreate = await getActiveCommunityId()
   const amenity = await createAmenity({
     ...parsed.data,
     description: parsed.data.description ?? null,
@@ -96,10 +99,11 @@ export async function POST(req: NextRequest) {
     rules: parsed.data.rules ?? null,
     hasAccessInstructions: parsed.data.hasAccessInstructions ?? false,
     accessInstructions: parsed.data.accessInstructions ?? null,
+    ...(communityIdForCreate ? { communityId: communityIdForCreate } : {}),
   })
 
   if (parsed.data.isDefault) {
-    await setDefaultAmenity(amenity.id)
+    await setDefaultAmenity(amenity.id, communityIdForCreate ?? undefined)
   }
 
   await addAuditLog(amenity.id, 'admin', 'AMENITY_CREATED', {

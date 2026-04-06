@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth'
 import { getSettings, updateSettings } from '@/lib/firebase/db'
+import { getActiveCommunityId } from '@/lib/community'
 
 const SettingsSchema = z.object({
   pmEmail: z.string().email().optional(),
@@ -13,7 +14,8 @@ export async function GET() {
   const authState = await requireRole(['property_manager'])
   if (!authState.ok) return authState.response
 
-  const settings = await getSettings()
+  const communityId = await getActiveCommunityId()
+  const settings = await getSettings(communityId ?? undefined)
   return NextResponse.json({
     settings: {
       pmEmail: settings.pmEmail,
@@ -36,6 +38,7 @@ export async function PUT(req: NextRequest) {
     )
   }
 
-  await updateSettings(parsed.data)
+  const communityIdForUpdate = await getActiveCommunityId()
+  await updateSettings(parsed.data, communityIdForUpdate ?? undefined)
   return NextResponse.json({ success: true })
 }

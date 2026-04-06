@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server'
 import { requireRole } from '@/lib/auth'
 import { getAllResidents } from '@/lib/firebase/db'
 import { adminAuth } from '@/lib/firebase/admin'
+import { getActiveCommunityId } from '@/lib/community'
 
 export async function GET() {
   const authState = await requireRole(['property_manager'])
   if (!authState.ok) return authState.response
 
-  const residents = await getAllResidents()
+  const communityId = await getActiveCommunityId()
+  const residents = await getAllResidents(communityId ?? undefined)
 
   // Fetch Firebase Auth roles for each resident
   const residentsWithRoles = await Promise.all(

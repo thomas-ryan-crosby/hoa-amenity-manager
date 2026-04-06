@@ -11,6 +11,7 @@ import {
   type BookingStatus,
   type TurnWindow,
 } from '@/lib/firebase/db'
+import { getActiveCommunityId } from '@/lib/community'
 
 const AMENITY_COLORS = [
   '#3B82F6',
@@ -42,9 +43,11 @@ export async function GET(req: NextRequest) {
       ? ['INQUIRY_RECEIVED', 'AVAILABILITY_CHECKING', 'PENDING_APPROVAL', 'PAYMENT_PENDING', 'CONFIRMED', 'IN_PROGRESS', 'REMINDER_SENT', 'WAITLISTED']
       : ['INQUIRY_RECEIVED', 'AVAILABILITY_CHECKING', 'PENDING_APPROVAL', 'PAYMENT_PENDING', 'CONFIRMED', 'REMINDER_SENT', 'WAITLISTED']
 
+  const communityId = await getActiveCommunityId()
+
   const [amenities, bookings] = await Promise.all([
-    getAllAmenities(),
-    getBookingsByStatus(statuses),
+    getAllAmenities(communityId ?? undefined),
+    getBookingsByStatus(statuses, communityId ?? undefined),
   ])
 
   const colorMap = new Map<string, string>()

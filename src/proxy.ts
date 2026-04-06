@@ -9,6 +9,7 @@ function isPublic(pathname: string) {
   if (pathname.startsWith('/api/cron')) return true
   if (pathname === '/api/amenities') return true
   if (pathname === '/api/calendar/events') return true
+  if (pathname.startsWith('/api/communities')) return true
   return false
 }
 

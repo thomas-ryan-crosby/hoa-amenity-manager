@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth'
 import { getAllAreas, createArea } from '@/lib/firebase/db'
+import { getActiveCommunityId } from '@/lib/community'
 
 const AreaSchema = z.object({
   name: z.string().min(1, 'Area name is required'),
 })
 
 export async function GET() {
-  const areas = await getAllAreas()
+  const communityId = await getActiveCommunityId()
+  const areas = await getAllAreas(communityId ?? undefined)
   return NextResponse.json({ areas })
 }
 
@@ -33,12 +35,14 @@ export async function POST(req: NextRequest) {
   }
 
   // Auto-set sortOrder to max + 1
-  const areas = await getAllAreas()
+  const communityIdForCreate = await getActiveCommunityId()
+  const areas = await getAllAreas(communityIdForCreate ?? undefined)
   const maxSort = areas.reduce((max, a) => Math.max(max, a.sortOrder ?? 0), 0)
 
   const area = await createArea({
     name: parsed.data.name,
     sortOrder: maxSort + 1,
+    ...(communityIdForCreate ? { communityId: communityIdForCreate } : {}),
   })
 
   return NextResponse.json({ area }, { status: 201 })

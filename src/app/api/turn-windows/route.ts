@@ -7,6 +7,7 @@ import {
 import { requireUser } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { Timestamp } from 'firebase-admin/firestore'
+import { getActiveCommunityId } from '@/lib/community'
 
 function toDate(val: Timestamp | Date | unknown): Date {
   if (val instanceof Timestamp) return (val as Timestamp).toDate()
@@ -38,13 +39,17 @@ export async function GET(req: NextRequest) {
   const amenityId = searchParams.get('amenityId')
   const status = searchParams.get('status') as TurnWindow['status'] | null
 
+  const communityId = await getActiveCommunityId()
   let turnWindows: TurnWindow[] = []
 
   if (amenityId) {
     turnWindows = await getTurnWindowsForAmenity(amenityId)
   } else {
     // Fetch all turn windows from Firestore directly
-    const snap = await adminDb.collection('turnWindows').get()
+    const col = adminDb.collection('turnWindows')
+    const snap = communityId
+      ? await col.where('communityId', '==', communityId).get()
+      : await col.get()
     turnWindows = snap.docs.map((doc) => {
       const data = doc.data()
       return {

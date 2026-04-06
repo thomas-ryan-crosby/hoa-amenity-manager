@@ -9,6 +9,7 @@ import {
 } from '@/lib/firebase/db'
 import * as orchestrator from '@/lib/agents/orchestrator'
 import * as residentAgent from '@/lib/agents/resident-agent'
+import { getActiveCommunityId } from '@/lib/community'
 
 const CreateBookingSchema = z.object({
   amenityId: z.string().min(1),
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { amenityId, additionalAmenityIds, startDatetime, endDatetime, guestCount, notes, anonymous } = parsed.data
+  const communityId = await getActiveCommunityId()
 
   // Create the primary booking
   const booking = await createBookingWithAuditLog(
@@ -77,6 +79,7 @@ export async function POST(req: NextRequest) {
       guestCount,
       notes: notes ?? null,
       anonymous: anonymous ?? false,
+      ...(communityId ? { communityId } : {}),
     },
     'api',
     'BOOKING_CREATED',
@@ -96,6 +99,7 @@ export async function POST(req: NextRequest) {
           guestCount,
           notes: notes ? `[Bundled booking] ${notes}` : '[Bundled booking]',
           anonymous: anonymous ?? false,
+          ...(communityId ? { communityId } : {}),
         },
         'api',
         'BOOKING_CREATED_BUNDLED',
@@ -163,7 +167,8 @@ export async function GET() {
     )
   }
 
-  const bookings = await getBookingsByResident(resident.id)
+  const activeCommunityId = await getActiveCommunityId()
+  const bookings = await getBookingsByResident(resident.id, activeCommunityId ?? undefined)
 
   const result = bookings.map((b) => ({
     id: b.id,

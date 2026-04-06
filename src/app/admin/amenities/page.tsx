@@ -2,12 +2,14 @@ export const dynamic = 'force-dynamic'
 
 import { getAllAmenities, getAllStaff, getBlackoutDates, getAllAreas } from '@/lib/firebase/db'
 import { AmenitySetupClient } from '@/components/admin/AmenitySetupClient'
+import { getActiveCommunityId } from '@/lib/community'
 
 export default async function AmenitySetupPage() {
+  const communityId = await getActiveCommunityId()
   const [amenities, staff, areas] = await Promise.all([
-    getAllAmenities(),
-    getAllStaff(),
-    getAllAreas(),
+    getAllAmenities(communityId ?? undefined),
+    getAllStaff(communityId ?? undefined),
+    getAllAreas(communityId ?? undefined),
   ])
 
   const amenitiesWithBlackouts = await Promise.all(
