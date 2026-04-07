@@ -73,8 +73,12 @@ function CommunitySwitcher() {
 }
 
 export function NavBar() {
-  const { user, role, loading, signOut } = useAuth()
+  const { user, role: authRole, loading, signOut } = useAuth()
+  const { activeCommunity } = useCommunity()
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  // Use community-specific role (from communityMembers), falling back to auth claims
+  const role = activeCommunity?.role ?? authRole
 
   function closeMobile() {
     setMobileOpen(false)

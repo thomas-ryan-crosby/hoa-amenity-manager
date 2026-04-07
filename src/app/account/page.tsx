@@ -2,9 +2,12 @@
 
 import { useEffect, useState, FormEvent } from 'react'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { useCommunity } from '@/components/providers/CommunityProvider'
 
 export default function AccountPage() {
-  const { user, role } = useAuth()
+  const { user, role: authRole } = useAuth()
+  const { activeCommunity } = useCommunity()
+  const role = activeCommunity?.role ?? authRole
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
