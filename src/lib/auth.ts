@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { adminAuth } from '@/lib/firebase/admin'
 
-export type AppRole = 'resident' | 'property_manager' | 'janitorial' | 'board'
+export type AppRole = 'admin' | 'resident' | 'property_manager' | 'janitorial' | 'board'
 
 export async function getAuthContext() {
   const cookieStore = await cookies()
@@ -50,7 +50,14 @@ export async function requireUser() {
 export async function requireRole(allowedRoles: AppRole[]) {
   const authState = await requireUser()
   if (!authState.ok) return authState
-  if (!authState.role || !allowedRoles.includes(authState.role as AppRole)) {
+
+  // Admin role inherits all property_manager permissions
+  const effectiveRoles = new Set(allowedRoles as string[])
+  if (effectiveRoles.has('property_manager')) {
+    effectiveRoles.add('admin')
+  }
+
+  if (!authState.role || !effectiveRoles.has(authState.role)) {
     return {
       ok: false as const,
       response: NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 }),

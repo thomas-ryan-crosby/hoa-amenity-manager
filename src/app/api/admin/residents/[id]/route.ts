@@ -7,7 +7,7 @@ import { getActiveCommunityId } from '@/lib/community'
 
 const UpdateMemberSchema = z.object({
   status: z.enum(['approved', 'denied', 'pending']).optional(),
-  role: z.enum(['resident', 'property_manager', 'janitorial', 'board']).optional(),
+  role: z.enum(['admin', 'resident', 'property_manager', 'janitorial', 'board']).optional(),
 })
 
 export async function PUT(
@@ -111,6 +111,16 @@ export async function PUT(
 
   // Handle role change — update communityMember, not Firebase Auth claims
   if (parsed.data.role && parsed.data.role !== member.role) {
+    // Enforce: cannot remove the last admin from a community
+    if (member.role === 'admin' && parsed.data.role !== 'admin') {
+      const adminCount = members.filter((m) => m.role === 'admin' && m.status === 'approved').length
+      if (adminCount <= 1) {
+        return NextResponse.json(
+          { error: 'Cannot remove the last admin. Assign another admin first.' },
+          { status: 400 },
+        )
+      }
+    }
     await updateCommunityMember(id, { role: parsed.data.role })
   }
 

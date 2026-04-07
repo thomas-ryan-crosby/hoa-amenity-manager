@@ -101,12 +101,12 @@ export function NavBar() {
               <Link href="/resident/bookings" data-tutorial="nav-my-bookings" className="hover:text-stone-900">
                 My Bookings
               </Link>
-              {(role === 'property_manager' || role === 'board' || role === 'janitorial') && (
+              {(role === 'admin' || role === 'property_manager' || role === 'board' || role === 'janitorial') && (
                 <Link href="/admin/dashboard" className="hover:text-stone-900">
                   Dashboard
                 </Link>
               )}
-              {(role === 'property_manager' || role === 'board') && (
+              {(role === 'admin' || role === 'property_manager' || role === 'board') && (
                 <>
                   <Link href="/admin/amenities" className="hover:text-stone-900">
                     Amenities
@@ -118,6 +118,11 @@ export function NavBar() {
                     Insights
                   </Link>
                 </>
+              )}
+              {role === 'admin' && (
+                <Link href="/admin/billing" className="hover:text-stone-900">
+                  Billing
+                </Link>
               )}
               {/* Super-admin internal link — gated by property_manager for now; real superAdmin check coming */}
               {role === 'property_manager' && (
@@ -210,7 +215,7 @@ export function NavBar() {
               >
                 My Bookings
               </Link>
-              {(role === 'property_manager' || role === 'board' || role === 'janitorial') && (
+              {(role === 'admin' || role === 'property_manager' || role === 'board' || role === 'janitorial') && (
                 <Link
                   href="/admin/dashboard"
                   className="block rounded-xl px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50"
@@ -219,7 +224,7 @@ export function NavBar() {
                   Dashboard
                 </Link>
               )}
-              {(role === 'property_manager' || role === 'board') && (
+              {(role === 'admin' || role === 'property_manager' || role === 'board') && (
                 <>
                   <Link
                     href="/admin/amenities"
@@ -243,6 +248,15 @@ export function NavBar() {
                     Insights
                   </Link>
                 </>
+              )}
+              {role === 'admin' && (
+                <Link
+                  href="/admin/billing"
+                  className="block rounded-xl px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50"
+                  onClick={closeMobile}
+                >
+                  Billing
+                </Link>
               )}
               {/* Super-admin internal link — gated by property_manager for now */}
               {role === 'property_manager' && (

@@ -30,6 +30,7 @@ type Invite = {
 
 const ROLE_OPTIONS = [
   { value: 'resident', label: 'Resident' },
+  { value: 'admin', label: 'Admin' },
   { value: 'property_manager', label: 'Property Manager' },
   { value: 'janitorial', label: 'Janitorial' },
   { value: 'board', label: 'Board Member' },

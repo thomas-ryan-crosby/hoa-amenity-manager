@@ -171,7 +171,7 @@ export interface CommunityMember {
   communityId: string
   userId: string        // Firebase UID
   residentId: string    // Reference to residents collection
-  role: 'resident' | 'property_manager' | 'janitorial' | 'board'
+  role: 'admin' | 'resident' | 'property_manager' | 'janitorial' | 'board'
   status: 'pending' | 'approved' | 'denied'
   unitNumber: string
   joinedAt: Date
