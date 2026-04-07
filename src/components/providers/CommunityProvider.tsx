@@ -49,6 +49,16 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
         const activeId = data.activeCommunityId
         const active = list.find((c: CommunityInfo) => c.id === activeId) ?? list[0] ?? null
         setActiveCommunity(active)
+
+        // If no cookie is set but we have a community, set the cookie
+        // so server-side API routes can read the active community
+        if (!activeId && active) {
+          await fetch('/api/communities/switch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ communityId: active.id }),
+          })
+        }
       } catch {
         // ignore
       } finally {
