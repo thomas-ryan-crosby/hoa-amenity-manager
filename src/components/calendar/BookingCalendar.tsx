@@ -162,6 +162,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   const [additionalAmenities, setAdditionalAmenities] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
   const [eventDetail, setEventDetail] = useState<{
+    bookingId: string
     title: string
     start: string
     end: string
@@ -672,6 +673,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
           <p className="mt-4 text-xs text-stone-400 text-center">
             To book this time slot, click the whitespace next to this event or drag to select a time range.
           </p>
+          <p className="mt-2 text-[10px] text-stone-300 text-center font-mono">{eventDetail.bookingId}</p>
         </div>
       </div>
     )}
@@ -868,6 +870,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                 const props = event.extendedProps ?? {}
 
                 setEventDetail({
+                  bookingId: event.id,
                   title: event.title,
                   start: event.startStr,
                   end: event.endStr,

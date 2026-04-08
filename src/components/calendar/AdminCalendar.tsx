@@ -1040,6 +1040,7 @@ export function AdminCalendar() {
             <div className="rounded-2xl bg-stone-50 p-4 text-sm leading-6 text-stone-700">
               <p><strong>Amenity:</strong> {selectedEvent.extendedProps.amenityName}</p>
               <p><strong>Window:</strong> {formatDateRange(selectedEvent.start, selectedEvent.end)}</p>
+              <p className="text-[10px] text-stone-300 font-mono mt-1">{selectedEvent.extendedProps.turnWindowId}</p>
               <p>
                 <strong>Cleaning status:</strong>{' '}
                 <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
@@ -1103,6 +1104,7 @@ export function AdminCalendar() {
                   {selectedEvent.extendedProps.status.replaceAll('_', ' ')}
                 </span>
               </p>
+              <p className="mt-1 text-[10px] text-stone-300 font-mono">{getRealBookingId()}</p>
             </div>
 
             {/* Badges for special booking flags */}
