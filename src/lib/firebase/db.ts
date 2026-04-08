@@ -725,9 +725,23 @@ export async function getBookingsByResident(
 }
 
 export async function getBookingsByStatus(statuses: BookingStatus[], communityId?: string): Promise<Booking[]> {
-  let query: FirebaseFirestore.Query = bookingsCol().where('status', 'in', statuses)
-  if (communityId) query = query.where('communityId', '==', communityId)
-  const snap = await query.get()
+  if (communityId) {
+    // Fetch both community-scoped bookings AND legacy bookings without communityId
+    const [scopedSnap, legacySnap] = await Promise.all([
+      bookingsCol().where('status', 'in', statuses).where('communityId', '==', communityId).get(),
+      bookingsCol().where('status', 'in', statuses).get(),
+    ])
+    const scopedIds = new Set(scopedSnap.docs.map((d) => d.id))
+    const allDocs = [...scopedSnap.docs]
+    // Add legacy docs (no communityId field) that aren't already included
+    for (const doc of legacySnap.docs) {
+      if (!scopedIds.has(doc.id) && !doc.data().communityId) {
+        allDocs.push(doc)
+      }
+    }
+    return allDocs.map((d) => bookingFromQueryDoc(d as FirebaseFirestore.QueryDocumentSnapshot))
+  }
+  const snap = await bookingsCol().where('status', 'in', statuses).get()
   return snap.docs.map((d) => bookingFromQueryDoc(d as FirebaseFirestore.QueryDocumentSnapshot))
 }
 

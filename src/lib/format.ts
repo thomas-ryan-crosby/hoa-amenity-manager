@@ -5,15 +5,16 @@ export function formatCurrency(amount: number): string {
   }).format(amount)
 }
 
-export function formatDateTime(value: string | Date): string {
+export function formatDateTime(value: string | Date, timeZone = 'America/New_York'): string {
   const date = typeof value === 'string' ? new Date(value) : value
 
   return new Intl.DateTimeFormat('en-US', {
     dateStyle: 'medium',
     timeStyle: 'short',
+    timeZone,
   }).format(date)
 }
 
-export function formatDateRange(start: string | Date, end: string | Date) {
-  return `${formatDateTime(start)} - ${formatDateTime(end)}`
+export function formatDateRange(start: string | Date, end: string | Date, timeZone = 'America/New_York') {
+  return `${formatDateTime(start, timeZone)} - ${formatDateTime(end, timeZone)}`
 }

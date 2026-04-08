@@ -110,7 +110,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Send ONE combined booking received email
+  // Send ONE combined booking received email BEFORE orchestration
+  // (orchestration may send confirmation/payment emails — order matters)
   const allAmenityIds = [amenityId, ...(additionalAmenityIds ?? [])]
   const amenityNames = await Promise.all(
     allAmenityIds.map(async (id) => {
@@ -119,12 +120,11 @@ export async function POST(req: NextRequest) {
     }),
   )
 
-  residentAgent.notifyBookingReceivedMultiple(
-    booking.id,
-    amenityNames,
-  ).catch((err) => {
+  try {
+    await residentAgent.notifyBookingReceivedMultiple(booking.id, amenityNames)
+  } catch (err) {
     console.error(`[Email] Booking received notification failed:`, err)
-  })
+  }
 
   // Run orchestration synchronously so turn windows, status transitions,
   // and availability checks are all complete before we respond.
