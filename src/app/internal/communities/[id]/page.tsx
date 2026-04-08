@@ -67,6 +67,11 @@ export default function CommunityDetailPage() {
   const [saving, setSaving] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [activeTab, setActiveTab] = useState<'usage' | 'members' | 'settings'>('usage')
+  const [addMemberName, setAddMemberName] = useState('')
+  const [addMemberEmail, setAddMemberEmail] = useState('')
+  const [addMemberRole, setAddMemberRole] = useState<string>('admin')
+  const [addingMember, setAddingMember] = useState(false)
+  const [addMemberNotice, setAddMemberNotice] = useState<string | null>(null)
 
   // Editable fields
   const [name, setName] = useState('')
@@ -164,6 +169,38 @@ export default function CommunityDetailPage() {
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setSaving(false)
+    }
+  }
+
+  async function handleAddMember(e: React.FormEvent) {
+    e.preventDefault()
+    setAddingMember(true)
+    setAddMemberNotice(null)
+    try {
+      const res = await fetch(`/api/internal/communities/${communityId}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: addMemberEmail, name: addMemberName, role: addMemberRole }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed to add member')
+      if (data.linked) {
+        setAddMemberNotice(`${addMemberEmail} added as ${addMemberRole.replace('_', ' ')}.`)
+      } else {
+        setAddMemberNotice(`Invite sent to ${addMemberEmail}. They'll be linked as ${addMemberRole.replace('_', ' ')} when they sign up.`)
+      }
+      setAddMemberName('')
+      setAddMemberEmail('')
+      // Reload community data to refresh members list
+      const refreshRes = await fetch(`/api/internal/communities/${communityId}`)
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json()
+        setCommunity(refreshData.community)
+      }
+    } catch (err: unknown) {
+      setAddMemberNotice(err instanceof Error ? err.message : 'Failed to add member')
+    } finally {
+      setAddingMember(false)
     }
   }
 
@@ -473,6 +510,63 @@ export default function CommunityDetailPage() {
 
             {/* ===== Members Tab ===== */}
             {activeTab === 'members' && (
+              <div className="space-y-4">
+                {/* Add member form */}
+                <div className="rounded-xl border border-purple-200 bg-purple-50 p-5">
+                  <p className="text-sm font-semibold text-purple-800 mb-3">Add Member</p>
+                  <form onSubmit={handleAddMember} className="flex flex-wrap gap-2 items-end">
+                    <div className="flex-1 min-w-[140px]">
+                      <label className="block text-xs font-medium text-purple-700 mb-1">Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={addMemberName}
+                        onChange={(e) => setAddMemberName(e.target.value)}
+                        placeholder="Jane Smith"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-[180px]">
+                      <label className="block text-xs font-medium text-purple-700 mb-1">Email</label>
+                      <input
+                        type="email"
+                        required
+                        value={addMemberEmail}
+                        onChange={(e) => setAddMemberEmail(e.target.value)}
+                        placeholder="jane@example.com"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="w-40">
+                      <label className="block text-xs font-medium text-purple-700 mb-1">Role</label>
+                      <select
+                        value={addMemberRole}
+                        onChange={(e) => setAddMemberRole(e.target.value)}
+                        className={inputClass}
+                      >
+                        <option value="admin">Admin</option>
+                        <option value="property_manager">Property Manager</option>
+                        <option value="board">Board</option>
+                        <option value="janitorial">Janitorial</option>
+                        <option value="resident">Resident</option>
+                      </select>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={addingMember}
+                      className="rounded-full bg-purple-700 px-5 py-2 text-sm font-medium text-white hover:bg-purple-800 disabled:opacity-50"
+                    >
+                      {addingMember ? 'Adding...' : 'Add'}
+                    </button>
+                  </form>
+                  {addMemberNotice && (
+                    <p className="mt-2 text-xs text-purple-700">{addMemberNotice}</p>
+                  )}
+                  <p className="mt-2 text-xs text-purple-500">
+                    If the person doesn't have a Neighbri account, they'll receive a sign-up invitation email.
+                  </p>
+                </div>
+
               <div className="rounded-xl border border-stone-200 bg-white">
                 {!community.members || community.members.length === 0 ? (
                   <div className="px-5 py-12 text-center text-stone-500">No members yet.</div>
@@ -500,6 +594,7 @@ export default function CommunityDetailPage() {
                     ))}
                   </div>
                 )}
+              </div>
               </div>
             )}
 
