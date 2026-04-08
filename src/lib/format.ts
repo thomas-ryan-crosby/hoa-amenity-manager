@@ -5,7 +5,7 @@ export function formatCurrency(amount: number): string {
   }).format(amount)
 }
 
-export function formatDateTime(value: string | Date, timeZone = 'America/New_York'): string {
+export function formatDateTime(value: string | Date, timeZone = 'America/Chicago'): string {
   const date = typeof value === 'string' ? new Date(value) : value
 
   return new Intl.DateTimeFormat('en-US', {
@@ -15,6 +15,6 @@ export function formatDateTime(value: string | Date, timeZone = 'America/New_Yor
   }).format(date)
 }
 
-export function formatDateRange(start: string | Date, end: string | Date, timeZone = 'America/New_York') {
+export function formatDateRange(start: string | Date, end: string | Date, timeZone = 'America/Chicago') {
   return `${formatDateTime(start, timeZone)} - ${formatDateTime(end, timeZone)}`
 }
