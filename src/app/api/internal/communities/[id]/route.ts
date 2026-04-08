@@ -26,6 +26,7 @@ const UpdateCommunitySchema = z.object({
   city: z.string().min(1).optional(),
   state: z.string().length(2).optional(),
   zip: z.string().min(5).optional(),
+  timezone: z.string().min(1).optional(),
   contactEmail: z.string().email().optional(),
   contactPhone: z.string().nullable().optional(),
   plan: z.enum(['free', 'standard', 'premium']).optional(),

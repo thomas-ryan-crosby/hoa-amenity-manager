@@ -25,9 +25,12 @@ export default function CreateCommunityPage() {
   const [zip, setZip] = useState('')
   const [contactEmail, setContactEmail] = useState('')
   const [contactPhone, setContactPhone] = useState('')
+  const [timezone, setTimezone] = useState('America/Chicago')
   const [plan, setPlan] = useState('free')
   const [maxAmenities, setMaxAmenities] = useState(5)
   const [maxMembers, setMaxMembers] = useState(50)
+  const [adminEmail, setAdminEmail] = useState('')
+  const [adminName, setAdminName] = useState('')
 
   useEffect(() => {
     if (!slugManual) {
@@ -51,11 +54,14 @@ export default function CreateCommunityPage() {
           city,
           state,
           zip,
+          timezone,
           contactEmail,
           contactPhone: contactPhone || null,
           plan,
           maxAmenities,
           maxMembers,
+          adminEmail,
+          adminName,
         }),
       })
 
@@ -220,6 +226,57 @@ export default function CreateCommunityPage() {
                   onChange={(e) => setContactPhone(e.target.value)}
                   className={inputClass}
                 />
+              </div>
+            </div>
+
+            {/* Timezone */}
+            <div>
+              <label className={labelClass}>Timezone</label>
+              <select
+                required
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                className={inputClass}
+              >
+                <option value="America/New_York">Eastern (America/New_York)</option>
+                <option value="America/Chicago">Central (America/Chicago)</option>
+                <option value="America/Denver">Mountain (America/Denver)</option>
+                <option value="America/Los_Angeles">Pacific (America/Los_Angeles)</option>
+                <option value="America/Anchorage">Alaska (America/Anchorage)</option>
+                <option value="Pacific/Honolulu">Hawaii (Pacific/Honolulu)</option>
+              </select>
+            </div>
+
+            {/* First Admin */}
+            <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
+              <p className="text-sm font-semibold text-purple-800 mb-3">First Admin (required)</p>
+              <p className="text-xs text-purple-600 mb-3">
+                This person will manage the community — approvals, amenity setup, billing, etc.
+                They must have a Neighbri account before the community is created.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}>Admin Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={adminName}
+                    onChange={(e) => setAdminName(e.target.value)}
+                    placeholder="Jane Smith"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Admin Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={adminEmail}
+                    onChange={(e) => setAdminEmail(e.target.value)}
+                    placeholder="jane@example.com"
+                    className={inputClass}
+                  />
+                </div>
               </div>
             </div>
 

@@ -30,7 +30,7 @@ export async function verifyActionToken(
 }
 
 export async function sendApprovalRequest(bookingId: string): Promise<void> {
-  const { booking, amenity, resident, communityName: rawCommunityName } = await getBookingWithRelations(bookingId)
+  const { booking, amenity, resident, communityName: rawCommunityName, communityTimezone } = await getBookingWithRelations(bookingId)
   const settings = await getSettings()
 
   let approverEmail: string | undefined
@@ -66,7 +66,7 @@ export async function sendApprovalRequest(bookingId: string): Promise<void> {
             <tr><td style="padding: 4px 0; color: #78716c;">Resident</td><td style="padding: 4px 0;">${resident.name} (${resident.email})</td></tr>
             <tr><td style="padding: 4px 0; color: #78716c;">Unit</td><td style="padding: 4px 0;">${resident.unitNumber}</td></tr>
             <tr><td style="padding: 4px 0; color: #78716c;">Amenity</td><td style="padding: 4px 0; font-weight: 600;">${amenity.name}</td></tr>
-            <tr><td style="padding: 4px 0; color: #78716c;">When</td><td style="padding: 4px 0;">${formatDateRange(booking.startDatetime, booking.endDatetime)}</td></tr>
+            <tr><td style="padding: 4px 0; color: #78716c;">When</td><td style="padding: 4px 0;">${formatDateRange(booking.startDatetime, booking.endDatetime, communityTimezone ?? 'America/Chicago')}</td></tr>
             <tr><td style="padding: 4px 0; color: #78716c;">Guests</td><td style="padding: 4px 0;">${booking.guestCount}</td></tr>
             ${amenity.rentalFee > 0 ? `<tr><td style="padding: 4px 0; color: #78716c;">Rental fee</td><td style="padding: 4px 0;">${formatCurrency(amenity.rentalFee)}</td></tr>` : ''}
             ${amenity.depositAmount > 0 ? `<tr><td style="padding: 4px 0; color: #78716c;">Deposit</td><td style="padding: 4px 0;">${formatCurrency(amenity.depositAmount)}</td></tr>` : ''}

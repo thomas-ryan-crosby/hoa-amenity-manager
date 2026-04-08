@@ -155,6 +155,7 @@ export interface Community {
   city: string | null
   state: string | null
   zip: string | null
+  timezone: string            // IANA timezone (e.g. 'America/Chicago')
   logoUrl: string | null
   contactEmail: string | null
   contactPhone: string | null
@@ -664,7 +665,7 @@ export async function getBookingById(id: string): Promise<Booking | null> {
 
 export async function getBookingWithRelations(
   id: string,
-): Promise<{ booking: Booking; amenity: Amenity; resident: Resident; communityName: string | null }> {
+): Promise<{ booking: Booking; amenity: Amenity; resident: Resident; communityName: string | null; communityTimezone: string }> {
   const booking = await getBookingById(id)
   if (!booking) throw new Error(`Booking ${id} not found`)
 
@@ -692,7 +693,13 @@ export async function getBookingWithRelations(
     status: 'approved' as const,
     createdAt: booking.createdAt,
   }
-  return { booking, amenity, resident: resolvedResident, communityName: community?.name ?? null }
+  return {
+    booking,
+    amenity,
+    resident: resolvedResident,
+    communityName: community?.name ?? null,
+    communityTimezone: community?.timezone ?? 'America/Chicago',
+  }
 }
 
 export async function getBookingsByResident(

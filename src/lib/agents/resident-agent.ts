@@ -3,8 +3,8 @@ import { formatCurrency, formatDateRange } from '@/lib/format'
 import { sendEmail } from '@/lib/integrations/gmail'
 
 async function getBooking(bookingId: string) {
-  const { booking, amenity, resident, communityName } = await getBookingWithRelations(bookingId)
-  return { ...booking, amenity, resident, communityName }
+  const { booking, amenity, resident, communityName, communityTimezone } = await getBookingWithRelations(bookingId)
+  return { ...booking, amenity, resident, communityName, communityTimezone }
 }
 
 /** Send email to resident + bookee if sendCommsToBookee is enabled */
@@ -36,13 +36,14 @@ function emailWrapper(communityName: string | null, content: string): string {
 
 function bookingSummaryHtml(booking: Awaited<ReturnType<typeof getBooking>>) {
   const community = booking.communityName ?? 'your community'
+  const tz = booking.communityTimezone ?? 'America/Chicago'
   return `
     <div style="margin: 16px 0; padding: 16px; background: #fafaf9; border-radius: 12px;">
       <p style="margin: 0 0 4px; color: #78716c; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Booking Details</p>
       <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #1c1917;">
         <tr><td style="padding: 4px 0; color: #78716c;">Community</td><td style="padding: 4px 0; font-weight: 600;">${community}</td></tr>
         <tr><td style="padding: 4px 0; color: #78716c;">Amenity</td><td style="padding: 4px 0; font-weight: 600;">${booking.amenity.name}</td></tr>
-        <tr><td style="padding: 4px 0; color: #78716c;">When</td><td style="padding: 4px 0;">${formatDateRange(booking.startDatetime, booking.endDatetime)}</td></tr>
+        <tr><td style="padding: 4px 0; color: #78716c;">When</td><td style="padding: 4px 0;">${formatDateRange(booking.startDatetime, booking.endDatetime, tz)}</td></tr>
         <tr><td style="padding: 4px 0; color: #78716c;">Guests</td><td style="padding: 4px 0;">${booking.guestCount}</td></tr>
         ${booking.amenity.rentalFee > 0 ? `<tr><td style="padding: 4px 0; color: #78716c;">Rental fee</td><td style="padding: 4px 0;">${formatCurrency(booking.amenity.rentalFee)}</td></tr>` : ''}
         ${booking.amenity.depositAmount > 0 ? `<tr><td style="padding: 4px 0; color: #78716c;">Deposit</td><td style="padding: 4px 0;">${formatCurrency(booking.amenity.depositAmount)}</td></tr>` : ''}

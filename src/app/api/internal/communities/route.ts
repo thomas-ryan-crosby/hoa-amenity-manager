@@ -5,6 +5,9 @@ import { adminAuth } from '@/lib/firebase/admin'
 import {
   getAllCommunities,
   createCommunity,
+  createCommunityMember,
+  getResidentByFirebaseUid,
+  createResident,
 } from '@/lib/firebase/db'
 
 // ---------------------------------------------------------------------------
@@ -51,11 +54,15 @@ const CreateCommunitySchema = z.object({
   city: z.string().min(1, 'City is required'),
   state: z.string().length(2, 'State must be 2-letter code'),
   zip: z.string().min(5, 'Zip code is required'),
+  timezone: z.string().min(1, 'Timezone is required'),
   contactEmail: z.string().email('Valid email required'),
   contactPhone: z.string().nullable().optional(),
   plan: z.enum(['free', 'standard', 'premium']),
   maxAmenities: z.number().int().positive(),
   maxMembers: z.number().int().positive(),
+  // First admin — required for every new community
+  adminEmail: z.string().email('Admin email is required'),
+  adminName: z.string().min(1, 'Admin name is required'),
 })
 
 // ---------------------------------------------------------------------------
@@ -93,13 +100,56 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  const { adminEmail, adminName, ...communityData } = parsed.data
+
+  // Look up the admin user in Firebase Auth by email
+  let adminUid: string
+  try {
+    const adminUser = await adminAuth.getUserByEmail(adminEmail)
+    adminUid = adminUser.uid
+  } catch {
+    return NextResponse.json(
+      { error: `No account found for ${adminEmail}. The admin must sign up on Neighbri first.` },
+      { status: 400 },
+    )
+  }
+
+  // Create the community
   const community = await createCommunity({
-    ...parsed.data,
-    contactPhone: parsed.data.contactPhone ?? null,
+    ...communityData,
+    contactPhone: communityData.contactPhone ?? null,
     logoUrl: null,
     isActive: true,
     createdAt: new Date(),
     createdBy: auth.userId,
+  })
+
+  // Get or create a resident record for the admin
+  let resident = await getResidentByFirebaseUid(adminUid)
+  if (!resident) {
+    resident = await createResident({
+      firebaseUid: adminUid,
+      name: adminName,
+      email: adminEmail,
+      phone: null,
+      unitNumber: '',
+      stripeCustomerId: null,
+      status: 'approved',
+      createdAt: new Date(),
+    })
+  }
+
+  // Create the admin community membership (approved immediately)
+  await createCommunityMember({
+    communityId: community.id,
+    userId: adminUid,
+    residentId: resident.id,
+    role: 'admin',
+    status: 'approved',
+    unitNumber: resident.unitNumber ?? '',
+    joinedAt: new Date(),
+    approvedBy: auth.userId,
+    approvedAt: new Date(),
   })
 
   return NextResponse.json({ community }, { status: 201 })
