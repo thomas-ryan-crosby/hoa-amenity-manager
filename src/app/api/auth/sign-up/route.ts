@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { adminAuth } from '@/lib/firebase/admin'
-import { getResidentByFirebaseUid, createResident } from '@/lib/firebase/db'
+import {
+  getResidentByFirebaseUid,
+  createResident,
+  getPendingAdminInvitesByEmail,
+  deletePendingAdminInvite,
+  createCommunityMember,
+} from '@/lib/firebase/db'
 import { sendEmail } from '@/lib/integrations/gmail'
 
 const SignUpSchema = z.object({
@@ -45,6 +51,28 @@ export async function POST(req: NextRequest) {
     status: 'pending',
     createdAt: new Date(),
   })
+
+  // Check for pending admin invites and auto-link
+  const pendingInvites = await getPendingAdminInvitesByEmail(resident.email)
+  for (const invite of pendingInvites) {
+    try {
+      await createCommunityMember({
+        communityId: invite.communityId,
+        userId: decoded.uid,
+        residentId: resident.id,
+        role: invite.role,
+        status: 'approved',
+        unitNumber: '',
+        joinedAt: new Date(),
+        approvedBy: invite.createdBy,
+        approvedAt: new Date(),
+      })
+      await deletePendingAdminInvite(invite.id)
+      console.log(`[Sign-up] Auto-linked ${resident.email} as ${invite.role} for community ${invite.communityId}`)
+    } catch (err) {
+      console.error(`[Sign-up] Failed to link pending invite ${invite.id}:`, err)
+    }
+  }
 
   // Send welcome email
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://neighbri.com'

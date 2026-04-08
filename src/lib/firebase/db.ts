@@ -1342,3 +1342,49 @@ export async function updateSettings(data: Partial<SystemSettings>, communityId?
     await adminDb.collection('settings').doc('global').set(data, { merge: true })
   }
 }
+
+// ---------------------------------------------------------------------------
+// PENDING ADMIN INVITES
+// ---------------------------------------------------------------------------
+
+export interface PendingAdminInvite {
+  id: string
+  communityId: string
+  email: string
+  name: string
+  role: 'admin' | 'property_manager'
+  createdBy: string
+  createdAt: Date
+}
+
+function pendingAdminInvitesCol() {
+  return adminDb.collection('pendingAdminInvites')
+}
+
+export async function createPendingAdminInvite(
+  data: Omit<PendingAdminInvite, 'id'>,
+): Promise<PendingAdminInvite> {
+  const ref = await pendingAdminInvitesCol().add({
+    ...data,
+    createdAt: Timestamp.fromDate(data.createdAt),
+  })
+  return { id: ref.id, ...data }
+}
+
+export async function getPendingAdminInvitesByEmail(email: string): Promise<PendingAdminInvite[]> {
+  const snap = await pendingAdminInvitesCol()
+    .where('email', '==', email.toLowerCase())
+    .get()
+  return snap.docs.map((d) => {
+    const data = d.data()
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt ? toDate(data.createdAt) : new Date(),
+    } as PendingAdminInvite
+  })
+}
+
+export async function deletePendingAdminInvite(id: string): Promise<void> {
+  await pendingAdminInvitesCol().doc(id).delete()
+}

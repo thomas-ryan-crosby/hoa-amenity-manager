@@ -6,9 +6,11 @@ import {
   getAllCommunities,
   createCommunity,
   createCommunityMember,
+  createPendingAdminInvite,
   getResidentByFirebaseUid,
   createResident,
 } from '@/lib/firebase/db'
+import { sendEmail } from '@/lib/integrations/gmail'
 
 // ---------------------------------------------------------------------------
 // Super-admin auth helper
@@ -101,20 +103,9 @@ export async function POST(req: NextRequest) {
   }
 
   const { adminEmail, adminName, ...communityData } = parsed.data
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://neighbri.com'
 
-  // Look up the admin user in Firebase Auth by email
-  let adminUid: string
-  try {
-    const adminUser = await adminAuth.getUserByEmail(adminEmail)
-    adminUid = adminUser.uid
-  } catch {
-    return NextResponse.json(
-      { error: `No account found for ${adminEmail}. The admin must sign up on Neighbri first.` },
-      { status: 400 },
-    )
-  }
-
-  // Create the community
+  // Create the community first
   const community = await createCommunity({
     ...communityData,
     contactPhone: communityData.contactPhone ?? null,
@@ -124,33 +115,91 @@ export async function POST(req: NextRequest) {
     createdBy: auth.userId,
   })
 
-  // Get or create a resident record for the admin
-  let resident = await getResidentByFirebaseUid(adminUid)
-  if (!resident) {
-    resident = await createResident({
-      firebaseUid: adminUid,
-      name: adminName,
-      email: adminEmail,
-      phone: null,
-      unitNumber: '',
-      stripeCustomerId: null,
+  // Try to find the admin in Firebase Auth
+  let adminLinked = false
+  try {
+    const adminUser = await adminAuth.getUserByEmail(adminEmail)
+    const adminUid = adminUser.uid
+
+    // Get or create a resident record for the admin
+    let resident = await getResidentByFirebaseUid(adminUid)
+    if (!resident) {
+      resident = await createResident({
+        firebaseUid: adminUid,
+        name: adminName,
+        email: adminEmail,
+        phone: null,
+        unitNumber: '',
+        stripeCustomerId: null,
+        status: 'approved',
+        createdAt: new Date(),
+      })
+    }
+
+    // Create the admin community membership (approved immediately)
+    await createCommunityMember({
+      communityId: community.id,
+      userId: adminUid,
+      residentId: resident.id,
+      role: 'admin',
       status: 'approved',
+      unitNumber: resident.unitNumber ?? '',
+      joinedAt: new Date(),
+      approvedBy: auth.userId,
+      approvedAt: new Date(),
+    })
+    adminLinked = true
+  } catch {
+    // Admin doesn't have an account yet — store a pending invite
+    await createPendingAdminInvite({
+      communityId: community.id,
+      email: adminEmail.toLowerCase(),
+      name: adminName,
+      role: 'admin',
+      createdBy: auth.userId,
       createdAt: new Date(),
+    })
+
+    // Send them an invitation email
+    sendEmail({
+      to: adminEmail,
+      subject: `You've been invited to manage ${community.name} on Neighbri`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto;">
+          <p style="color: #059669; font-size: 13px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;">Neighbri</p>
+          <h1 style="color: #1c1917; font-size: 24px; margin-top: 8px;">You're invited!</h1>
+          <p style="color: #57534e; font-size: 15px; line-height: 1.7;">
+            Hi ${adminName}, you've been set up as the admin for
+            <strong>${community.name}</strong> on Neighbri.
+          </p>
+          <p style="color: #57534e; font-size: 15px; line-height: 1.7;">
+            Neighbri is an amenity booking platform for your community. As admin,
+            you'll manage amenities, approve bookings, and oversee community settings.
+          </p>
+          <p style="color: #57534e; font-size: 15px; line-height: 1.7;">
+            Create your account to get started:
+          </p>
+          <a href="${appUrl}/sign-up"
+             style="display: inline-block; background: #059669; color: white; padding: 12px 28px; border-radius: 9999px; text-decoration: none; font-weight: 600; font-size: 14px;">
+            Create your account
+          </a>
+          <p style="color: #78716c; font-size: 13px; margin-top: 16px;">
+            Use this email address (<strong>${adminEmail}</strong>) when signing up
+            so your admin access is linked automatically.
+          </p>
+          <p style="color: #a8a29e; font-size: 13px; margin-top: 32px;">
+            Neighbri &mdash; Amenity booking for your community
+          </p>
+        </div>
+      `,
+    }).catch((err) => {
+      console.error('[Email] Admin invite email failed:', err)
     })
   }
 
-  // Create the admin community membership (approved immediately)
-  await createCommunityMember({
-    communityId: community.id,
-    userId: adminUid,
-    residentId: resident.id,
-    role: 'admin',
-    status: 'approved',
-    unitNumber: resident.unitNumber ?? '',
-    joinedAt: new Date(),
-    approvedBy: auth.userId,
-    approvedAt: new Date(),
-  })
-
-  return NextResponse.json({ community }, { status: 201 })
+  return NextResponse.json({
+    community,
+    adminLinked,
+    adminInviteSent: !adminLinked,
+  }, { status: 201 })
 }
