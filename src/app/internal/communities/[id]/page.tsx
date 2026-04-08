@@ -67,8 +67,10 @@ export default function CommunityDetailPage() {
   const [saving, setSaving] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [activeTab, setActiveTab] = useState<'usage' | 'members' | 'settings'>('usage')
+  const [searchEmail, setSearchEmail] = useState('')
+  const [searchResult, setSearchResult] = useState<{ found: boolean; name?: string; email?: string } | null>(null)
+  const [searching, setSearching] = useState(false)
   const [addMemberName, setAddMemberName] = useState('')
-  const [addMemberEmail, setAddMemberEmail] = useState('')
   const [addMemberRole, setAddMemberRole] = useState<string>('admin')
   const [addingMember, setAddingMember] = useState(false)
   const [addMemberNotice, setAddMemberNotice] = useState<string | null>(null)
@@ -172,26 +174,55 @@ export default function CommunityDetailPage() {
     }
   }
 
-  async function handleAddMember(e: React.FormEvent) {
+  async function handleSearchEmail(e: React.FormEvent) {
     e.preventDefault()
+    if (!searchEmail.trim()) return
+    setSearching(true)
+    setSearchResult(null)
+    setAddMemberNotice(null)
+    try {
+      const res = await fetch(`/api/internal/users?q=${encodeURIComponent(searchEmail.trim())}&limit=1`)
+      const data = await res.json()
+      const match = (data.users ?? []).find(
+        (u: { email: string }) => u.email.toLowerCase() === searchEmail.trim().toLowerCase(),
+      )
+      if (match) {
+        setSearchResult({ found: true, name: match.name, email: match.email })
+        setAddMemberName(match.name)
+      } else {
+        setSearchResult({ found: false })
+        setAddMemberName('')
+      }
+    } catch {
+      setAddMemberNotice('Search failed. Try again.')
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  async function handleAddMember() {
+    const email = searchResult?.found ? searchResult.email! : searchEmail.trim()
+    const memberName = searchResult?.found ? (searchResult.name ?? addMemberName) : addMemberName
+    if (!email || !memberName) return
     setAddingMember(true)
     setAddMemberNotice(null)
     try {
       const res = await fetch(`/api/internal/communities/${communityId}/members`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: addMemberEmail, name: addMemberName, role: addMemberRole }),
+        body: JSON.stringify({ email, name: memberName, role: addMemberRole }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Failed to add member')
       if (data.linked) {
-        setAddMemberNotice(`${addMemberEmail} added as ${addMemberRole.replace('_', ' ')}.`)
+        setAddMemberNotice(`${email} added as ${addMemberRole.replace('_', ' ')}.`)
       } else {
-        setAddMemberNotice(`Invite sent to ${addMemberEmail}. They'll be linked as ${addMemberRole.replace('_', ' ')} when they sign up.`)
+        setAddMemberNotice(`Invite sent to ${email}. They'll be linked as ${addMemberRole.replace('_', ' ')} when they sign up.`)
       }
+      setSearchEmail('')
+      setSearchResult(null)
       setAddMemberName('')
-      setAddMemberEmail('')
-      // Reload community data to refresh members list
+      // Reload community data
       const refreshRes = await fetch(`/api/internal/communities/${communityId}`)
       if (refreshRes.ok) {
         const refreshData = await refreshRes.json()
@@ -511,60 +542,100 @@ export default function CommunityDetailPage() {
             {/* ===== Members Tab ===== */}
             {activeTab === 'members' && (
               <div className="space-y-4">
-                {/* Add member form */}
+                {/* Add member — search first, then add */}
                 <div className="rounded-xl border border-purple-200 bg-purple-50 p-5">
                   <p className="text-sm font-semibold text-purple-800 mb-3">Add Member</p>
-                  <form onSubmit={handleAddMember} className="flex flex-wrap gap-2 items-end">
-                    <div className="flex-1 min-w-[140px]">
-                      <label className="block text-xs font-medium text-purple-700 mb-1">Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={addMemberName}
-                        onChange={(e) => setAddMemberName(e.target.value)}
-                        placeholder="Jane Smith"
-                        className={inputClass}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-[180px]">
-                      <label className="block text-xs font-medium text-purple-700 mb-1">Email</label>
-                      <input
-                        type="email"
-                        required
-                        value={addMemberEmail}
-                        onChange={(e) => setAddMemberEmail(e.target.value)}
-                        placeholder="jane@example.com"
-                        className={inputClass}
-                      />
-                    </div>
-                    <div className="w-40">
-                      <label className="block text-xs font-medium text-purple-700 mb-1">Role</label>
-                      <select
-                        value={addMemberRole}
-                        onChange={(e) => setAddMemberRole(e.target.value)}
-                        className={inputClass}
-                      >
-                        <option value="admin">Admin</option>
-                        <option value="property_manager">Property Manager</option>
-                        <option value="board">Board</option>
-                        <option value="janitorial">Janitorial</option>
-                        <option value="resident">Resident</option>
-                      </select>
-                    </div>
+
+                  {/* Step 1: Search by email */}
+                  <form onSubmit={handleSearchEmail} className="flex gap-2">
+                    <input
+                      type="email"
+                      required
+                      value={searchEmail}
+                      onChange={(e) => { setSearchEmail(e.target.value); setSearchResult(null); setAddMemberNotice(null) }}
+                      placeholder="Search by email..."
+                      className={`flex-1 ${inputClass}`}
+                    />
                     <button
                       type="submit"
-                      disabled={addingMember}
+                      disabled={searching || !searchEmail.trim()}
                       className="rounded-full bg-purple-700 px-5 py-2 text-sm font-medium text-white hover:bg-purple-800 disabled:opacity-50"
                     >
-                      {addingMember ? 'Adding...' : 'Add'}
+                      {searching ? 'Searching...' : 'Search'}
                     </button>
                   </form>
-                  {addMemberNotice && (
-                    <p className="mt-2 text-xs text-purple-700">{addMemberNotice}</p>
+
+                  {/* Step 2: Result */}
+                  {searchResult && (
+                    <div className="mt-3 rounded-lg border border-purple-100 bg-white p-4">
+                      {searchResult.found ? (
+                        <>
+                          <p className="text-sm text-stone-900">
+                            <span className="font-medium">{searchResult.name}</span>
+                            <span className="text-stone-400 ml-2">{searchResult.email}</span>
+                          </p>
+                          <div className="mt-3 flex items-center gap-2">
+                            <select
+                              value={addMemberRole}
+                              onChange={(e) => setAddMemberRole(e.target.value)}
+                              className={`w-44 ${inputClass}`}
+                            >
+                              <option value="admin">Admin</option>
+                              <option value="property_manager">Property Manager</option>
+                              <option value="board">Board</option>
+                              <option value="janitorial">Janitorial</option>
+                              <option value="resident">Resident</option>
+                            </select>
+                            <button
+                              onClick={handleAddMember}
+                              disabled={addingMember}
+                              className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                            >
+                              {addingMember ? 'Adding...' : 'Add to community'}
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm text-stone-600 mb-3">
+                            No Neighbri account found for <strong>{searchEmail}</strong>.
+                            Enter their name to send an invitation.
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={addMemberName}
+                              onChange={(e) => setAddMemberName(e.target.value)}
+                              placeholder="Full name"
+                              className={`flex-1 ${inputClass}`}
+                            />
+                            <select
+                              value={addMemberRole}
+                              onChange={(e) => setAddMemberRole(e.target.value)}
+                              className={`w-44 ${inputClass}`}
+                            >
+                              <option value="admin">Admin</option>
+                              <option value="property_manager">Property Manager</option>
+                              <option value="board">Board</option>
+                              <option value="janitorial">Janitorial</option>
+                              <option value="resident">Resident</option>
+                            </select>
+                            <button
+                              onClick={handleAddMember}
+                              disabled={addingMember || !addMemberName.trim()}
+                              className="rounded-full bg-purple-700 px-5 py-2 text-sm font-medium text-white hover:bg-purple-800 disabled:opacity-50"
+                            >
+                              {addingMember ? 'Sending...' : 'Send invite'}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
-                  <p className="mt-2 text-xs text-purple-500">
-                    If the person doesn't have a Neighbri account, they'll receive a sign-up invitation email.
-                  </p>
+
+                  {addMemberNotice && (
+                    <p className="mt-3 text-xs text-purple-700">{addMemberNotice}</p>
+                  )}
                 </div>
 
               <div className="rounded-xl border border-stone-200 bg-white">
