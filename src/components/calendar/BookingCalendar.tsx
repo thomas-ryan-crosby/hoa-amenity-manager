@@ -863,7 +863,10 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               }}
               dateClick={(info) => {
                 if (info.view.type === 'dayGridMonth') {
-                  calendarRef.current?.getApi().changeView('rolling3Day', info.dateStr)
+                  // Center the clicked date in the 7-day view
+                  const centered = new Date(info.dateStr)
+                  centered.setDate(centered.getDate() - 3)
+                  calendarRef.current?.getApi().changeView('rolling3Day', centered)
                   return
                 }
 
@@ -899,7 +902,10 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               }}
               navLinks
               navLinkDayClick={(date) => {
-                calendarRef.current?.getApi().changeView('rolling3Day', date)
+                // Center the selected date in the 7-day view
+                const centered = new Date(date)
+                centered.setDate(centered.getDate() - 3)
+                calendarRef.current?.getApi().changeView('rolling3Day', centered)
               }}
               eventOverlap
               slotEventOverlap

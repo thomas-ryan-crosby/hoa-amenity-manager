@@ -597,12 +597,16 @@ export function AdminCalendar() {
               selectAllow={(info) => !info.allDay}
               dateClick={(info) => {
                 if (info.view.type === 'dayGridMonth') {
-                  calendarRef.current?.getApi().changeView('rolling3Day', info.dateStr)
+                  const centered = new Date(info.dateStr)
+                  centered.setDate(centered.getDate() - 3)
+                  calendarRef.current?.getApi().changeView('rolling3Day', centered)
                 }
               }}
               navLinks
               navLinkDayClick={(date) => {
-                calendarRef.current?.getApi().changeView('rolling3Day', date)
+                const centered = new Date(date)
+                centered.setDate(centered.getDate() - 3)
+                calendarRef.current?.getApi().changeView('rolling3Day', centered)
               }}
               select={(info) => {
                 if (!primaryAmenityId || info.allDay) return
