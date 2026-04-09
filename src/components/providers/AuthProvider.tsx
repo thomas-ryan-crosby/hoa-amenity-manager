@@ -7,6 +7,7 @@ import { getClientAuth } from '@/lib/firebase/client'
 type AuthContextType = {
   user: User | null
   role: string | null
+  isSuperAdmin: boolean
   loading: boolean
   signOut: () => Promise<void>
 }
@@ -14,6 +15,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   role: null,
+  isSuperAdmin: false,
   loading: true,
   signOut: async () => {},
 })
@@ -41,6 +43,7 @@ function isSessionHandled(): boolean {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [role, setRole] = useState<string | null>(null)
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -50,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const tokenResult = await firebaseUser.getIdTokenResult()
         setRole((tokenResult.claims.role as string) ?? null)
+        setIsSuperAdmin(!!tokenResult.claims.superAdmin)
 
         // Only create session if the page didn't already handle it
         if (!isSessionHandled()) {
@@ -64,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setUser(null)
         setRole(null)
+        setIsSuperAdmin(false)
         if (!isSessionHandled()) {
           await fetch('/api/auth/session', { method: 'DELETE' })
         }
@@ -80,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, signOut }}>
+    <AuthContext.Provider value={{ user, role, isSuperAdmin, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   )

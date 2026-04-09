@@ -73,7 +73,7 @@ function CommunitySwitcher() {
 }
 
 export function NavBar() {
-  const { user, role: authRole, loading, signOut } = useAuth()
+  const { user, role: authRole, isSuperAdmin, loading, signOut } = useAuth()
   const { activeCommunity } = useCommunity()
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -128,8 +128,7 @@ export function NavBar() {
                   Billing
                 </Link>
               )}
-              {/* Super-admin internal link — gated by property_manager for now; real superAdmin check coming */}
-              {role === 'property_manager' && (
+              {isSuperAdmin && (
                 <Link href="/internal" className="text-purple-600 hover:text-purple-800">
                   Internal
                 </Link>
@@ -263,7 +262,7 @@ export function NavBar() {
                 </Link>
               )}
               {/* Super-admin internal link — gated by property_manager for now */}
-              {role === 'property_manager' && (
+              {isSuperAdmin && (
                 <Link
                   href="/internal"
                   className="block rounded-xl px-4 py-2.5 text-sm text-purple-600 hover:bg-purple-50"

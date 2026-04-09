@@ -88,6 +88,12 @@ export default function InternalDashboard() {
             </div>
             <div className="flex items-center gap-3">
               <Link
+                href="/internal/employees"
+                className="rounded-full border border-purple-300 px-4 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100"
+              >
+                Employees
+              </Link>
+              <Link
                 href="/internal/users"
                 className="rounded-full border border-purple-300 px-4 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100"
               >

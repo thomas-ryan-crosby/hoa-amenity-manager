@@ -2,22 +2,27 @@
  * Set superAdmin custom claim on a Firebase user.
  *
  * Usage:
- *   npx tsx scripts/set-super-admin.ts <firebase-uid>
- *
- * Requires FIREBASE_SERVICE_ACCOUNT_KEY env var or default credentials.
+ *   npx tsx scripts/set-super-admin.ts <email-or-uid>
  */
 
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
+import { readFileSync } from 'fs'
+
+// Load .env.local
+const envFile = readFileSync('.env.local', 'utf-8')
+for (const line of envFile.split('\n')) {
+  const match = line.match(/^([^#=]+)=(.*)$/)
+  if (match) process.env[match[1].trim()] = match[2].trim()
+}
 
 async function main() {
-  const uid = process.argv[2]
-  if (!uid) {
-    console.error('Usage: npx tsx scripts/set-super-admin.ts <firebase-uid>')
+  const input = process.argv[2]
+  if (!input) {
+    console.error('Usage: npx tsx scripts/set-super-admin.ts <email-or-uid>')
     process.exit(1)
   }
 
-  // Initialize Firebase Admin
   if (!getApps().length) {
     const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
     if (serviceAccount) {
@@ -28,19 +33,24 @@ async function main() {
   }
 
   const auth = getAuth()
-  const user = await auth.getUser(uid)
+
+  // Resolve email to UID if needed
+  let user
+  if (input.includes('@')) {
+    user = await auth.getUserByEmail(input)
+  } else {
+    user = await auth.getUser(input)
+  }
+
   const existingClaims = user.customClaims ?? {}
 
-  await auth.setCustomUserClaims(uid, {
+  await auth.setCustomUserClaims(user.uid, {
     ...existingClaims,
     superAdmin: true,
   })
 
-  console.log(`Successfully set superAdmin=true for user ${uid} (${user.email})`)
-  console.log('Existing claims preserved:', existingClaims)
-  console.log(
-    'Note: The user must sign out and sign back in (or refresh their token) for the new claim to take effect.',
-  )
+  console.log(`Set superAdmin=true for ${user.email} (${user.uid})`)
+  console.log('User must sign out and back in for the claim to take effect.')
 }
 
 main().catch((err) => {
