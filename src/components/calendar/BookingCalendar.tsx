@@ -101,6 +101,7 @@ type Amenity = {
   rentalFee: number
   depositAmount: number
   maxAdvanceBookingDays: number
+  defaultTurnTimeHours: number
   suggestedAmenityIds: string[]
   areaId: string | null
   sortOrder: number
@@ -335,6 +336,50 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         : events,
     [events, selectedAmenities],
   )
+
+  // Preview cleaning block when a selection is active
+  const cleaningPreview = useMemo(() => {
+    if (!selection || !amenityInfo || amenityInfo.defaultTurnTimeHours <= 0) return null
+    const endDate = new Date(selection.end)
+    const cleanEnd = new Date(endDate.getTime() + amenityInfo.defaultTurnTimeHours * 60 * 60 * 1000)
+    return {
+      id: '__cleaning-preview__',
+      resourceId: selection.amenityId,
+      title: `Cleaning (${amenityInfo.defaultTurnTimeHours}h)`,
+      start: endDate.toISOString(),
+      end: cleanEnd.toISOString(),
+      color: '#78716C',
+      backgroundColor: '#78716C',
+      borderColor: '#78716C',
+      textColor: '#ffffff',
+      editable: false,
+      display: 'block' as const,
+      extendedProps: {
+        type: 'turn-window-preview' as const,
+        amenityId: selection.amenityId,
+        amenityName: amenityInfo.name,
+      },
+    }
+  }, [selection, amenityInfo])
+
+  // Check if cleaning block conflicts with existing events
+  const cleaningConflict = useMemo(() => {
+    if (!cleaningPreview) return false
+    const cleanStart = new Date(cleaningPreview.start).getTime()
+    const cleanEnd = new Date(cleaningPreview.end).getTime()
+    return filteredEvents.some((e) => {
+      if (e.id.startsWith('__')) return false // ignore preview events
+      const eStart = new Date(e.start).getTime()
+      const eEnd = new Date(e.end).getTime()
+      return eStart < cleanEnd && eEnd > cleanStart
+    })
+  }, [cleaningPreview, filteredEvents])
+
+  // Inject cleaning preview into calendar events
+  const calendarEvents = useMemo(() => {
+    if (!cleaningPreview) return filteredEvents
+    return [...filteredEvents, cleaningPreview]
+  }, [filteredEvents, cleaningPreview])
 
   function handleAmenityClick(amenityId: string, e: MouseEvent) {
     clearSelection()
@@ -585,6 +630,12 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         ) && (
           <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800 mb-4">
             This slot has existing bookings. Your request will be <strong>waitlisted</strong>.
+          </div>
+        )}
+
+        {cleaningConflict && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 mb-4">
+            The cleaning window after your booking overlaps with another reservation. Janitorial will need to confirm that this booking time is possible.
           </div>
         )}
 
@@ -847,7 +898,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                 center: 'title',
                 right: 'timeGridDay,rolling3Day,dayGridMonth',
               }}
-              events={filteredEvents}
+              events={calendarEvents}
               selectable
               selectMirror
               unselectAuto={false}
@@ -1086,6 +1137,12 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                 This time slot already has one or more bookings. Your request
                 will be <strong>waitlisted</strong> and you will be notified if
                 the slot opens up.
+              </div>
+            )}
+
+            {cleaningConflict && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                The cleaning window after your booking overlaps with another reservation. Janitorial will need to confirm that this booking time is possible.
               </div>
             )}
 

@@ -25,6 +25,7 @@ export async function GET() {
       hasRules: a.hasRules ?? false,
       rules: a.rules ?? null,
       isDefault: a.isDefault ?? false,
+      defaultTurnTimeHours: a.defaultTurnTimeHours ?? 0,
     }))
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
 
