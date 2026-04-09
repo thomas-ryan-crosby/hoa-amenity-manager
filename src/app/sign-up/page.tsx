@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
 import { getClientAuth } from '@/lib/firebase/client'
 import { markSessionHandled } from '@/components/providers/AuthProvider'
-import { useRouter } from 'next/navigation'
+import { PasswordInput } from '@/components/PasswordInput'
 
 export default function SignUpPage() {
   const [name, setName] = useState('')
@@ -13,7 +13,6 @@ export default function SignUpPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -81,10 +80,10 @@ export default function SignUpPage() {
             Unit / address
             <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900 placeholder:text-stone-400 outline-none focus:border-emerald-500" placeholder="e.g. Unit 204, 123 Main St" value={unitNumber} onChange={e => setUnitNumber(e.target.value)} />
           </label>
-          <label className="block text-sm font-medium text-stone-700">
-            Password
-            <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900 outline-none focus:border-emerald-500" type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
-          </label>
+          <div>
+            <span className="text-sm font-medium text-stone-700">Password</span>
+            <PasswordInput value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
+          </div>
           {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
           <button className="w-full rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:bg-emerald-300" type="submit" disabled={loading}>
             {loading ? 'Creating account...' : 'Sign up'}
