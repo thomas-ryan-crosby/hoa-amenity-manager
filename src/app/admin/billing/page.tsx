@@ -237,33 +237,42 @@ export default function BillingPage() {
                   </p>
                 </div>
               ) : (
-                <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 mb-4">
-                  <p className="text-sm font-medium text-amber-800 mb-2">Setup required for paid amenities</p>
-                  <p className="text-sm text-amber-700 leading-relaxed">
-                    To accept payments for amenity bookings, connect your Stripe account. Follow these steps:
+                <div className="rounded-xl bg-stone-50 border border-stone-200 p-5 mb-4">
+                  <p className="text-sm font-semibold text-stone-900 mb-1">Setup required for paid amenities</p>
+                  <p className="text-sm text-stone-500 mb-4">
+                    Connect your Stripe account to accept payments for bookings.
                   </p>
-                  <ol className="mt-3 space-y-2 text-sm text-amber-700">
-                    <li className="flex gap-2">
-                      <span className="font-semibold text-amber-800">1.</span>
-                      Create a Stripe account at <a href="https://dashboard.stripe.com/register" target="_blank" rel="noopener noreferrer" className="underline font-medium">stripe.com</a>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-semibold text-amber-800">2.</span>
-                      Go to <strong>Developers &gt; API keys</strong> and copy your <strong>Publishable key</strong> and <strong>Secret key</strong>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-semibold text-amber-800">3.</span>
-                      Go to <strong>Developers &gt; Webhooks &gt; Add endpoint</strong>. Set the URL to <code className="bg-amber-100 px-1 rounded text-xs">https://neighbri.com/api/webhooks/stripe</code> and listen for <code className="bg-amber-100 px-1 rounded text-xs">checkout.session.completed</code> and <code className="bg-amber-100 px-1 rounded text-xs">checkout.session.expired</code>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-semibold text-amber-800">4.</span>
-                      Copy the <strong>Signing secret</strong> from the webhook endpoint
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-semibold text-amber-800">5.</span>
-                      Paste all three keys below and save
-                    </li>
-                  </ol>
+                  <div className="space-y-3">
+                    <div className="flex gap-3 items-start">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-stone-200 text-xs font-bold text-stone-600">1</span>
+                      <p className="text-sm text-stone-700">Create a Stripe account at <a href="https://dashboard.stripe.com/register" target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-medium underline">stripe.com</a></p>
+                    </div>
+                    <div className="flex gap-3 items-start">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-stone-200 text-xs font-bold text-stone-600">2</span>
+                      <p className="text-sm text-stone-700">In your Stripe dashboard, go to <strong>Developers &gt; API keys</strong> and copy the Publishable key and Secret key</p>
+                    </div>
+                    <div className="flex gap-3 items-start">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-stone-200 text-xs font-bold text-stone-600">3</span>
+                      <div className="text-sm text-stone-700">
+                        <p>Go to <strong>Developers &gt; Webhooks &gt; Add endpoint</strong></p>
+                        <p className="mt-1 text-xs text-stone-500">Endpoint URL:</p>
+                        <p className="mt-0.5 rounded-lg bg-stone-100 px-3 py-1.5 font-mono text-xs text-stone-800 select-all">https://neighbri.com/api/webhooks/stripe</p>
+                        <p className="mt-1.5 text-xs text-stone-500">Events to listen for:</p>
+                        <div className="mt-0.5 flex flex-wrap gap-1.5">
+                          <span className="rounded bg-stone-100 px-2 py-0.5 font-mono text-xs text-stone-700">checkout.session.completed</span>
+                          <span className="rounded bg-stone-100 px-2 py-0.5 font-mono text-xs text-stone-700">checkout.session.expired</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-3 items-start">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-stone-200 text-xs font-bold text-stone-600">4</span>
+                      <p className="text-sm text-stone-700">Copy the <strong>Signing secret</strong> from the webhook endpoint details</p>
+                    </div>
+                    <div className="flex gap-3 items-start">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-stone-200 text-xs font-bold text-stone-600">5</span>
+                      <p className="text-sm text-stone-700">Paste all three keys below and save</p>
+                    </div>
+                  </div>
                 </div>
               )}
 
