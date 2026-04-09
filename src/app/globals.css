@@ -51,25 +51,12 @@ body {
   font-size: 0.75rem;
 }
 
-/* Calendar header clone — always overlaid on real header */
-.fc-sticky-header-clone {
-  z-index: 40;
-  background: white;
-  pointer-events: none;
-  transition: box-shadow 0.15s ease;
-  border-bottom: 1px solid #e7e5e4;
-  box-shadow: none;
+/* Hide scrollbar but keep scroll functionality */
+.fc .fc-scroller::-webkit-scrollbar {
+  display: none;
 }
-/* When scrolled past — add subtle shadow to indicate pinned state */
-.fc-sticky-header-clone.fc-sticky-header-pinned {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-/* Match FullCalendar header cell styling inside the clone */
-.fc-sticky-header-clone .fc-col-header {
-  width: 100% !important;
-}
-.fc-sticky-header-clone .fc-col-header-cell {
-  background: white;
+.fc .fc-scroller {
+  scrollbar-width: none;
 }
 
 /* Nav buttons */
