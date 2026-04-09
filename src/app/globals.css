@@ -51,12 +51,20 @@ body {
   font-size: 0.75rem;
 }
 
-/* Hide scrollbar but keep scrolling */
-.fc .fc-scroller::-webkit-scrollbar {
-  display: none;
+/* Sticky column headers when page scrolls */
+.fc .fc-col-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: white;
 }
-.fc .fc-scroller {
-  scrollbar-width: none;
+.fc .fc-scrollgrid-section-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.fc .fc-scrollgrid-section-header > td {
+  background: white;
 }
 
 /* Nav buttons */
