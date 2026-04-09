@@ -1,0 +1,21 @@
+rules_version = '2';
+
+// Neighbri Firestore Security Rules
+//
+// The Next.js app uses Firebase Admin SDK for ALL reads/writes, which
+// bypasses these rules entirely. These rules protect against direct
+// client-side Firestore access (e.g. someone using the Firebase JS SDK
+// directly with the public API key).
+//
+// Strategy: deny everything client-side. All data access goes through
+// our API routes which use the Admin SDK.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default: deny all reads and writes
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

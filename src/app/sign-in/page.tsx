@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signInWithEmailAndPassword } from 'firebase/auth'
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'
 import { getClientAuth } from '@/lib/firebase/client'
 import { markSessionHandled } from '@/components/providers/AuthProvider'
 import { useRouter } from 'next/navigation'
@@ -11,6 +11,8 @@ export default function SignInPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
   const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent) {
@@ -53,8 +55,30 @@ export default function SignInPage() {
             <input className="mt-2 w-full rounded-2xl border border-stone-300 px-4 py-3 text-stone-900 outline-none focus:border-emerald-500" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
           </label>
           {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+          {resetSent && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">Password reset email sent. Check your inbox.</div>}
           <button className="w-full rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:bg-emerald-300" type="submit" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign in'}
+          </button>
+          <button
+            type="button"
+            disabled={resetLoading || !email}
+            className="w-full text-sm text-stone-500 hover:text-emerald-700 disabled:text-stone-300"
+            onClick={async () => {
+              if (!email) { setError('Enter your email first.'); return }
+              setResetLoading(true)
+              setError('')
+              setResetSent(false)
+              try {
+                await sendPasswordResetEmail(getClientAuth(), email)
+                setResetSent(true)
+              } catch {
+                setError('Unable to send reset email. Check the address and try again.')
+              } finally {
+                setResetLoading(false)
+              }
+            }}
+          >
+            {resetLoading ? 'Sending...' : 'Forgot password?'}
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-stone-500">
