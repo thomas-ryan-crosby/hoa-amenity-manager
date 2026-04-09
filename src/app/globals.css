@@ -51,6 +51,14 @@ body {
   font-size: 0.75rem;
 }
 
+/* Hide scrollbar but keep scrolling */
+.fc .fc-scroller::-webkit-scrollbar {
+  display: none;
+}
+.fc .fc-scroller {
+  scrollbar-width: none;
+}
+
 /* Nav buttons */
 .fc .fc-button {
   font-weight: 500;
