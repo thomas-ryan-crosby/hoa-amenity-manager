@@ -802,7 +802,6 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
             <FullCalendar
               ref={calendarRef}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-              timeZone={communityTz}
               initialView={isMobile ? 'timeGridDay' : 'dayGridMonth'}
               eventDisplay="block"
               views={{

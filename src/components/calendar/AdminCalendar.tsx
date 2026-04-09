@@ -570,7 +570,6 @@ export function AdminCalendar() {
             <FullCalendar
               ref={calendarRef}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-              timeZone={communityTz}
               initialView={isMobile ? 'timeGridDay' : 'dayGridMonth'}
               eventDisplay="block"
               views={{
