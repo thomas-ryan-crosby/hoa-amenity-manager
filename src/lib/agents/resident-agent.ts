@@ -99,9 +99,10 @@ export async function notifyBookingReceivedMultiple(bookingId: string, amenityNa
   )
 }
 
-export async function notifyCancelled(bookingId: string, reason?: string): Promise<void> {
+export async function notifyCancelled(bookingId: string, _reason?: string): Promise<void> {
   const booking = await getBooking(bookingId)
   const community = booking.communityName ?? 'your community'
+  const hasPaidFee = booking.amenity.rentalFee > 0 || booking.amenity.depositAmount > 0
   await sendToRecipients(booking,
     `Booking cancelled — ${booking.amenity.name} at ${community}`,
     emailWrapper(booking.communityName, `
@@ -110,9 +111,8 @@ export async function notifyCancelled(bookingId: string, reason?: string): Promi
         Hi ${booking.resident.name}, your booking for <strong>${booking.amenity.name}</strong>
         at <strong>${community}</strong> has been cancelled.
       </p>
-      ${reason ? `<p style="color: #57534e; font-size: 15px;"><strong>Reason:</strong> ${reason}</p>` : ''}
       ${bookingSummaryHtml(booking)}
-      <p style="color: #57534e; font-size: 15px;">Any applicable refund will be processed per the cancellation policy.</p>
+      ${hasPaidFee ? `<p style="color: #57534e; font-size: 15px; line-height: 1.7;">If a refund applies, it will be processed to your original payment method. Refunds typically appear within 5&ndash;10 business days.</p>` : ''}
     `),
   )
 }
