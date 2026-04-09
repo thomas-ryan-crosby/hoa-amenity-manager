@@ -16,6 +16,7 @@ export async function GET() {
         id: m.communityId,
         name: community?.name ?? 'Unknown',
         slug: community?.slug ?? '',
+        timezone: community?.timezone ?? 'America/Chicago',
         role: m.role,
         status: m.status,
       }

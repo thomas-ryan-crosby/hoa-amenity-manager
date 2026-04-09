@@ -7,6 +7,7 @@ type CommunityInfo = {
   id: string
   name: string
   slug: string
+  timezone: string
   role: string
   status: string
 }

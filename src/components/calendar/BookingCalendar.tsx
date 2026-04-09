@@ -6,11 +6,19 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import { formatCurrency, formatDateTime, formatDateRange } from '@/lib/format'
+import { useCommunity } from '@/components/providers/CommunityProvider'
 
 /** Convert a Date to a local `YYYY-MM-DDTHH:MM` string for datetime-local inputs */
 function toLocalDatetime(d: Date): string {
   const pad = (n: number) => n.toString().padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+/** Convert a datetime-local input value (no timezone) to a UTC ISO string.
+ *  The browser interprets bare datetime strings as local time, so
+ *  `new Date("2026-04-10T09:00")` gives the correct UTC timestamp. */
+function localInputToISO(localStr: string): string {
+  return new Date(localStr).toISOString()
 }
 
 function BookingSummary({
@@ -19,12 +27,14 @@ function BookingSummary({
   allAmenities,
   startStr,
   endStr,
+  communityTz,
 }: {
   primaryAmenity: { name: string; rentalFee: number; depositAmount: number }
   additionalAmenities: string[]
   allAmenities: Array<{ id: string; name: string; rentalFee: number; depositAmount: number }>
   startStr: string
   endStr: string
+  communityTz: string
 }) {
   const additional = allAmenities.filter((a) => additionalAmenities.includes(a.id))
   const allBooked = [primaryAmenity, ...additional]
@@ -52,7 +62,7 @@ function BookingSummary({
       <div className="mt-3 border-t border-stone-100 pt-3 space-y-1 text-xs text-stone-500">
         <div className="flex justify-between">
           <span>Date & time</span>
-          <span className="text-stone-700 text-right">{formatDateRange(startStr, endStr)}</span>
+          <span className="text-stone-700 text-right">{formatDateRange(startStr, endStr, communityTz)}</span>
         </div>
         {!isFree && (
           <>
@@ -148,6 +158,8 @@ const STATUS_BADGE_STYLES: Record<string, string> = {
 }
 
 export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string | null }) {
+  const { activeCommunity } = useCommunity()
+  const communityTz = activeCommunity?.timezone ?? 'America/Chicago'
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [amenities, setAmenities] = useState<Amenity[]>([])
   const [areas, setAreas] = useState<Area[]>([])
@@ -495,7 +507,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
           <button
             className="flex-1 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
             onClick={() => {
-              setSelection({ amenityId: primaryAmenityId, start: quickBookStart, end: quickBookEnd })
+              setSelection({ amenityId: primaryAmenityId, start: localInputToISO(quickBookStart), end: localInputToISO(quickBookEnd) })
               setGuestCount(1)
               setNotes('')
               setShowQuickBook(false)
@@ -532,8 +544,8 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         </div>
 
         <div className="rounded-2xl bg-stone-50 p-4 text-sm text-stone-700 mb-4">
-          <p className="font-medium text-stone-900">{formatDateTime(selection.start)}</p>
-          <p>{formatDateTime(selection.end)}</p>
+          <p className="font-medium text-stone-900">{formatDateTime(selection.start, communityTz)}</p>
+          <p>{formatDateTime(selection.end, communityTz)}</p>
           {amenityInfo.description && <p className="mt-2 text-stone-500">{amenityInfo.description}</p>}
           <p className="mt-2">Capacity: {amenityInfo.capacity} guests</p>
           {(amenityInfo.rentalFee > 0 || amenityInfo.depositAmount > 0) && (
@@ -599,6 +611,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
             allAmenities={amenities}
             startStr={selection.start}
             endStr={selection.end}
+            communityTz={communityTz}
           />
 
           {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
@@ -646,7 +659,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
           <div className="space-y-2 text-sm text-stone-700">
             <div className="flex justify-between">
               <span className="text-stone-500">When</span>
-              <span className="font-medium text-right">{formatDateRange(eventDetail.start, eventDetail.end)}</span>
+              <span className="font-medium text-right">{formatDateRange(eventDetail.start, eventDetail.end, communityTz)}</span>
             </div>
             {eventDetail.residentName && (
               <div className="flex justify-between">
@@ -789,6 +802,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
             <FullCalendar
               ref={calendarRef}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
+              timeZone={communityTz}
               initialView={isMobile ? 'timeGridDay' : 'dayGridMonth'}
               eventDisplay="block"
               views={{
@@ -961,7 +975,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                           {props?.amenityName ?? event.title}
                         </p>
                         <p className="mt-1 text-sm text-stone-600">
-                          {formatDateRange(event.start, event.end)}
+                          {formatDateRange(event.start, event.end, communityTz)}
                         </p>
                         {props?.guestCount != null && (
                           <p className="mt-1 text-xs text-stone-500">
@@ -1000,9 +1014,9 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
             <div className="flex items-start justify-between rounded-2xl bg-stone-50 p-4 text-sm text-stone-700">
               <div>
                 <p className="font-medium text-stone-900">
-                  {formatDateTime(selection.start)}
+                  {formatDateTime(selection.start, communityTz)}
                 </p>
-                <p>{formatDateTime(selection.end)}</p>
+                <p>{formatDateTime(selection.end, communityTz)}</p>
               <p className="mt-3">{amenityInfo.description ?? 'No description yet.'}</p>
               <p className="mt-3">
                 Capacity: {amenityInfo.capacity} guests
@@ -1104,6 +1118,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               allAmenities={amenities}
               startStr={selection.start}
               endStr={selection.end}
+              communityTz={communityTz}
             />
 
             {error ? (

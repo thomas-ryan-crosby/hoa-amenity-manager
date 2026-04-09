@@ -6,6 +6,7 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import { formatDateRange } from '@/lib/format'
+import { useCommunity } from '@/components/providers/CommunityProvider'
 
 type Area = {
   id: string
@@ -81,6 +82,8 @@ const STATUS_BADGE_STYLES: Record<string, string> = {
 }
 
 export function AdminCalendar() {
+  const { activeCommunity } = useCommunity()
+  const communityTz = activeCommunity?.timezone ?? 'America/Chicago'
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [amenities, setAmenities] = useState<Amenity[]>([])
   const [areas, setAreas] = useState<Area[]>([])
@@ -567,6 +570,7 @@ export function AdminCalendar() {
             <FullCalendar
               ref={calendarRef}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
+              timeZone={communityTz}
               initialView={isMobile ? 'timeGridDay' : 'dayGridMonth'}
               eventDisplay="block"
               views={{
@@ -723,7 +727,7 @@ export function AdminCalendar() {
                           )}
                         </p>
                         <p className="mt-1 text-sm text-stone-600">
-                          {formatDateRange(event.start, event.end)}
+                          {formatDateRange(event.start, event.end, communityTz)}
                         </p>
                         {!isTW && props.residentName && (
                           <p className="mt-1 text-sm text-stone-500">
@@ -789,7 +793,7 @@ export function AdminCalendar() {
           }}>
             <div className="rounded-2xl bg-stone-50 p-4 text-sm text-stone-700">
               <p><strong>Amenity:</strong> {amenities.find((a) => a.id === adminSelection.amenityId)?.name}</p>
-              <p><strong>Time:</strong> {formatDateRange(adminSelection.start, adminSelection.end)}</p>
+              <p><strong>Time:</strong> {formatDateRange(adminSelection.start, adminSelection.end, communityTz)}</p>
             </div>
             <p className="text-sm text-stone-500">
               This creates a standalone cleaning/maintenance block that is not tied to any booking.
@@ -808,7 +812,7 @@ export function AdminCalendar() {
           <form className="mt-5 space-y-4" onSubmit={handleAdminBookingSubmit}>
             <div className="flex items-start justify-between rounded-2xl bg-stone-50 p-4 text-sm text-stone-700">
               <div>
-                <p><strong>Time:</strong> {formatDateRange(adminSelection.start, adminSelection.end)}</p>
+                <p><strong>Time:</strong> {formatDateRange(adminSelection.start, adminSelection.end, communityTz)}</p>
                 <p><strong>Amenity:</strong> {amenities.find((a) => a.id === adminSelection.amenityId)?.name}</p>
               </div>
               <button
@@ -1010,7 +1014,7 @@ export function AdminCalendar() {
                   <div className="mt-2 border-t border-stone-100 pt-2 text-xs text-stone-500">
                     <div className="flex justify-between">
                       <span>Time</span>
-                      <span className="text-stone-700">{formatDateRange(adminSelection.start, adminSelection.end)}</span>
+                      <span className="text-stone-700">{formatDateRange(adminSelection.start, adminSelection.end, communityTz)}</span>
                     </div>
                     {!bookingForm.feeWaived && totalFee > 0 && (
                       <div className="flex justify-between font-semibold text-stone-900 text-sm pt-1 mt-1 border-t border-stone-100">
@@ -1039,7 +1043,7 @@ export function AdminCalendar() {
           <div className="mt-5 space-y-4">
             <div className="rounded-2xl bg-stone-50 p-4 text-sm leading-6 text-stone-700">
               <p><strong>Amenity:</strong> {selectedEvent.extendedProps.amenityName}</p>
-              <p><strong>Window:</strong> {formatDateRange(selectedEvent.start, selectedEvent.end)}</p>
+              <p><strong>Window:</strong> {formatDateRange(selectedEvent.start, selectedEvent.end, communityTz)}</p>
               <p className="text-[10px] text-stone-300 font-mono mt-1">{selectedEvent.extendedProps.turnWindowId}</p>
               <p>
                 <strong>Cleaning status:</strong>{' '}
@@ -1097,7 +1101,7 @@ export function AdminCalendar() {
               <p><strong>Email:</strong> {selectedEvent.extendedProps.residentEmail}</p>
               <p><strong>Unit:</strong> {selectedEvent.extendedProps.unitNumber}</p>
               <p><strong>Guests:</strong> {selectedEvent.extendedProps.guestCount}</p>
-              <p><strong>When:</strong> {formatDateRange(selectedEvent.start, selectedEvent.end)}</p>
+              <p><strong>When:</strong> {formatDateRange(selectedEvent.start, selectedEvent.end, communityTz)}</p>
               <p>
                 <strong>Status:</strong>{' '}
                 <span className="font-medium text-amber-700">
