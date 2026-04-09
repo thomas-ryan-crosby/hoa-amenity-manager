@@ -572,6 +572,8 @@ export function AdminCalendar() {
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
               initialView={isMobile ? 'timeGridDay' : 'dayGridMonth'}
               eventDisplay="block"
+              allDaySlot={false}
+              stickyHeaderDates
               views={{
                 rolling3Day: {
                   type: 'timeGrid',

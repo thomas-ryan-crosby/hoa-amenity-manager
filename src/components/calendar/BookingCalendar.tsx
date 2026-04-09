@@ -804,6 +804,8 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
               initialView={isMobile ? 'timeGridDay' : 'dayGridMonth'}
               eventDisplay="block"
+              allDaySlot={false}
+              stickyHeaderDates
               views={{
                 rolling3Day: {
                   type: 'timeGrid',
