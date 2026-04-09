@@ -3,6 +3,7 @@ import { AuthProvider } from "@/components/providers/AuthProvider";
 import { CommunityProvider } from "@/components/providers/CommunityProvider";
 import { PendingGate } from "@/components/PendingGate";
 import { NavBar } from "@/components/NavBar";
+import { Footer } from "@/components/Footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default function RootLayout({
             <PendingGate>
               {children}
             </PendingGate>
+            <Footer />
           </CommunityProvider>
         </AuthProvider>
       </body>

@@ -13,6 +13,7 @@ export default function SignUpPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [agreed, setAgreed] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -84,8 +85,14 @@ export default function SignUpPage() {
             <span className="text-sm font-medium text-stone-700">Password</span>
             <PasswordInput value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
           </div>
+          <label className="flex items-start gap-3 text-sm text-stone-600">
+            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 rounded" required />
+            <span>
+              I agree to the <a href="/terms" target="_blank" className="text-emerald-600 underline">Terms of Service</a> and <a href="/privacy" target="_blank" className="text-emerald-600 underline">Privacy Policy</a>
+            </span>
+          </label>
           {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-          <button className="w-full rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:bg-emerald-300" type="submit" disabled={loading}>
+          <button className="w-full rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:bg-emerald-300" type="submit" disabled={loading || !agreed}>
             {loading ? 'Creating account...' : 'Sign up'}
           </button>
         </form>
