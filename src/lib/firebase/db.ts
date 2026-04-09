@@ -1301,6 +1301,10 @@ export interface SystemSettings {
   approvalJwtSecret: string
   orgName: string
   defaultAmenityId: string | null
+  stripePublishableKey: string
+  stripeSecretKey: string
+  stripeWebhookSecret: string
+  stripeConnected: boolean
 }
 
 const DEFAULT_SETTINGS: SystemSettings = {
@@ -1308,6 +1312,10 @@ const DEFAULT_SETTINGS: SystemSettings = {
   approvalJwtSecret: '',
   orgName: 'Sanctuary HOA',
   defaultAmenityId: null,
+  stripePublishableKey: '',
+  stripeSecretKey: '',
+  stripeWebhookSecret: '',
+  stripeConnected: false,
 }
 
 export async function getSettings(communityId?: string): Promise<SystemSettings> {

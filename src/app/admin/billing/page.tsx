@@ -9,43 +9,48 @@ type BillingInfo = {
   maxMembers: number
   currentAmenities: number
   currentMembers: number
-  contactEmail: string | null
 }
 
-const PLAN_DETAILS: Record<string, { label: string; color: string; features: string[] }> = {
+type StripeStatus = {
+  connected: boolean
+  hasPublishableKey: boolean
+  hasSecretKey: boolean
+  hasWebhookSecret: boolean
+}
+
+const PLAN_PRICING: Record<string, { label: string; price: string; color: string; features: string[] }> = {
   free: {
     label: 'Free',
+    price: '$0/mo',
     color: 'bg-stone-100 text-stone-700',
-    features: ['Basic amenity booking', 'Email notifications', 'Calendar view'],
+    features: ['Up to 3 amenities', 'Up to 25 members', 'Basic email notifications', 'Calendar view'],
   },
   standard: {
     label: 'Standard',
+    price: '$49/mo',
     color: 'bg-emerald-100 text-emerald-700',
-    features: [
-      'Everything in Free',
-      'Stripe payments & deposits',
-      'Janitorial assignments',
-      'Access instructions',
-      'Booking insights',
-    ],
+    features: ['Up to 15 amenities', 'Up to 500 members', 'Stripe payments & deposits', 'Janitorial assignments', 'Access instructions', 'Booking insights'],
   },
   premium: {
     label: 'Premium',
+    price: '$149/mo',
     color: 'bg-purple-100 text-purple-700',
-    features: [
-      'Everything in Standard',
-      'Priority support',
-      'Custom branding',
-      'Advanced analytics',
-      'API access',
-    ],
+    features: ['Unlimited amenities', 'Unlimited members', 'Everything in Standard', 'Priority support', 'Custom branding', 'Advanced analytics'],
   },
 }
 
 export default function BillingPage() {
   const [billing, setBilling] = useState<BillingInfo | null>(null)
+  const [stripe, setStripe] = useState<StripeStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Stripe config form
+  const [publishableKey, setPublishableKey] = useState('')
+  const [secretKey, setSecretKey] = useState('')
+  const [webhookSecret, setWebhookSecret] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/admin/billing')
@@ -55,6 +60,7 @@ export default function BillingPage() {
       })
       .then((d) => {
         setBilling(d.billing)
+        setStripe(d.stripe)
         setLoading(false)
       })
       .catch((err) => {
@@ -63,7 +69,44 @@ export default function BillingPage() {
       })
   }, [])
 
-  const planInfo = billing ? PLAN_DETAILS[billing.plan] ?? PLAN_DETAILS.free : null
+  async function saveStripeConfig(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+    setNotice(null)
+    setError(null)
+    try {
+      const body: Record<string, string> = {}
+      if (publishableKey.trim()) body.stripePublishableKey = publishableKey.trim()
+      if (secretKey.trim()) body.stripeSecretKey = secretKey.trim()
+      if (webhookSecret.trim()) body.stripeWebhookSecret = webhookSecret.trim()
+
+      const res = await fetch('/api/admin/billing', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed to save')
+
+      setNotice('Stripe configuration saved.')
+      setPublishableKey('')
+      setSecretKey('')
+      setWebhookSecret('')
+
+      // Refresh status
+      const refresh = await fetch('/api/admin/billing')
+      if (refresh.ok) {
+        const d = await refresh.json()
+        setStripe(d.stripe)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const planInfo = billing ? PLAN_PRICING[billing.plan] ?? PLAN_PRICING.free : null
 
   return (
     <main className="min-h-screen bg-stone-50 px-6 py-8">
@@ -72,9 +115,9 @@ export default function BillingPage() {
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-amber-700">
             Administration
           </p>
-          <h1 className="mt-2 text-3xl font-semibold text-stone-900">Billing</h1>
+          <h1 className="mt-2 text-3xl font-semibold text-stone-900">Billing & Payments</h1>
           <p className="mt-2 text-sm text-stone-500">
-            Plan details and usage for your community.
+            Plan details, usage, and payment configuration for your community.
           </p>
         </div>
 
@@ -83,30 +126,27 @@ export default function BillingPage() {
             <div className="h-40 animate-pulse rounded-2xl bg-stone-200" />
             <div className="h-32 animate-pulse rounded-2xl bg-stone-200" />
           </div>
-        ) : error ? (
+        ) : error && !billing ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800">
             {error}
           </div>
         ) : billing && planInfo ? (
           <div className="space-y-6">
-            {/* Current plan */}
+
+            {/* Neighbri plan & pricing */}
             <div className="rounded-2xl border border-stone-200 bg-white p-6">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-stone-400">
-                    Current Plan
+                    Neighbri Plan
                   </p>
                   <div className="mt-2 flex items-center gap-3">
-                    <h2 className="text-2xl font-bold text-stone-900">
-                      {planInfo.label}
-                    </h2>
+                    <h2 className="text-2xl font-bold text-stone-900">{planInfo.label}</h2>
                     <span className={`rounded-full px-3 py-1 text-xs font-semibold ${planInfo.color}`}>
-                      {billing.plan}
+                      {planInfo.price}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-stone-500">
-                    {billing.communityName}
-                  </p>
+                  <p className="mt-1 text-sm text-stone-500">{billing.communityName}</p>
                 </div>
                 <a
                   href="mailto:support@neighbri.com?subject=Plan change request"
@@ -118,7 +158,7 @@ export default function BillingPage() {
 
               <div className="mt-5 border-t border-stone-100 pt-5">
                 <p className="text-xs font-medium uppercase tracking-wide text-stone-400 mb-3">
-                  Plan Features
+                  What's Included
                 </p>
                 <ul className="space-y-2">
                   {planInfo.features.map((f) => (
@@ -143,46 +183,158 @@ export default function BillingPage() {
                   <p className="text-sm text-stone-500">Members</p>
                   <p className="mt-1 text-2xl font-bold text-stone-900">
                     {billing.currentMembers}
-                    <span className="text-sm font-normal text-stone-400">
-                      {' '}/ {billing.maxMembers}
-                    </span>
+                    <span className="text-sm font-normal text-stone-400"> / {billing.maxMembers}</span>
                   </p>
                   <div className="mt-2 h-2 w-full rounded-full bg-stone-100">
-                    <div
-                      className="h-2 rounded-full bg-emerald-500"
-                      style={{
-                        width: `${Math.min(100, (billing.currentMembers / billing.maxMembers) * 100)}%`,
-                      }}
-                    />
+                    <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${Math.min(100, (billing.currentMembers / billing.maxMembers) * 100)}%` }} />
                   </div>
                 </div>
                 <div>
                   <p className="text-sm text-stone-500">Amenities</p>
                   <p className="mt-1 text-2xl font-bold text-stone-900">
                     {billing.currentAmenities}
-                    <span className="text-sm font-normal text-stone-400">
-                      {' '}/ {billing.maxAmenities}
-                    </span>
+                    <span className="text-sm font-normal text-stone-400"> / {billing.maxAmenities}</span>
                   </p>
                   <div className="mt-2 h-2 w-full rounded-full bg-stone-100">
-                    <div
-                      className="h-2 rounded-full bg-purple-500"
-                      style={{
-                        width: `${Math.min(100, (billing.currentAmenities / billing.maxAmenities) * 100)}%`,
-                      }}
-                    />
+                    <div className="h-2 rounded-full bg-purple-500" style={{ width: `${Math.min(100, (billing.currentAmenities / billing.maxAmenities) * 100)}%` }} />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Contact */}
+            {/* Stripe configuration */}
+            <div className="rounded-2xl border border-stone-200 bg-white p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-stone-400">
+                    Payment Processing
+                  </p>
+                  <h3 className="mt-1 text-lg font-semibold text-stone-900">Stripe</h3>
+                </div>
+                {stripe?.connected ? (
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Connected</span>
+                ) : (
+                  <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">Not configured</span>
+                )}
+              </div>
+
+              {stripe?.connected ? (
+                <div className="space-y-2 text-sm text-stone-600">
+                  <div className="flex items-center gap-2">
+                    <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    Publishable key configured
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    Secret key configured
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    Webhook secret configured
+                  </div>
+                  <p className="mt-3 text-xs text-stone-400">
+                    To update your keys, fill in the fields below and save.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 mb-4">
+                  <p className="text-sm font-medium text-amber-800 mb-2">Setup required for paid amenities</p>
+                  <p className="text-sm text-amber-700 leading-relaxed">
+                    To accept payments for amenity bookings, connect your Stripe account. Follow these steps:
+                  </p>
+                  <ol className="mt-3 space-y-2 text-sm text-amber-700">
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-amber-800">1.</span>
+                      Create a Stripe account at <a href="https://dashboard.stripe.com/register" target="_blank" rel="noopener noreferrer" className="underline font-medium">stripe.com</a>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-amber-800">2.</span>
+                      Go to <strong>Developers &gt; API keys</strong> and copy your <strong>Publishable key</strong> and <strong>Secret key</strong>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-amber-800">3.</span>
+                      Go to <strong>Developers &gt; Webhooks &gt; Add endpoint</strong>. Set the URL to <code className="bg-amber-100 px-1 rounded text-xs">https://neighbri.com/api/webhooks/stripe</code> and listen for <code className="bg-amber-100 px-1 rounded text-xs">checkout.session.completed</code> and <code className="bg-amber-100 px-1 rounded text-xs">checkout.session.expired</code>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-amber-800">4.</span>
+                      Copy the <strong>Signing secret</strong> from the webhook endpoint
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-amber-800">5.</span>
+                      Paste all three keys below and save
+                    </li>
+                  </ol>
+                </div>
+              )}
+
+              {notice && (
+                <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  {notice}
+                </div>
+              )}
+              {error && (
+                <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <form onSubmit={saveStripeConfig} className="mt-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">
+                    Publishable Key
+                    {stripe?.hasPublishableKey && <span className="ml-2 text-xs text-emerald-600">(saved)</span>}
+                  </label>
+                  <input
+                    type="text"
+                    value={publishableKey}
+                    onChange={(e) => setPublishableKey(e.target.value)}
+                    placeholder={stripe?.hasPublishableKey ? 'pk_live_••••••••••••' : 'pk_live_...'}
+                    className="w-full rounded-xl border border-stone-300 px-4 py-2.5 text-sm text-stone-900 font-mono placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">
+                    Secret Key
+                    {stripe?.hasSecretKey && <span className="ml-2 text-xs text-emerald-600">(saved)</span>}
+                  </label>
+                  <input
+                    type="password"
+                    value={secretKey}
+                    onChange={(e) => setSecretKey(e.target.value)}
+                    placeholder={stripe?.hasSecretKey ? 'sk_live_••••••••••••' : 'sk_live_...'}
+                    className="w-full rounded-xl border border-stone-300 px-4 py-2.5 text-sm text-stone-900 font-mono placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">
+                    Webhook Signing Secret
+                    {stripe?.hasWebhookSecret && <span className="ml-2 text-xs text-emerald-600">(saved)</span>}
+                  </label>
+                  <input
+                    type="password"
+                    value={webhookSecret}
+                    onChange={(e) => setWebhookSecret(e.target.value)}
+                    placeholder={stripe?.hasWebhookSecret ? 'whsec_••••••••••••' : 'whsec_...'}
+                    className="w-full rounded-xl border border-stone-300 px-4 py-2.5 text-sm text-stone-900 font-mono placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={saving || (!publishableKey.trim() && !secretKey.trim() && !webhookSecret.trim())}
+                  className="rounded-full bg-stone-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-stone-800 disabled:bg-stone-300"
+                >
+                  {saving ? 'Saving...' : 'Save Stripe configuration'}
+                </button>
+              </form>
+            </div>
+
+            {/* Support */}
             <div className="rounded-2xl border border-stone-200 bg-white p-6">
               <p className="text-xs font-medium uppercase tracking-wide text-stone-400 mb-2">
                 Billing Support
               </p>
               <p className="text-sm text-stone-600">
-                To upgrade your plan, adjust limits, or for billing questions, contact us at{' '}
+                For plan changes, billing questions, or help with Stripe setup, contact{' '}
                 <a href="mailto:support@neighbri.com" className="text-emerald-600 font-medium">
                   support@neighbri.com
                 </a>
