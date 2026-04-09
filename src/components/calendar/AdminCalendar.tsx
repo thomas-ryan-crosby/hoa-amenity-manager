@@ -597,7 +597,9 @@ export function AdminCalendar() {
               selectAllow={(info) => !info.allDay}
               dateClick={(info) => {
                 if (info.view.type === 'dayGridMonth') {
-                  const centered = new Date(info.dateStr)
+                  const [y, m, d] = info.dateStr.split('-').map(Number)
+                  const clicked = new Date(y, m - 1, d)
+                  const centered = new Date(clicked)
                   centered.setDate(centered.getDate() - 3)
                   calendarRef.current?.getApi().changeView('rolling3Day', centered)
                 }

@@ -193,6 +193,33 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   const [quickBookEnd, setQuickBookEnd] = useState('')
   const calendarRef = useRef<FullCalendar>(null)
   const calendarWrapperRef = useRef<HTMLDivElement>(null)
+  const [highlightDate, setHighlightDate] = useState<string | null>(null)
+
+  /** Parse a date string as local (not UTC). "2026-04-10" → April 10 local. */
+  function parseLocalDate(dateStr: string): Date {
+    const [y, m, d] = dateStr.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  }
+
+  /** Flash a glow on a day column after switching to week view */
+  function flashDateGlow(dateStr: string) {
+    setHighlightDate(dateStr)
+    setTimeout(() => setHighlightDate(null), 1500)
+  }
+
+  // Glow effect on the clicked date's column header
+  useEffect(() => {
+    if (!highlightDate) return
+    const wrapper = calendarWrapperRef.current
+    if (!wrapper) return
+
+    // FullCalendar uses data-date on th[data-date] or td[data-date]
+    const headerCell = wrapper.querySelector<HTMLElement>(`th[data-date="${highlightDate}"]`)
+    if (headerCell) {
+      headerCell.classList.add('fc-day-highlight-glow')
+      return () => { headerCell.classList.remove('fc-day-highlight-glow') }
+    }
+  }, [highlightDate])
 
   // Keyboard left/right arrow navigation when calendar is focused
   useEffect(() => {
@@ -863,10 +890,12 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               }}
               dateClick={(info) => {
                 if (info.view.type === 'dayGridMonth') {
-                  // Center the clicked date in the 7-day view
-                  const centered = new Date(info.dateStr)
+                  // Center the clicked date in the 7-day view (position 4 of 7)
+                  const clicked = parseLocalDate(info.dateStr)
+                  const centered = new Date(clicked)
                   centered.setDate(centered.getDate() - 3)
                   calendarRef.current?.getApi().changeView('rolling3Day', centered)
+                  flashDateGlow(info.dateStr)
                   return
                 }
 
@@ -906,6 +935,8 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                 const centered = new Date(date)
                 centered.setDate(centered.getDate() - 3)
                 calendarRef.current?.getApi().changeView('rolling3Day', centered)
+                const pad = (n: number) => n.toString().padStart(2, '0')
+                flashDateGlow(`${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`)
               }}
               eventOverlap
               slotEventOverlap
