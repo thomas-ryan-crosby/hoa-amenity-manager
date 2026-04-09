@@ -806,6 +806,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               eventDisplay="block"
               allDaySlot={false}
               stickyHeaderDates
+              height="calc(100vh - 220px)"
               views={{
                 rolling3Day: {
                   type: 'timeGrid',
@@ -935,7 +936,6 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               slotMinTime="00:00:00"
               slotMaxTime="24:00:00"
               scrollTime="08:00:00"
-              height="auto"
             />
           </div>
         ) : (
