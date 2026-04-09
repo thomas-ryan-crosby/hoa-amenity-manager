@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { CommunityProvider } from "@/components/providers/CommunityProvider";
+import { PendingGate } from "@/components/PendingGate";
 import { NavBar } from "@/components/NavBar";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Sanctuary Booking",
-  description: "HOA Amenity Booking System",
+  title: "Neighbri",
+  description: "Amenity booking for your community",
 };
 
 export default function RootLayout({
@@ -20,7 +21,9 @@ export default function RootLayout({
         <AuthProvider>
           <CommunityProvider>
             <NavBar />
-            {children}
+            <PendingGate>
+              {children}
+            </PendingGate>
           </CommunityProvider>
         </AuthProvider>
       </body>
