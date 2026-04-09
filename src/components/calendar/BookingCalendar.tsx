@@ -93,6 +93,12 @@ type Area = {
   sortOrder: number
 }
 
+type BlackoutPeriod = {
+  start: string
+  end: string
+  recurring: boolean
+}
+
 type Amenity = {
   id: string
   name: string
@@ -108,6 +114,7 @@ type Amenity = {
   hasRules: boolean
   rules: string | null
   isDefault: boolean
+  blackoutDates: BlackoutPeriod[]
 }
 
 type CalendarEventExtendedProps = {
@@ -380,6 +387,49 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
     if (!cleaningPreview) return filteredEvents
     return [...filteredEvents, cleaningPreview]
   }, [filteredEvents, cleaningPreview])
+
+  // Client-side booking validation — catches issues before submission
+  const bookingValidation = useMemo(() => {
+    if (!selection || !amenityInfo) return null
+
+    const startDate = new Date(selection.start)
+    const now = new Date()
+
+    // Check max advance booking days
+    const daysUntil = Math.ceil((startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    if (daysUntil > amenityInfo.maxAdvanceBookingDays) {
+      return {
+        blocked: true,
+        message: `${amenityInfo.name} can only be booked up to ${amenityInfo.maxAdvanceBookingDays} days in advance. This date is ${daysUntil} days away.`,
+      }
+    }
+
+    // Check blackout dates
+    const bookingStart = startDate.getTime()
+    const bookingEnd = new Date(selection.end).getTime()
+    for (const blackout of amenityInfo.blackoutDates ?? []) {
+      let bStart = new Date(blackout.start).getTime()
+      let bEnd = new Date(blackout.end).getTime()
+
+      // For recurring blackouts, check the same month/day in the booking's year
+      if (blackout.recurring) {
+        const bsDate = new Date(blackout.start)
+        const beDate = new Date(blackout.end)
+        const year = startDate.getFullYear()
+        bStart = new Date(year, bsDate.getMonth(), bsDate.getDate(), bsDate.getHours(), bsDate.getMinutes()).getTime()
+        bEnd = new Date(year, beDate.getMonth(), beDate.getDate(), beDate.getHours(), beDate.getMinutes()).getTime()
+      }
+
+      if (bookingStart < bEnd && bookingEnd > bStart) {
+        return {
+          blocked: true,
+          message: `${amenityInfo.name} is unavailable during this time — it falls within a blackout period.`,
+        }
+      }
+    }
+
+    return null
+  }, [selection, amenityInfo])
 
   function handleAmenityClick(amenityId: string, e: MouseEvent) {
     clearSelection()
@@ -692,12 +742,16 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
             communityTz={communityTz}
           />
 
+          {bookingValidation && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{bookingValidation.message}</div>
+          )}
+
           {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
           <div className="flex gap-3">
             <button
               className="flex-1 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white disabled:bg-emerald-300"
-              disabled={submitting}
+              disabled={submitting || !!bookingValidation?.blocked}
               type="submit"
             >
               {submitting ? 'Submitting...' : 'Confirm Booking'}
@@ -1216,6 +1270,12 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               communityTz={communityTz}
             />
 
+            {bookingValidation && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {bookingValidation.message}
+              </div>
+            )}
+
             {error ? (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {error}
@@ -1224,7 +1284,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
 
             <button
               className="w-full rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-300"
-              disabled={submitting}
+              disabled={submitting || !!bookingValidation?.blocked}
               type="submit"
             >
               {submitting ? 'Submitting request...' : 'Request Booking'}

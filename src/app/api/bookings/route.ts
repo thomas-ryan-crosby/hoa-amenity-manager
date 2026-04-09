@@ -8,8 +8,8 @@ import {
   getBookingById,
   createBookingWithAuditLog,
 } from '@/lib/firebase/db'
-import * as orchestrator from '@/lib/agents/orchestrator'
-import * as residentAgent from '@/lib/agents/resident-agent'
+import * as orchestrator from '@/lib/booking/workflow'
+import * as residentAgent from '@/lib/notifications/resident'
 import { getActiveCommunityId } from '@/lib/community'
 
 const CreateBookingSchema = z.object({

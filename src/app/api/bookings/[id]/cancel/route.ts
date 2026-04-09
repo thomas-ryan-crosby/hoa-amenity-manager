@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireUser } from '@/lib/auth'
 import { getBookingById, getResidentByFirebaseUid } from '@/lib/firebase/db'
-import * as orchestrator from '@/lib/agents/orchestrator'
+import * as orchestrator from '@/lib/booking/workflow'
 
 const CANCELLABLE_STATUSES = [
   'INQUIRY_RECEIVED',

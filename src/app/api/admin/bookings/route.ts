@@ -7,7 +7,7 @@ import {
   getBookingById,
   createBookingWithAuditLog,
 } from '@/lib/firebase/db'
-import * as orchestrator from '@/lib/agents/orchestrator'
+import * as orchestrator from '@/lib/booking/workflow'
 import { getActiveCommunityId } from '@/lib/community'
 
 const AdminBookingSchema = z.object({

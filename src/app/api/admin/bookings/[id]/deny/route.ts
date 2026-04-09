@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth'
-import * as orchestrator from '@/lib/agents/orchestrator'
+import * as orchestrator from '@/lib/booking/workflow'
 
 const DenialSchema = z.object({
   reason: z.string().min(3).max(500),

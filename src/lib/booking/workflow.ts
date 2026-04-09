@@ -10,14 +10,14 @@ import {
   type Amenity,
   type Booking,
 } from '@/lib/firebase/db'
-import { getConflictingBookings } from '@/lib/integrations/google-calendar'
+import { getConflictingBookings } from '@/lib/booking/availability'
 import {
   createPaymentLink,
   getOrCreateCustomer,
   issueRefund,
 } from '@/lib/integrations/stripe'
-import * as residentAgent from '@/lib/agents/resident-agent'
-import * as pmAgent from '@/lib/agents/pm-agent'
+import * as residentAgent from '@/lib/notifications/resident'
+import * as pmAgent from '@/lib/notifications/pm'
 
 // ---------------------------------------------------------------------------
 // Ensure a turn window exists for a booking (idempotent)

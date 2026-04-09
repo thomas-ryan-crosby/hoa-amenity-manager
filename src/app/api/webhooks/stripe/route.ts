@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { stripe as getStripe } from '@/lib/integrations/stripe'
-import * as orchestrator from '@/lib/agents/orchestrator'
+import * as orchestrator from '@/lib/booking/workflow'
 
 export const runtime = 'nodejs'
 

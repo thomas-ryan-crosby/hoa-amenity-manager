@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireRole } from '@/lib/auth'
 import { upsertInspectionReport } from '@/lib/firebase/db'
-import * as orchestrator from '@/lib/agents/orchestrator'
+import * as orchestrator from '@/lib/booking/workflow'
 
 const InspectionSchema = z.object({
   status: z.enum(['PASS', 'FLAG']),

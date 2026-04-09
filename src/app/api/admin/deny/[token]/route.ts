@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyActionToken } from '@/lib/agents/pm-agent'
-import * as orchestrator from '@/lib/agents/orchestrator'
+import { verifyActionToken } from '@/lib/notifications/pm'
+import * as orchestrator from '@/lib/booking/workflow'
 
 export async function GET(
   req: NextRequest,

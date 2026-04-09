@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { Timestamp } from 'firebase-admin/firestore'
-import * as residentAgent from '@/lib/agents/resident-agent'
-import * as janitorialAgent from '@/lib/agents/janitorial-agent'
+import * as residentAgent from '@/lib/notifications/resident'
+import * as janitorialAgent from '@/lib/notifications/janitorial'
 
 /**
  * Vercel Cron Job — runs every hour.

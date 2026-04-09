@@ -229,8 +229,6 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
     reason: '',
     recurring: false,
   })
-  const [chatMessage, setChatMessage] = useState('')
-  const [chatReply, setChatReply] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
   const [noticeType, setNoticeType] = useState<'success' | 'error'>('success')
   const [saving, setSaving] = useState(false)
@@ -402,17 +400,6 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
     setBlackoutForm({ startDate: '', endDate: '', reason: '', recurring: false })
     showNotice('Blackout date added.')
     await loadData()
-  }
-
-  async function sendConfigMessage(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const res = await fetch('/api/admin/config-agent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: chatMessage }),
-    })
-    const data = await res.json()
-    setChatReply(!res.ok ? (data.error ?? 'Unable to reach configuration agent.') : data.message)
   }
 
   // --- Area CRUD ---
@@ -1135,29 +1122,6 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
               </div>
             </div>
 
-            {/* Config agent */}
-            <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-semibold text-stone-900">Configuration agent</h2>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
-                Ask the AI assistant to help configure amenities, fees, or policies.
-              </p>
-              <form className="mt-4 space-y-3" onSubmit={sendConfigMessage}>
-                <textarea
-                  className="min-h-32 w-full rounded-2xl border border-stone-300 px-4 py-3 text-sm"
-                  placeholder='Try "set the pool fee to $75" or "list all amenities"'
-                  value={chatMessage}
-                  onChange={(e) => setChatMessage(e.target.value)}
-                />
-                <button className="w-full rounded-full border border-stone-300 px-5 py-3 text-sm font-semibold text-stone-700" type="submit">
-                  Ask configuration agent
-                </button>
-              </form>
-              {chatReply && (
-                <div className="mt-4 whitespace-pre-wrap rounded-2xl bg-stone-50 px-4 py-3 text-sm text-stone-700">
-                  {chatReply}
-                </div>
-              )}
-            </div>
           </section>
         </div>
       </div>
