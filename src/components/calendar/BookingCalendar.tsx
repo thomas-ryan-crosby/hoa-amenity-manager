@@ -207,18 +207,18 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
     setTimeout(() => setHighlightDate(null), 1500)
   }
 
-  // Glow effect on the clicked date's column header
+  // Glow effect on the clicked date's full column
   useEffect(() => {
     if (!highlightDate) return
     const wrapper = calendarWrapperRef.current
     if (!wrapper) return
 
-    // FullCalendar uses data-date on th[data-date] or td[data-date]
-    const headerCell = wrapper.querySelector<HTMLElement>(`th[data-date="${highlightDate}"]`)
-    if (headerCell) {
-      headerCell.classList.add('fc-day-highlight-glow')
-      return () => { headerCell.classList.remove('fc-day-highlight-glow') }
-    }
+    // Apply glow to both the header cell and all body cells for that date
+    const cells = wrapper.querySelectorAll<HTMLElement>(
+      `th[data-date="${highlightDate}"], td[data-date="${highlightDate}"]`
+    )
+    cells.forEach((el) => el.classList.add('fc-day-highlight-glow'))
+    return () => { cells.forEach((el) => el.classList.remove('fc-day-highlight-glow')) }
   }, [highlightDate])
 
   // Keyboard left/right arrow navigation when calendar is focused
