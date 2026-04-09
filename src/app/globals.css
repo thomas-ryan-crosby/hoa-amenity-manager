@@ -51,20 +51,15 @@ body {
   font-size: 0.75rem;
 }
 
-/* Sticky column headers when page scrolls */
-.fc .fc-col-header {
-  position: sticky;
+/* Pinned calendar header clone (JS-driven) */
+.fc-sticky-header-clone {
+  position: fixed;
   top: 0;
-  z-index: 10;
+  z-index: 40;
   background: white;
-}
-.fc .fc-scrollgrid-section-header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-.fc .fc-scrollgrid-section-header > td {
-  background: white;
+  border-bottom: 1px solid #e7e5e4;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  pointer-events: none;
 }
 
 /* Nav buttons */

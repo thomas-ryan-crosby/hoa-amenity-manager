@@ -7,6 +7,7 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import { formatCurrency, formatDateTime, formatDateRange } from '@/lib/format'
 import { useCommunity } from '@/components/providers/CommunityProvider'
+import { useStickyCalendarHeader } from '@/hooks/useStickyCalendarHeader'
 
 /** Convert a Date to a local `YYYY-MM-DDTHH:MM` string for datetime-local inputs */
 function toLocalDatetime(d: Date): string {
@@ -193,6 +194,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   const [quickBookEnd, setQuickBookEnd] = useState('')
   const calendarRef = useRef<FullCalendar>(null)
   const calendarWrapperRef = useRef<HTMLDivElement>(null)
+  useStickyCalendarHeader(calendarWrapperRef)
 
   // Keyboard left/right arrow navigation when calendar is focused
   useEffect(() => {

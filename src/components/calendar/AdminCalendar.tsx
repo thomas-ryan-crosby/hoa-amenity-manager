@@ -7,6 +7,7 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import { formatDateRange } from '@/lib/format'
 import { useCommunity } from '@/components/providers/CommunityProvider'
+import { useStickyCalendarHeader } from '@/hooks/useStickyCalendarHeader'
 
 type Area = {
   id: string
@@ -98,6 +99,7 @@ export function AdminCalendar() {
   const [isMobile, setIsMobile] = useState(false)
   const calendarRef = useRef<FullCalendar>(null)
   const calendarWrapperRef = useRef<HTMLDivElement>(null)
+  useStickyCalendarHeader(calendarWrapperRef)
 
   // Keyboard arrow navigation
   useEffect(() => {
