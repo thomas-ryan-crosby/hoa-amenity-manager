@@ -23,8 +23,6 @@ export default function CreateCommunityPage() {
   const [city, setCity] = useState('')
   const [state, setState] = useState('')
   const [zip, setZip] = useState('')
-  const [contactEmail, setContactEmail] = useState('')
-  const [contactPhone, setContactPhone] = useState('')
   const [timezone, setTimezone] = useState('America/Chicago')
   const [plan, setPlan] = useState('free')
   const [maxAmenities, setMaxAmenities] = useState(5)
@@ -55,8 +53,6 @@ export default function CreateCommunityPage() {
           state,
           zip,
           timezone,
-          contactEmail,
-          contactPhone: contactPhone || null,
           plan,
           maxAmenities,
           maxMembers,
@@ -201,29 +197,6 @@ export default function CreateCommunityPage() {
                   onChange={(e) => setZip(e.target.value)}
                   maxLength={10}
                   placeholder="90210"
-                  className={inputClass}
-                />
-              </div>
-            </div>
-
-            {/* Contact */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelClass}>Contact Email</label>
-                <input
-                  type="email"
-                  required
-                  value={contactEmail}
-                  onChange={(e) => setContactEmail(e.target.value)}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Contact Phone</label>
-                <input
-                  type="tel"
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
                   className={inputClass}
                 />
               </div>

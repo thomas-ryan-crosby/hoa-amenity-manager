@@ -57,7 +57,7 @@ const CreateCommunitySchema = z.object({
   state: z.string().length(2, 'State must be 2-letter code'),
   zip: z.string().min(5, 'Zip code is required'),
   timezone: z.string().min(1, 'Timezone is required'),
-  contactEmail: z.string().email('Valid email required'),
+  contactEmail: z.string().email().nullable().optional(),
   contactPhone: z.string().nullable().optional(),
   plan: z.enum(['free', 'standard', 'premium']),
   maxAmenities: z.number().int().positive(),
@@ -108,6 +108,7 @@ export async function POST(req: NextRequest) {
   // Create the community first
   const community = await createCommunity({
     ...communityData,
+    contactEmail: communityData.contactEmail ?? null,
     contactPhone: communityData.contactPhone ?? null,
     logoUrl: null,
     isActive: true,

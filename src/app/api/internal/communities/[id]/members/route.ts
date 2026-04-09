@@ -5,8 +5,10 @@ import { adminAuth } from '@/lib/firebase/admin'
 import {
   getCommunityById,
   getCommunityMember,
+  getCommunityMembers,
   createCommunityMember,
   createPendingAdminInvite,
+  updateCommunityMember,
   getResidentByFirebaseUid,
   createResident,
 } from '@/lib/firebase/db'
@@ -132,4 +134,49 @@ export async function POST(
 
     return NextResponse.json({ linked: false, invited: true })
   }
+}
+
+// ---------------------------------------------------------------------------
+// PUT — update a member's role (super-admin only)
+// ---------------------------------------------------------------------------
+
+const UpdateRoleSchema = z.object({
+  memberId: z.string().min(1),
+  role: z.enum(['admin', 'property_manager', 'resident', 'janitorial', 'board']),
+})
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireSuperAdmin()
+  if (!auth.ok) return auth.response
+
+  const { id: communityId } = await params
+  const body = await req.json().catch(() => null)
+  const parsed = UpdateRoleSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
+  }
+
+  const { memberId, role } = parsed.data
+  const members = await getCommunityMembers(communityId)
+  const member = members.find((m) => m.id === memberId)
+  if (!member) {
+    return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+  }
+
+  // Enforce min-1-admin
+  if (member.role === 'admin' && role !== 'admin') {
+    const adminCount = members.filter((m) => m.role === 'admin' && m.status === 'approved').length
+    if (adminCount <= 1) {
+      return NextResponse.json(
+        { error: 'Cannot remove the last admin. Assign another admin first.' },
+        { status: 400 },
+      )
+    }
+  }
+
+  await updateCommunityMember(memberId, { role })
+  return NextResponse.json({ success: true })
 }

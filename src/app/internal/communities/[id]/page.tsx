@@ -74,6 +74,7 @@ export default function CommunityDetailPage() {
   const [addMemberRole, setAddMemberRole] = useState<string>('admin')
   const [addingMember, setAddingMember] = useState(false)
   const [addMemberNotice, setAddMemberNotice] = useState<string | null>(null)
+  const [changingRole, setChangingRole] = useState<string | null>(null)
 
   // Editable fields
   const [name, setName] = useState('')
@@ -232,6 +233,29 @@ export default function CommunityDetailPage() {
       setAddMemberNotice(err instanceof Error ? err.message : 'Failed to add member')
     } finally {
       setAddingMember(false)
+    }
+  }
+
+  async function handleRoleChange(memberId: string, newRole: string) {
+    setChangingRole(memberId)
+    try {
+      const res = await fetch(`/api/internal/communities/${communityId}/members`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId, role: newRole }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error ?? 'Failed to update role'); return }
+      // Refresh community data
+      const refreshRes = await fetch(`/api/internal/communities/${communityId}`)
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json()
+        setCommunity(refreshData.community)
+      }
+    } catch {
+      setError('Failed to update role')
+    } finally {
+      setChangingRole(null)
     }
   }
 
@@ -643,7 +667,16 @@ export default function CommunityDetailPage() {
                   <div className="px-5 py-12 text-center text-stone-500">No members yet.</div>
                 ) : (
                   <div className="divide-y divide-stone-100">
-                    {community.members.map((m) => (
+                    {[...community.members]
+                      .sort((a, b) => {
+                        // Admins first, then by status (pending before approved), then by name
+                        if (a.role === 'admin' && b.role !== 'admin') return -1
+                        if (b.role === 'admin' && a.role !== 'admin') return 1
+                        if (a.status === 'pending' && b.status !== 'pending') return -1
+                        if (b.status === 'pending' && a.status !== 'pending') return 1
+                        return a.name.localeCompare(b.name)
+                      })
+                      .map((m) => (
                       <div key={m.id} className="flex items-center justify-between px-5 py-3">
                         <div>
                           <p className="text-sm font-medium text-stone-900">{m.name}</p>
@@ -651,9 +684,18 @@ export default function CommunityDetailPage() {
                           {m.unitNumber && <p className="text-xs text-stone-400">Unit: {m.unitNumber}</p>}
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="rounded bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-600">
-                            {m.role.replace('_', ' ')}
-                          </span>
+                          <select
+                            value={m.role}
+                            onChange={(e) => handleRoleChange(m.id, e.target.value)}
+                            disabled={changingRole === m.id}
+                            className="rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs font-medium text-stone-700 disabled:opacity-50"
+                          >
+                            <option value="admin">Admin</option>
+                            <option value="property_manager">Property Manager</option>
+                            <option value="board">Board</option>
+                            <option value="janitorial">Janitorial</option>
+                            <option value="resident">Resident</option>
+                          </select>
                           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${m.status === 'approved' ? 'bg-emerald-50 text-emerald-700' : m.status === 'pending' ? 'bg-yellow-50 text-yellow-700' : 'bg-red-50 text-red-700'}`}>
                             {m.status}
                           </span>
@@ -700,16 +742,6 @@ export default function CommunityDetailPage() {
                     <div>
                       <label className={labelClass}>Zip</label>
                       <input type="text" required value={zip} onChange={(e) => setZip(e.target.value)} maxLength={10} className={inputClass} />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className={labelClass}>Contact Email</label>
-                      <input type="email" required value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={inputClass} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Contact Phone</label>
-                      <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className={inputClass} />
                     </div>
                   </div>
                   <div>

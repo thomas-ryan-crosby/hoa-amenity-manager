@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'
+import { signInWithEmailAndPassword } from 'firebase/auth'
 import { getClientAuth } from '@/lib/firebase/client'
 import { markSessionHandled } from '@/components/providers/AuthProvider'
 import { PasswordInput } from '@/components/PasswordInput'
@@ -47,16 +47,18 @@ export default function SignInPage() {
     }
     setResetLoading(true)
     try {
-      await sendPasswordResetEmail(getClientAuth(), email)
-      setResetSent(true)
-    } catch (err) {
-      console.error('[Password Reset]', err)
-      const msg = err instanceof Error ? err.message : ''
-      if (msg.includes('user-not-found') || msg.includes('invalid-email')) {
-        setError('No account found with that email address.')
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      if (res.ok) {
+        setResetSent(true)
       } else {
         setError('Unable to send reset email. Check the address and try again.')
       }
+    } catch {
+      setError('Unable to send reset email. Please try again.')
     } finally {
       setResetLoading(false)
     }
