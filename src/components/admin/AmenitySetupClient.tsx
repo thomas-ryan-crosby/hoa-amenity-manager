@@ -235,6 +235,7 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
   const [noticeType, setNoticeType] = useState<'success' | 'error'>('success')
   const [saving, setSaving] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
+  const [showForm, setShowForm] = useState(false)
 
   function showNotice(message: string, type: 'success' | 'error' = 'success') {
     setNotice(message)
@@ -298,6 +299,19 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
     setSelectedAmenityId(amenity?.id ?? null)
     setAmenityForm(toAmenityForm(amenity))
     setIsDirty(false)
+    setShowForm(false)
+  }
+
+  function openCreateForm() {
+    if (isDirty && !confirm('You have unsaved changes. Discard them?')) return
+    setSelectedAmenityId(null)
+    setAmenityForm({ ...emptyAmenityForm })
+    setIsDirty(false)
+    setShowForm(true)
+  }
+
+  function openEditForm() {
+    setShowForm(true)
   }
 
   async function saveAmenity(event: FormEvent<HTMLFormElement>) {
@@ -345,7 +359,10 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
       showNotice(selectedAmenity ? `${f.name} saved successfully!` : `${f.name} created!`)
       setIsDirty(false)
       await loadData()
-      if (!selectedAmenity) setAmenityForm({ ...emptyAmenityForm })
+      if (!selectedAmenity) {
+        setAmenityForm({ ...emptyAmenityForm })
+      }
+      setShowForm(false)
     } finally {
       setSaving(false)
     }
@@ -506,7 +523,7 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
               <h2 className="text-lg font-semibold text-stone-900">Amenities</h2>
               <button
                 className="rounded-full border border-stone-300 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-stone-700"
-                onClick={() => selectAmenity(null)}
+                onClick={openCreateForm}
                 type="button"
               >
                 New
@@ -572,13 +589,144 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
             </div>
           </section>
 
-          {/* ---- CENTER: form ---- */}
+          {/* ---- CENTER: summary or form ---- */}
           <section className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold text-stone-900">
-              {selectedAmenity ? `Edit ${selectedAmenity.name}` : 'Create amenity'}
-            </h2>
+            {!showForm ? (
+              /* --- Summary view --- */
+              selectedAmenity ? (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-stone-900">{selectedAmenity.name}</h2>
+                    <div className="flex gap-2">
+                      <button onClick={openEditForm} type="button" className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800">
+                        Edit
+                      </button>
+                      <button onClick={deleteSelectedAmenity} type="button" className="rounded-full border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                  {selectedAmenity.isDefault && (
+                    <p className="mb-3 text-xs text-amber-600 font-medium">★ Default amenity on booking calendar</p>
+                  )}
+                  {selectedAmenity.description && (
+                    <p className="text-sm text-stone-600 mb-4">{selectedAmenity.description}</p>
+                  )}
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-2xl bg-stone-50 px-4 py-3">
+                      <p className="text-xs text-stone-400">Capacity</p>
+                      <p className="font-semibold text-stone-900">{selectedAmenity.capacity}</p>
+                    </div>
+                    <div className="rounded-2xl bg-stone-50 px-4 py-3">
+                      <p className="text-xs text-stone-400">Pricing</p>
+                      <p className="font-semibold text-stone-900">
+                        {selectedAmenity.rentalFee > 0 ? `$${selectedAmenity.rentalFee}` : 'Free'}
+                        {selectedAmenity.depositAmount > 0 && ` + $${selectedAmenity.depositAmount} deposit`}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-stone-50 px-4 py-3">
+                      <p className="text-xs text-stone-400">Approval</p>
+                      <p className="font-semibold text-stone-900">{selectedAmenity.requiresApproval ? 'Required' : 'Auto-approved'}</p>
+                    </div>
+                    <div className="rounded-2xl bg-stone-50 px-4 py-3">
+                      <p className="text-xs text-stone-400">Janitorial</p>
+                      <p className="font-semibold text-stone-900">
+                        {selectedAmenity.janitorialAssignment === 'none' ? 'None' : selectedAmenity.janitorialAssignment}
+                        {selectedAmenity.defaultTurnTimeHours > 0 && ` (${selectedAmenity.defaultTurnTimeHours}h turn)`}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-stone-50 px-4 py-3">
+                      <p className="text-xs text-stone-400">Max Advance Booking</p>
+                      <p className="font-semibold text-stone-900">{selectedAmenity.maxAdvanceBookingDays} days</p>
+                    </div>
+                    <div className="rounded-2xl bg-stone-50 px-4 py-3">
+                      <p className="text-xs text-stone-400">Area</p>
+                      <p className="font-semibold text-stone-900">{areas.find((a) => a.id === selectedAmenity.areaId)?.name ?? 'None'}</p>
+                    </div>
+                  </div>
+                  {selectedAmenity.hasRules && (
+                    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                      <p className="text-xs font-medium text-amber-700 mb-1">Rules</p>
+                      <p className="text-sm text-amber-800 whitespace-pre-wrap">{selectedAmenity.rules}</p>
+                    </div>
+                  )}
+                  {selectedAmenity.hasAccessInstructions && (
+                    <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                      <p className="text-xs font-medium text-emerald-700 mb-1">Access Instructions</p>
+                      <p className="text-sm text-emerald-800 whitespace-pre-wrap">{selectedAmenity.accessInstructions}</p>
+                    </div>
+                  )}
+                  {(selectedAmenity.parentAmenityId || selectedAmenity.childAmenityIds?.length > 0) && (
+                    <div className="mt-4 text-sm text-stone-500">
+                      <p className="text-xs font-medium text-stone-400 mb-1">Linked Amenities</p>
+                      {selectedAmenity.parentAmenityId && (
+                        <p>Parent: <span className="text-stone-700">{amenities.find((a) => a.id === selectedAmenity.parentAmenityId)?.name ?? 'Unknown'}</span></p>
+                      )}
+                      {selectedAmenity.childAmenityIds?.length > 0 && (
+                        <p>Children: <span className="text-stone-700">{selectedAmenity.childAmenityIds.map((id) => amenities.find((a) => a.id === id)?.name ?? id).join(', ')}</span></p>
+                      )}
+                    </div>
+                  )}
+                  {selectedAmenity.suggestedAmenityIds?.length > 0 && (
+                    <div className="mt-3 text-sm text-stone-500">
+                      <p className="text-xs font-medium text-stone-400 mb-1">Suggested Pairings</p>
+                      <p className="text-stone-700">{selectedAmenity.suggestedAmenityIds.map((id) => amenities.find((a) => a.id === id)?.name ?? id).join(', ')}</p>
+                    </div>
+                  )}
+                  {/* Blackout dates */}
+                  {selectedAmenity.blackoutDates?.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-xs font-medium text-stone-400 mb-2">Blackout Dates</p>
+                      <div className="space-y-1">
+                        {selectedAmenity.blackoutDates.map((b) => (
+                          <div key={b.id} className="flex items-center justify-between rounded-xl bg-stone-50 px-3 py-2 text-xs text-stone-600">
+                            <span>{new Date(b.startDate).toLocaleDateString()} — {new Date(b.endDate).toLocaleDateString()}</span>
+                            {b.reason && <span className="text-stone-400">{b.reason}</span>}
+                            {b.recurring && <span className="text-amber-600">Recurring</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* --- Empty state --- */
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="rounded-full bg-stone-100 p-4 mb-4">
+                    <svg className="h-8 w-8 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-stone-900 mb-2">
+                    {amenities.length === 0 ? 'No amenities yet' : 'Select an amenity'}
+                  </h3>
+                  <p className="text-sm text-stone-500 max-w-xs mb-6">
+                    {amenities.length === 0
+                      ? 'Create your first amenity to get started with booking.'
+                      : 'Click an amenity in the sidebar to view its details, or create a new one.'}
+                  </p>
+                  <button
+                    onClick={openCreateForm}
+                    type="button"
+                    className="rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
+                  >
+                    Create Amenity
+                  </button>
+                </div>
+              )
+            ) : (
+            /* --- Edit/Create form --- */
+            <div>
+            <div className="flex items-center gap-3 mb-4">
+              <button onClick={() => { if (!isDirty || confirm('Discard changes?')) setShowForm(false) }} type="button" className="text-sm text-stone-500 hover:text-stone-700">
+                &larr; Back
+              </button>
+              <h2 className="text-lg font-semibold text-stone-900">
+                {selectedAmenity ? `Edit ${selectedAmenity.name}` : 'Create amenity'}
+              </h2>
+            </div>
 
-            <form className="mt-5 space-y-5" onSubmit={saveAmenity}>
+            <form className="space-y-5" onSubmit={saveAmenity}>
               <label className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
                 <input type="checkbox" checked={f.isDefault} onChange={(e) => set({ isDefault: e.target.checked })} className="rounded" />
                 ★ Set as default amenity on booking calendar
@@ -895,6 +1043,8 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
                 ))}
               </div>
             </div>
+            </div>
+            )}
           </section>
 
           {/* ---- RIGHT: areas + config agent ---- */}
