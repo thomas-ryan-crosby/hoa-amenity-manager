@@ -49,8 +49,14 @@ export default function SignInPage() {
     try {
       await sendPasswordResetEmail(getClientAuth(), email)
       setResetSent(true)
-    } catch {
-      setError('Unable to send reset email. Check the address and try again.')
+    } catch (err) {
+      console.error('[Password Reset]', err)
+      const msg = err instanceof Error ? err.message : ''
+      if (msg.includes('user-not-found') || msg.includes('invalid-email')) {
+        setError('No account found with that email address.')
+      } else {
+        setError('Unable to send reset email. Check the address and try again.')
+      }
     } finally {
       setResetLoading(false)
     }
