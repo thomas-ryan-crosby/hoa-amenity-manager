@@ -6,7 +6,7 @@ import Script from 'next/script'
 
 export default function OnboardPage() {
   const [step, setStep] = useState<'plan' | 'details'>('plan')
-  const [plan, setPlan] = useState('standard')
+  const [plan] = useState('standard')
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
   const [city, setCity] = useState('')
@@ -16,15 +16,12 @@ export default function OnboardPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Listen for Stripe pricing table checkout completion
-  // Stripe redirects back or fires events — for now, provide a manual "Continue" button
-  // after the user views the pricing table
+  // Detect Stripe Pricing Table success redirect
+  // Configure the pricing table's confirmation page URL in Stripe Dashboard to:
+  // https://neighbri.com/onboard?checkout=complete
   useEffect(() => {
-    // Check URL params for Stripe success redirect
     const params = new URLSearchParams(window.location.search)
-    const selectedPlan = params.get('plan')
-    if (selectedPlan) {
-      setPlan(selectedPlan)
+    if (params.get('checkout') === 'complete') {
       setStep('details')
     }
   }, [])
@@ -52,14 +49,15 @@ export default function OnboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-stone-50 px-6 py-12">
-      <div className="mx-auto max-w-4xl">
-        <Link href="/join" className="text-sm text-emerald-700 hover:text-emerald-900">&larr; Back to join</Link>
+    <main className="min-h-screen bg-stone-50 px-4 sm:px-6 py-12">
+      {/* Wider container for plan step, narrower for details */}
+      <div className={step === 'plan' ? 'mx-auto max-w-6xl' : 'mx-auto max-w-2xl'}>
+        <Link href="/join" className="text-sm text-emerald-700 hover:text-emerald-900">&larr; Back</Link>
 
         <div className="mt-4">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">Neighbri</p>
           <h1 className="mt-3 text-3xl font-semibold text-stone-900">
-            {step === 'plan' ? 'Choose your plan' : 'Community details'}
+            {step === 'plan' ? 'Choose your plan' : 'Set up your community'}
           </h1>
           <p className="mt-2 text-sm text-stone-500">
             {step === 'plan'
@@ -81,38 +79,19 @@ export default function OnboardPage() {
                 __html: `<stripe-pricing-table pricing-table-id="prctbl_1TKlPEBBuISOmksbDQTkGmEh" publishable-key="pk_live_51RMEL2BBuISOmksbi0eTOMmSGCf1ZK7nqQnMAAmN6PYJn7SoyeIuJCEhiXQVaINCI99DZqEo3UeV4P56dXf7yriG00OGztty8j"></stripe-pricing-table>`,
               }}
             />
-
-            <div className="mt-8 rounded-2xl border border-stone-200 bg-white p-6 text-center">
-              <p className="text-sm text-stone-600">
-                Already completed checkout? Continue to set up your community.
-              </p>
-              <div className="mt-4 flex flex-wrap justify-center gap-3">
-                <button
-                  onClick={() => { setPlan('standard'); setStep('details') }}
-                  className="rounded-full border border-stone-300 px-5 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-50"
-                >
-                  Continue with Essentials
-                </button>
-                <button
-                  onClick={() => { setPlan('growth'); setStep('details') }}
-                  className="rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-500"
-                >
-                  Continue with Growth
-                </button>
-                <button
-                  onClick={() => { setPlan('premium'); setStep('details') }}
-                  className="rounded-full border border-stone-300 px-5 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-50"
-                >
-                  Continue with Enterprise
-                </button>
-              </div>
-            </div>
           </div>
         )}
 
-        {/* Step 2: Community details */}
+        {/* Step 2: Community details (shown after Stripe checkout) */}
         {step === 'details' && (
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800 flex items-center gap-3">
+              <svg className="h-5 w-5 flex-shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              Payment confirmed. Now set up your community.
+            </div>
+
             <div className="rounded-2xl border border-stone-200 bg-white p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-1">Community Name</label>
@@ -193,22 +172,13 @@ export default function OnboardPage() {
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
             )}
 
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setStep('plan')}
-                className="rounded-full border border-stone-300 px-5 py-3 text-sm font-semibold text-stone-700 hover:bg-stone-50"
-              >
-                Back
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:bg-emerald-300"
-              >
-                {loading ? 'Creating community...' : 'Create community'}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:bg-emerald-300"
+            >
+              {loading ? 'Creating community...' : 'Create community'}
+            </button>
 
             <p className="text-center text-xs text-stone-400">
               By creating a community you agree to the <a href="/terms" target="_blank" className="text-emerald-600 underline">Terms of Service</a> and <a href="/privacy" target="_blank" className="text-emerald-600 underline">Privacy Policy</a>.

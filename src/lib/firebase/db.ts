@@ -163,6 +163,8 @@ export interface Community {
   isActive: boolean
   maxAmenities: number
   maxMembers: number
+  stripeCustomerId: string | null
+  stripeSubscriptionId: string | null
   createdAt: Date
   createdBy: string
 }
@@ -1169,6 +1171,22 @@ export async function createCommunity(data: Omit<Community, 'id'>): Promise<Comm
 
 export async function updateCommunity(id: string, data: Partial<Community>): Promise<void> {
   await communitiesCol().doc(id).update(data)
+}
+
+export async function getCommunityByStripeSubscription(subscriptionId: string): Promise<Community | null> {
+  const snap = await communitiesCol().where('stripeSubscriptionId', '==', subscriptionId).limit(1).get()
+  if (snap.empty) return null
+  const doc = snap.docs[0]
+  const data = doc.data()
+  return { id: doc.id, ...data, createdAt: data.createdAt ? toDate(data.createdAt) : new Date() } as Community
+}
+
+export async function getCommunityByStripeCustomer(customerId: string): Promise<Community | null> {
+  const snap = await communitiesCol().where('stripeCustomerId', '==', customerId).limit(1).get()
+  if (snap.empty) return null
+  const doc = snap.docs[0]
+  const data = doc.data()
+  return { id: doc.id, ...data, createdAt: data.createdAt ? toDate(data.createdAt) : new Date() } as Community
 }
 
 export async function deleteCommunity(id: string): Promise<void> {

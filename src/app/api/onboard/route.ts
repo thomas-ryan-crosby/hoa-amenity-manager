@@ -67,6 +67,8 @@ export async function POST(req: NextRequest) {
     contactPhone: null,
     plan,
     isActive: true,
+    stripeCustomerId: null,
+    stripeSubscriptionId: null,
     maxAmenities: limits.maxAmenities,
     maxMembers: limits.maxMembers,
     createdAt: new Date(),

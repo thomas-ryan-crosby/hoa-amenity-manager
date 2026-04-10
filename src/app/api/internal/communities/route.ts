@@ -112,6 +112,8 @@ export async function POST(req: NextRequest) {
     contactPhone: communityData.contactPhone ?? null,
     logoUrl: null,
     isActive: true,
+    stripeCustomerId: null,
+    stripeSubscriptionId: null,
     createdAt: new Date(),
     createdBy: auth.userId,
   })
