@@ -157,40 +157,6 @@ export default function PricingPage() {
         </p>
       </section>
 
-      {/* Compare */}
-      <section className="border-t border-stone-200 bg-white px-4 sm:px-6 py-16 sm:py-20">
-        <div className="mx-auto max-w-3xl">
-          <h2 className="text-center text-2xl font-bold text-stone-900">How we compare</h2>
-          <p className="mt-3 text-center text-sm text-stone-500">
-            Most HOA software charges $135+/mo just to unlock amenity booking. Neighbri starts at $29.
-          </p>
-
-          <div className="mt-10 space-y-3">
-            {[
-              { name: 'Neighbri Essentials', price: '$29/mo', highlight: true },
-              { name: 'Neighbri Growth', price: '$99/mo', highlight: true },
-              { name: 'Condo Control', price: '$135+/mo', highlight: false },
-              { name: 'AmenityBoss', price: '$145/mo', highlight: false },
-              { name: 'Omnify', price: '$149/mo', highlight: false },
-              { name: 'Buildium (with amenities)', price: '$192+/mo', highlight: false },
-              { name: 'Neighbri Enterprise', price: '$249/mo', highlight: true },
-              { name: 'AppFolio', price: '$280+ min/mo', highlight: false },
-              { name: 'BuildingLink', price: '$300-3,000/mo', highlight: false },
-            ].map((c) => (
-              <div
-                key={c.name}
-                className={`flex items-center justify-between rounded-xl px-5 py-3 text-sm ${
-                  c.highlight ? 'bg-emerald-50 border border-emerald-200 font-semibold text-emerald-800' : 'bg-stone-50 text-stone-600'
-                }`}
-              >
-                <span>{c.name}</span>
-                <span>{c.price}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* FAQ */}
       <section className="border-t border-stone-200 px-4 sm:px-6 py-16 sm:py-20">
         <div className="mx-auto max-w-3xl">
