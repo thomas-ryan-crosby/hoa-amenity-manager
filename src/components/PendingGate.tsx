@@ -11,6 +11,8 @@ const BYPASS_PATHS = [
   '/sign-up',
   '/join',
   '/onboard',
+  '/features',
+  '/pricing',
   '/account',
   '/internal',
   '/technology',
