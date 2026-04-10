@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   // Plan limits
   const planLimits: Record<string, { maxAmenities: number; maxMembers: number }> = {
-    free: { maxAmenities: 3, maxMembers: 25 },
+    free: { maxAmenities: 3, maxMembers: 50 },
     standard: { maxAmenities: 15, maxMembers: 500 },
     premium: { maxAmenities: 999, maxMembers: 9999 },
   }

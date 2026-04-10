@@ -6,25 +6,25 @@ import Link from 'next/link'
 const PLANS = [
   {
     id: 'free',
-    name: 'Free',
+    name: 'Starter',
     price: '$0',
     period: '/mo',
-    features: ['Up to 3 amenities', 'Up to 25 members', 'Email notifications', 'Calendar view'],
+    features: ['Up to 3 amenities', 'Up to 50 members', 'Booking calendar', 'Email notifications', 'Approval workflows', 'Waitlist management'],
   },
   {
     id: 'standard',
     name: 'Standard',
-    price: '$49',
+    price: '$29',
     period: '/mo',
     popular: true,
-    features: ['Up to 15 amenities', 'Up to 500 members', 'Stripe payments & deposits', 'Janitorial assignments', 'Booking insights'],
+    features: ['Up to 15 amenities', 'Up to 500 members', 'Stripe payments & deposits', 'Janitorial scheduling', 'Access instructions', 'Booking insights', 'Up to 3 admins'],
   },
   {
     id: 'premium',
-    name: 'Premium',
-    price: '$149',
+    name: 'Pro',
+    price: '$79',
     period: '/mo',
-    features: ['Unlimited amenities', 'Unlimited members', 'Everything in Standard', 'Priority support', 'Custom branding'],
+    features: ['Unlimited amenities', 'Unlimited members', 'Everything in Standard', 'Priority support', 'Custom branding', 'Unlimited admins'],
   },
 ]
 
