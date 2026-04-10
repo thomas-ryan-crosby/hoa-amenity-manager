@@ -29,8 +29,18 @@ export function PendingGate({ children }: { children: React.ReactNode }) {
   const { activeCommunity, loading: communityLoading } = useCommunity()
   const pathname = usePathname()
 
-  // Don't gate while loading, or on bypass paths, or if not logged in
-  if (authLoading || communityLoading || !user || shouldBypass(pathname)) {
+  // Bypass paths always show content
+  if (shouldBypass(pathname)) {
+    return <>{children}</>
+  }
+
+  // While auth or community is loading, show a blank screen (prevents flash)
+  if (authLoading || communityLoading) {
+    return <main className="min-h-screen bg-stone-50" />
+  }
+
+  // Not logged in — show content (middleware handles redirect to sign-in)
+  if (!user) {
     return <>{children}</>
   }
 
