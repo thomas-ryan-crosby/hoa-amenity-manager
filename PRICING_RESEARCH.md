@@ -82,53 +82,72 @@ Neighbri is **amenity-first** — not a full HOA management suite. This is a fea
 
 Flat pricing is simpler, more predictable, and avoids the sticker shock of per-unit models. Tiers based on what features matter at different scales.
 
+### Positioning: Revenue Generation Platform
+
+Neighbri isn't just a cost center for HOAs — it's a **revenue enabler**. Like ResortPass for hotels, Neighbri lets communities monetize their amenities through:
+
+- **Outside bookings** — non-residents can book amenities (pool day passes, event spaces, courts) generating new revenue for the HOA
+- **Dynamic pricing** — peak times, weekends, and holidays can command premium rates
+- **Guest fees** — residents can book for events with per-guest charges
+- **Deposit collection** — automated security deposits reduce property damage risk
+
+This shifts the conversation from "how much does Neighbri cost?" to "how much revenue does Neighbri generate?"
+
 ### Recommended Tiers
 
-| | **Starter** | **Standard** | **Pro** |
-|--|------------|-------------|---------|
-| **Price** | **Free** | **$29/mo** | **$79/mo** |
-| Annual billing | Free | $24/mo ($288/yr) | $66/mo ($792/yr) |
-| Amenities | 3 | 15 | Unlimited |
-| Members | 50 | 500 | Unlimited |
+All plans include a **30-day free trial**. No credit card required to start.
+
+| | **Essentials** | **Growth** | **Enterprise** |
+|--|---------------|-----------|---------------|
+| **Price** | **$29/mo** | **$99/mo** | **$249/mo** |
+| Annual billing | $24/mo ($288/yr) | $83/mo ($996/yr) | $208/mo ($2,496/yr) |
+| Amenities | 5 | 20 | Unlimited |
+| Members | 100 | 1,000 | Unlimited |
 | Booking calendar | Yes | Yes | Yes |
 | Email notifications | Yes | Yes | Yes |
 | Approval workflows | Yes | Yes | Yes |
 | Waitlist management | Yes | Yes | Yes |
-| Stripe payments | No | Yes | Yes |
+| Stripe payments | Yes | Yes | Yes |
 | Janitorial scheduling | No | Yes | Yes |
 | Access instructions | No | Yes | Yes |
 | Booking insights | No | Yes | Yes |
+| Outside/guest bookings | No | Yes | Yes |
+| Revenue reporting | No | Yes | Yes |
 | Custom branding | No | No | Yes |
 | Priority support | No | No | Yes |
-| Multiple admins | 1 | 3 | Unlimited |
+| Dedicated onboarding | No | No | Yes |
+| Multiple admins | 1 | 5 | Unlimited |
+| API access | No | No | Yes |
 
 ### Why These Prices
 
-**Free tier ($0):**
-- Captures small communities and drives word-of-mouth
-- HOA Messenger proves free amenity booking is viable
-- Near-zero marginal cost makes this sustainable
-- Conversion funnel: free → paid when they outgrow 3 amenities or need payments
-
-**Standard ($29/mo):**
-- Undercuts every competitor with amenity booking (Condo Control $135+, Buildium $192+, AmenityBoss $145)
-- Sweet spot for the typical HOA (100-400 homes, 5-10 amenities)
-- Stripe payments unlock at this tier, which is the main upgrade trigger
+**Essentials ($29/mo):**
+- Entry point that undercuts every competitor with amenity booking
+- Condo Control needs $135+, Buildium $192+, AmenityBoss $145
 - $29 is an easy "just approve it" expense for any HOA board
+- Stripe payments included from day one — no upgrade friction
+- 30-day free trial lowers the barrier to zero
 
-**Pro ($79/mo):**
-- For larger communities or those wanting premium features
-- Still cheaper than every competitor except HOA Messenger
-- Unlimited everything removes friction
-- Custom branding and priority support justify the premium
+**Growth ($99/mo):**
+- The money-making tier — outside bookings and revenue reporting
+- Communities generating $500+/mo in amenity revenue see immediate ROI
+- Janitorial scheduling, insights, and access instructions for operational efficiency
+- Sweet spot for the typical HOA (100-500 homes, 5-15 amenities)
+
+**Enterprise ($249/mo):**
+- For large communities (500+ homes) and management companies
+- Unlimited everything, API access, custom branding
+- Dedicated onboarding with white-glove setup
+- Still cheaper than BuildingLink ($300-3,000/mo), AppFolio ($280+ min)
+- Premium positioning justifies higher perceived value
 
 ### Revenue Projections
 
 | Scenario | Communities | Mix | MRR |
 |----------|-----------|-----|-----|
-| Conservative (6 months) | 20 | 10 free, 8 standard, 2 pro | $390/mo |
-| Moderate (12 months) | 100 | 40 free, 45 standard, 15 pro | $2,490/mo |
-| Growth (24 months) | 500 | 200 free, 225 standard, 75 pro | $12,375/mo |
+| Conservative (6 months) | 15 | 8 essentials, 5 growth, 2 enterprise | $1,225/mo |
+| Moderate (12 months) | 60 | 25 essentials, 25 growth, 10 enterprise | $5,690/mo |
+| Growth (24 months) | 250 | 100 essentials, 110 growth, 40 enterprise | $22,760/mo |
 
 ---
 

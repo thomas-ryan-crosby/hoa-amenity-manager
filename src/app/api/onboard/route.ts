@@ -15,7 +15,7 @@ const OnboardSchema = z.object({
   state: z.string().length(2, 'State must be 2-letter code'),
   zip: z.string().min(5, 'Zip code is required'),
   timezone: z.string().min(1, 'Timezone is required'),
-  plan: z.enum(['free', 'standard', 'premium']),
+  plan: z.enum(['standard', 'growth', 'premium']),
 })
 
 export async function POST(req: NextRequest) {
@@ -47,8 +47,8 @@ export async function POST(req: NextRequest) {
 
   // Plan limits
   const planLimits: Record<string, { maxAmenities: number; maxMembers: number }> = {
-    free: { maxAmenities: 3, maxMembers: 50 },
-    standard: { maxAmenities: 15, maxMembers: 500 },
+    standard: { maxAmenities: 5, maxMembers: 100 },
+    growth: { maxAmenities: 20, maxMembers: 1000 },
     premium: { maxAmenities: 999, maxMembers: 9999 },
   }
   const limits = planLimits[plan] ?? planLimits.free

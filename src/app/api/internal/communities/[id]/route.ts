@@ -29,7 +29,7 @@ const UpdateCommunitySchema = z.object({
   timezone: z.string().min(1).optional(),
   contactEmail: z.string().email().optional(),
   contactPhone: z.string().nullable().optional(),
-  plan: z.enum(['free', 'standard', 'premium']).optional(),
+  plan: z.enum(['free', 'standard', 'growth', 'premium']).optional(),
   maxAmenities: z.number().int().positive().optional(),
   maxMembers: z.number().int().positive().optional(),
   isActive: z.boolean().optional(),

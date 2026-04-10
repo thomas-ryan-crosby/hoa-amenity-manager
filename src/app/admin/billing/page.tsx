@@ -19,23 +19,23 @@ type StripeStatus = {
 }
 
 const PLAN_PRICING: Record<string, { label: string; price: string; color: string; features: string[] }> = {
-  free: {
-    label: 'Starter',
-    price: '$0/mo',
-    color: 'bg-stone-100 text-stone-700',
-    features: ['Up to 3 amenities', 'Up to 50 members', 'Booking calendar', 'Email notifications', 'Approval workflows', 'Waitlist management'],
-  },
   standard: {
-    label: 'Standard',
+    label: 'Essentials',
     price: '$29/mo',
+    color: 'bg-stone-100 text-stone-700',
+    features: ['Up to 5 amenities', 'Up to 100 members', 'Booking calendar', 'Email notifications', 'Approval workflows', 'Waitlist management', 'Stripe payments'],
+  },
+  growth: {
+    label: 'Growth',
+    price: '$99/mo',
     color: 'bg-emerald-100 text-emerald-700',
-    features: ['Up to 15 amenities', 'Up to 500 members', 'Stripe payments & deposits', 'Janitorial scheduling', 'Access instructions', 'Booking insights', 'Up to 3 admins'],
+    features: ['Up to 20 amenities', 'Up to 1,000 members', 'Outside/guest bookings', 'Revenue reporting', 'Janitorial scheduling', 'Access instructions', 'Booking insights', 'Up to 5 admins'],
   },
   premium: {
-    label: 'Pro',
-    price: '$79/mo',
+    label: 'Enterprise',
+    price: '$249/mo',
     color: 'bg-purple-100 text-purple-700',
-    features: ['Unlimited amenities', 'Unlimited members', 'Everything in Standard', 'Priority support', 'Custom branding', 'Unlimited admins'],
+    features: ['Unlimited amenities', 'Unlimited members', 'Everything in Growth', 'Custom branding', 'Priority support', 'Dedicated onboarding', 'API access', 'Unlimited admins'],
   },
 }
 

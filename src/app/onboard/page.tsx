@@ -5,26 +5,26 @@ import Link from 'next/link'
 
 const PLANS = [
   {
-    id: 'free',
-    name: 'Starter',
-    price: '$0',
-    period: '/mo',
-    features: ['Up to 3 amenities', 'Up to 50 members', 'Booking calendar', 'Email notifications', 'Approval workflows', 'Waitlist management'],
-  },
-  {
     id: 'standard',
-    name: 'Standard',
+    name: 'Essentials',
     price: '$29',
     period: '/mo',
+    features: ['Up to 5 amenities', 'Up to 100 members', 'Booking calendar', 'Email notifications', 'Approval workflows', 'Waitlist management', 'Stripe payments'],
+  },
+  {
+    id: 'growth',
+    name: 'Growth',
+    price: '$99',
+    period: '/mo',
     popular: true,
-    features: ['Up to 15 amenities', 'Up to 500 members', 'Stripe payments & deposits', 'Janitorial scheduling', 'Access instructions', 'Booking insights', 'Up to 3 admins'],
+    features: ['Up to 20 amenities', 'Up to 1,000 members', 'Outside/guest bookings', 'Revenue reporting', 'Janitorial scheduling', 'Access instructions', 'Booking insights', 'Up to 5 admins'],
   },
   {
     id: 'premium',
-    name: 'Pro',
-    price: '$79',
+    name: 'Enterprise',
+    price: '$249',
     period: '/mo',
-    features: ['Unlimited amenities', 'Unlimited members', 'Everything in Standard', 'Priority support', 'Custom branding', 'Unlimited admins'],
+    features: ['Unlimited amenities', 'Unlimited members', 'Everything in Growth', 'Custom branding', 'Priority support', 'Dedicated onboarding', 'API access', 'Unlimited admins'],
   },
 ]
 
@@ -75,9 +75,15 @@ export default function OnboardPage() {
           </h1>
           <p className="mt-2 text-sm text-stone-500">
             {step === 'plan'
-              ? 'Start managing amenity bookings for your community in minutes.'
+              ? 'Turn your amenities into a revenue stream. Like ResortPass, but for your community.'
               : 'Tell us about your community. You can update this later.'}
           </p>
+          {step === 'plan' && (
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200 px-4 py-1.5">
+              <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              <span className="text-sm font-medium text-emerald-700">30-day free trial on all plans</span>
+            </div>
+          )}
         </div>
 
         {/* Step 1: Plan selection */}
@@ -242,7 +248,7 @@ export default function OnboardPage() {
                 disabled={loading}
                 className="flex-1 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:bg-emerald-300"
               >
-                {loading ? 'Creating community...' : plan === 'free' ? 'Create community' : 'Create community & set up billing'}
+                {loading ? 'Creating community...' : 'Start 30-day free trial'}
               </button>
             </div>
 

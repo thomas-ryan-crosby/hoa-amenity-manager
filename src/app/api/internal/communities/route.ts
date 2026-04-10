@@ -59,7 +59,7 @@ const CreateCommunitySchema = z.object({
   timezone: z.string().min(1, 'Timezone is required'),
   contactEmail: z.string().email().nullable().optional(),
   contactPhone: z.string().nullable().optional(),
-  plan: z.enum(['free', 'standard', 'premium']),
+  plan: z.enum(['free', 'standard', 'growth', 'premium']),
   maxAmenities: z.number().int().positive(),
   maxMembers: z.number().int().positive(),
   // First admin — required for every new community

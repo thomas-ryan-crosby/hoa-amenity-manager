@@ -159,7 +159,7 @@ export interface Community {
   logoUrl: string | null
   contactEmail: string | null
   contactPhone: string | null
-  plan: 'free' | 'standard' | 'premium'
+  plan: 'free' | 'standard' | 'growth' | 'premium'
   isActive: boolean
   maxAmenities: number
   maxMembers: number
