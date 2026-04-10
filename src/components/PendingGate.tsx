@@ -32,8 +32,29 @@ export function PendingGate({ children }: { children: React.ReactNode }) {
     return <>{children}</>
   }
 
+  // If user has no community, send them to join
+  if (!activeCommunity) {
+    return (
+      <main className="min-h-screen bg-stone-50 flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">Neighbri</p>
+          <h1 className="mt-4 text-2xl font-bold text-stone-900">Join a community</h1>
+          <p className="mt-4 text-sm text-stone-600 leading-relaxed">
+            You need to join a community before you can start booking amenities.
+          </p>
+          <a
+            href="/join"
+            className="mt-6 inline-block rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
+          >
+            Find your community
+          </a>
+        </div>
+      </main>
+    )
+  }
+
   // If user has a community and it's not approved
-  if (activeCommunity && activeCommunity.status !== 'approved') {
+  if (activeCommunity.status !== 'approved') {
     return (
       <main className="min-h-screen bg-stone-50 flex items-center justify-center px-6">
         <div className="text-center max-w-md">
