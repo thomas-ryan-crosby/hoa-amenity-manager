@@ -1382,3 +1382,56 @@ export async function getPendingAdminInvitesByEmail(email: string): Promise<Pend
 export async function deletePendingAdminInvite(id: string): Promise<void> {
   await pendingAdminInvitesCol().doc(id).delete()
 }
+
+// ---------------------------------------------------------------------------
+// SUPPORT TICKETS (inbound emails)
+// ---------------------------------------------------------------------------
+
+export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed'
+
+export interface SupportTicket {
+  id: string
+  emailId: string
+  from: string
+  to: string[]
+  cc: string[]
+  subject: string
+  body: string
+  status: TicketStatus
+  notes: string
+  receivedAt: Date
+  updatedAt: Date
+}
+
+function supportTicketsCol() {
+  return adminDb.collection('supportTickets')
+}
+
+export async function createSupportTicket(data: Omit<SupportTicket, 'id'>): Promise<SupportTicket> {
+  const ref = await supportTicketsCol().add({
+    ...data,
+    receivedAt: Timestamp.fromDate(data.receivedAt),
+    updatedAt: Timestamp.fromDate(data.updatedAt),
+  })
+  return { id: ref.id, ...data }
+}
+
+export async function getSupportTickets(): Promise<SupportTicket[]> {
+  const snap = await supportTicketsCol().orderBy('receivedAt', 'desc').get()
+  return snap.docs.map((d) => {
+    const data = d.data()
+    return {
+      id: d.id,
+      ...data,
+      receivedAt: data.receivedAt ? toDate(data.receivedAt) : new Date(),
+      updatedAt: data.updatedAt ? toDate(data.updatedAt) : new Date(),
+    } as SupportTicket
+  })
+}
+
+export async function updateSupportTicket(id: string, data: Partial<Pick<SupportTicket, 'status' | 'notes'>>): Promise<void> {
+  await supportTicketsCol().doc(id).update({
+    ...data,
+    updatedAt: Timestamp.fromDate(new Date()),
+  })
+}
