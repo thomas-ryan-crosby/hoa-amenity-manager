@@ -97,6 +97,13 @@ export function NavBar() {
 
           {user && <CommunitySwitcher />}
 
+          {!user && (
+            <div className="hidden md:flex items-center gap-4 text-sm text-stone-600">
+              <Link href="/features" className="hover:text-stone-900">Features</Link>
+              <Link href="/pricing" className="hover:text-stone-900">Pricing</Link>
+            </div>
+          )}
+
           {user && (
             <div className="hidden md:flex items-center gap-4 text-sm text-stone-600">
               <Link href="/resident" className="hover:text-stone-900">
@@ -291,6 +298,21 @@ export function NavBar() {
           ) : (
             <div className="space-y-2 pt-2">
               <Link
+                href="/features"
+                className="block rounded-xl px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50"
+                onClick={closeMobile}
+              >
+                Features
+              </Link>
+              <Link
+                href="/pricing"
+                className="block rounded-xl px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50"
+                onClick={closeMobile}
+              >
+                Pricing
+              </Link>
+              <div className="pt-2 border-t border-stone-200 space-y-2">
+              <Link
                 href="/sign-in"
                 className="block w-full rounded-full bg-stone-900 px-4 py-2.5 text-center text-sm font-medium text-white"
                 onClick={closeMobile}
@@ -304,6 +326,7 @@ export function NavBar() {
               >
                 Sign up
               </Link>
+              </div>
             </div>
           )}
         </div>
