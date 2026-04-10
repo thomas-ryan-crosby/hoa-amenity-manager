@@ -1,36 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-
-const PLANS = [
-  {
-    id: 'standard',
-    name: 'Essentials',
-    price: '$29',
-    period: '/mo',
-    features: ['Up to 5 amenities', 'Up to 100 members', 'Booking calendar', 'Email notifications', 'Approval workflows', 'Waitlist management', 'Stripe payments'],
-  },
-  {
-    id: 'growth',
-    name: 'Growth',
-    price: '$99',
-    period: '/mo',
-    popular: true,
-    features: ['Up to 20 amenities', 'Up to 1,000 members', 'Outside/guest bookings', 'Revenue reporting', 'Janitorial scheduling', 'Access instructions', 'Booking insights', 'Up to 5 admins'],
-  },
-  {
-    id: 'premium',
-    name: 'Enterprise',
-    price: '$249',
-    period: '/mo',
-    features: ['Unlimited amenities', 'Unlimited members', 'Everything in Growth', 'Custom branding', 'Priority support', 'Dedicated onboarding', 'API access', 'Unlimited admins'],
-  },
-]
+import Script from 'next/script'
 
 export default function OnboardPage() {
   const [step, setStep] = useState<'plan' | 'details'>('plan')
-  const [plan, setPlan] = useState('free')
+  const [plan, setPlan] = useState('standard')
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
   const [city, setCity] = useState('')
@@ -39,6 +15,19 @@ export default function OnboardPage() {
   const [timezone, setTimezone] = useState('America/Chicago')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Listen for Stripe pricing table checkout completion
+  // Stripe redirects back or fires events — for now, provide a manual "Continue" button
+  // after the user views the pricing table
+  useEffect(() => {
+    // Check URL params for Stripe success redirect
+    const params = new URLSearchParams(window.location.search)
+    const selectedPlan = params.get('plan')
+    if (selectedPlan) {
+      setPlan(selectedPlan)
+      setStep('details')
+    }
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -54,7 +43,6 @@ export default function OnboardPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Unable to create community')
 
-      // Redirect to admin dashboard
       window.location.href = '/admin/dashboard'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -65,7 +53,7 @@ export default function OnboardPage() {
 
   return (
     <main className="min-h-screen bg-stone-50 px-6 py-12">
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-4xl">
         <Link href="/join" className="text-sm text-emerald-700 hover:text-emerald-900">&larr; Back to join</Link>
 
         <div className="mt-4">
@@ -75,61 +63,50 @@ export default function OnboardPage() {
           </h1>
           <p className="mt-2 text-sm text-stone-500">
             {step === 'plan'
-              ? 'Turn your amenities into a revenue stream. Like ResortPass, but for your community.'
+              ? 'Turn your amenities into a revenue stream. All plans include a 30-day free trial.'
               : 'Tell us about your community. You can update this later.'}
           </p>
-          {step === 'plan' && (
-            <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200 px-4 py-1.5">
-              <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-              <span className="text-sm font-medium text-emerald-700">30-day free trial on all plans</span>
-            </div>
-          )}
         </div>
 
-        {/* Step 1: Plan selection */}
+        {/* Step 1: Stripe Pricing Table */}
         {step === 'plan' && (
           <div className="mt-8">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {PLANS.map((p) => (
+            <Script
+              async
+              src="https://js.stripe.com/v3/pricing-table.js"
+              strategy="afterInteractive"
+            />
+            <div
+              dangerouslySetInnerHTML={{
+                __html: `<stripe-pricing-table pricing-table-id="prctbl_1TKlPEBBuISOmksbDQTkGmEh" publishable-key="pk_live_51RMEL2BBuISOmksbi0eTOMmSGCf1ZK7nqQnMAAmN6PYJn7SoyeIuJCEhiXQVaINCI99DZqEo3UeV4P56dXf7yriG00OGztty8j"></stripe-pricing-table>`,
+              }}
+            />
+
+            <div className="mt-8 rounded-2xl border border-stone-200 bg-white p-6 text-center">
+              <p className="text-sm text-stone-600">
+                Already completed checkout? Continue to set up your community.
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-3">
                 <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setPlan(p.id)}
-                  className={`relative rounded-2xl border-2 p-5 text-left transition ${
-                    plan === p.id
-                      ? 'border-emerald-500 bg-emerald-50'
-                      : 'border-stone-200 bg-white hover:border-stone-300'
-                  }`}
+                  onClick={() => { setPlan('standard'); setStep('details') }}
+                  className="rounded-full border border-stone-300 px-5 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-50"
                 >
-                  {p.popular && (
-                    <span className="absolute -top-2.5 right-4 rounded-full bg-emerald-600 px-2.5 py-0.5 text-[10px] font-semibold text-white">
-                      Popular
-                    </span>
-                  )}
-                  <p className="text-lg font-bold text-stone-900">{p.name}</p>
-                  <p className="mt-1">
-                    <span className="text-2xl font-bold text-stone-900">{p.price}</span>
-                    <span className="text-sm text-stone-500">{p.period}</span>
-                  </p>
-                  <ul className="mt-4 space-y-1.5">
-                    {p.features.map((f) => (
-                      <li key={f} className="flex items-center gap-2 text-xs text-stone-600">
-                        <svg className="h-3.5 w-3.5 flex-shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
+                  Continue with Essentials
                 </button>
-              ))}
+                <button
+                  onClick={() => { setPlan('growth'); setStep('details') }}
+                  className="rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-500"
+                >
+                  Continue with Growth
+                </button>
+                <button
+                  onClick={() => { setPlan('premium'); setStep('details') }}
+                  className="rounded-full border border-stone-300 px-5 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-50"
+                >
+                  Continue with Enterprise
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => setStep('details')}
-              className="mt-6 w-full rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
-            >
-              Continue with {PLANS.find((p) => p.id === plan)?.name} plan
-            </button>
           </div>
         )}
 
@@ -212,25 +189,6 @@ export default function OnboardPage() {
               </div>
             </div>
 
-            {/* Plan summary */}
-            <div className="rounded-2xl bg-stone-100 px-5 py-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-stone-900">
-                  {PLANS.find((p) => p.id === plan)?.name} Plan
-                </p>
-                <p className="text-xs text-stone-500">
-                  {PLANS.find((p) => p.id === plan)?.price}{PLANS.find((p) => p.id === plan)?.period}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setStep('plan')}
-                className="text-xs text-emerald-600 font-medium hover:text-emerald-700"
-              >
-                Change plan
-              </button>
-            </div>
-
             {error && (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
             )}
@@ -248,12 +206,12 @@ export default function OnboardPage() {
                 disabled={loading}
                 className="flex-1 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:bg-emerald-300"
               >
-                {loading ? 'Creating community...' : 'Start 30-day free trial'}
+                {loading ? 'Creating community...' : 'Create community'}
               </button>
             </div>
 
             <p className="text-center text-xs text-stone-400">
-              By creating a community you agree to the <a href="/terms" className="text-emerald-600 underline">Terms of Service</a> and <a href="/privacy" className="text-emerald-600 underline">Privacy Policy</a>.
+              By creating a community you agree to the <a href="/terms" target="_blank" className="text-emerald-600 underline">Terms of Service</a> and <a href="/privacy" target="_blank" className="text-emerald-600 underline">Privacy Policy</a>.
             </p>
           </form>
         )}
