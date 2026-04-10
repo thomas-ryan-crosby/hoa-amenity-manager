@@ -10,9 +10,12 @@ const BYPASS_PATHS = [
   '/sign-in',
   '/sign-up',
   '/join',
+  '/onboard',
   '/account',
   '/internal',
   '/technology',
+  '/terms',
+  '/privacy',
 ]
 
 function shouldBypass(pathname: string): boolean {
