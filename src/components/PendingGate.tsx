@@ -16,6 +16,7 @@ const BYPASS_PATHS = [
   '/get-started',
   '/features',
   '/how-it-works',
+  '/test-plan',
   '/pricing',
   '/account',
   '/internal',
