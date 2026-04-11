@@ -22,6 +22,7 @@ export async function GET() {
           capacity: a.capacity,
           rentalFee: Number(a.rentalFee),
           depositAmount: Number(a.depositAmount),
+          requiresApproval: a.requiresApproval ?? true,
           maxAdvanceBookingDays: a.maxAdvanceBookingDays,
           suggestedAmenityIds: a.suggestedAmenityIds ?? [],
           areaId: a.areaId ?? null,

@@ -113,6 +113,7 @@ type Amenity = {
   capacity: number
   rentalFee: number
   depositAmount: number
+  requiresApproval: boolean
   maxAdvanceBookingDays: number
   defaultTurnTimeHours: number
   suggestedAmenityIds: string[]
@@ -944,28 +945,29 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                   {group.area?.name ?? 'Other'}
                 </span>
                 {group.amenities.map((amenity) => (
-                  <button
-                    key={amenity.id}
-                    className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                      selectedAmenities.has(amenity.id)
-                        ? 'bg-stone-900 text-white'
-                        : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
-                    }`}
-                    onClick={(e) => handleAmenityClick(amenity.id, e)}
-                    type="button"
-                  >
-                    {amenity.name}
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-full p-1 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition -ml-1"
-                    onClick={() => setAmenityDetail(amenity)}
-                    aria-label={`Info about ${amenity.name}`}
-                  >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </button>
+                  <div key={amenity.id} className="flex items-center gap-0.5">
+                    <button
+                      className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                        selectedAmenities.has(amenity.id)
+                          ? 'bg-stone-900 text-white'
+                          : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                      }`}
+                      onClick={(e) => handleAmenityClick(amenity.id, e)}
+                      type="button"
+                    >
+                      {amenity.name}
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-full p-1 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition"
+                      onClick={() => setAmenityDetail(amenity)}
+                      aria-label={`Info about ${amenity.name}`}
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </button>
+                  </div>
                 ))}
               </div>
             ))}
