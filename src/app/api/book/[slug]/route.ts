@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { requireUser } from '@/lib/auth'
 import {
   getCommunityBySlug,
   getAllAmenities,
+  getResidentByFirebaseUid,
   createBookingWithAuditLog,
   getBookingById,
 } from '@/lib/firebase/db'
@@ -56,9 +58,6 @@ const ExternalBookingSchema = z.object({
   startDatetime: z.string().refine((s) => !isNaN(Date.parse(s)), 'Invalid date'),
   endDatetime: z.string().refine((s) => !isNaN(Date.parse(s)), 'Invalid date'),
   guestCount: z.number().int().positive(),
-  guestName: z.string().min(1, 'Name is required'),
-  guestEmail: z.string().email('Valid email is required'),
-  guestPhone: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
 })
 
@@ -66,11 +65,21 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
+  // Require authentication
+  const auth = await requireUser()
+  if (!auth.ok) return auth.response
+
   const { slug } = await params
 
   const community = await getCommunityBySlug(slug)
   if (!community || !community.isActive) {
     return NextResponse.json({ error: 'Community not found' }, { status: 404 })
+  }
+
+  // Get the user's resident profile
+  const resident = await getResidentByFirebaseUid(auth.userId)
+  if (!resident) {
+    return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
   }
 
   const body = await req.json().catch(() => null)
@@ -82,7 +91,7 @@ export async function POST(
     )
   }
 
-  const { amenityId, startDatetime, endDatetime, guestCount, guestName, guestEmail, guestPhone, notes } = parsed.data
+  const { amenityId, startDatetime, endDatetime, guestCount, notes } = parsed.data
 
   // Verify the amenity allows external booking
   const amenities = await getAllAmenities(community.id)
@@ -91,10 +100,10 @@ export async function POST(
     return NextResponse.json({ error: 'This amenity is not available for external booking' }, { status: 400 })
   }
 
-  // Create the booking with isExternal flag
+  // Create the booking with isExternal flag, linked to the user's resident profile
   const booking = await createBookingWithAuditLog(
     {
-      residentId: '',
+      residentId: resident.id,
       amenityId,
       status: 'INQUIRY_RECEIVED',
       startDatetime: new Date(startDatetime),
@@ -103,9 +112,9 @@ export async function POST(
       notes: notes ?? null,
       anonymous: false,
       isExternal: true,
-      bookedByName: guestName,
-      bookedByEmail: guestEmail,
-      bookedByPhone: guestPhone ?? null,
+      bookedByName: resident.name,
+      bookedByEmail: resident.email,
+      bookedByPhone: resident.phone ?? null,
       bookedByStaffId: null,
       sendCommsToBookee: true,
       feeWaived: false,

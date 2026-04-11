@@ -182,7 +182,7 @@ export default function FeaturesPage() {
           <p className="mt-3 text-stone-500">Start your 30-day free trial. Setup takes under 5 minutes.</p>
           <div className="mt-6 flex flex-wrap justify-center gap-4">
             <Link
-              href="/onboard"
+              href="/sign-up"
               className="rounded-full bg-emerald-600 px-8 py-3.5 text-sm font-semibold text-white hover:bg-emerald-500 transition"
             >
               Start free trial

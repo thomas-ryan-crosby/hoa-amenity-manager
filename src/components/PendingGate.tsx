@@ -12,6 +12,8 @@ const BYPASS_PATHS = [
   '/join',
   '/onboard',
   '/book',
+  '/browse',
+  '/get-started',
   '/features',
   '/pricing',
   '/account',
@@ -45,22 +47,45 @@ export function PendingGate({ children }: { children: React.ReactNode }) {
     return <>{children}</>
   }
 
-  // If user has no community, send them to join
+  // If user has no community, show the get-started choice screen
   if (!activeCommunity) {
     return (
-      <main className="min-h-screen bg-stone-50 flex items-center justify-center px-6">
-        <div className="text-center max-w-md">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">Neighbri</p>
-          <h1 className="mt-4 text-2xl font-bold text-stone-900">Join a community</h1>
-          <p className="mt-4 text-sm text-stone-600 leading-relaxed">
-            You need to join a community before you can start booking amenities.
-          </p>
-          <a
-            href="/join"
-            className="mt-6 inline-block rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
-          >
-            Find your community
-          </a>
+      <main className="min-h-screen bg-stone-50 px-4 sm:px-6 py-12">
+        <div className="mx-auto max-w-2xl">
+          <div className="text-center mb-10">
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">Neighbri</p>
+            <h1 className="mt-3 text-3xl font-bold text-stone-900">What brings you here?</h1>
+            <p className="mt-2 text-sm text-stone-500">Choose how you want to use Neighbri.</p>
+          </div>
+          <div className="space-y-4">
+            <a href="/join" className="block rounded-2xl border-2 border-stone-200 bg-white p-6 hover:border-emerald-400 hover:bg-emerald-50 transition group">
+              <div className="flex items-start gap-4">
+                <span className="text-3xl">🏠</span>
+                <div>
+                  <h2 className="text-lg font-semibold text-stone-900 group-hover:text-emerald-800">I&apos;m a resident</h2>
+                  <p className="mt-1 text-sm text-stone-500">Join your community to browse and book amenities.</p>
+                </div>
+              </div>
+            </a>
+            <a href="/onboard" className="block rounded-2xl border-2 border-stone-200 bg-white p-6 hover:border-emerald-400 hover:bg-emerald-50 transition group">
+              <div className="flex items-start gap-4">
+                <span className="text-3xl">⚙️</span>
+                <div>
+                  <h2 className="text-lg font-semibold text-stone-900 group-hover:text-emerald-800">I manage a community</h2>
+                  <p className="mt-1 text-sm text-stone-500">Set up your HOA on Neighbri and start managing bookings.</p>
+                </div>
+              </div>
+            </a>
+            <a href="/browse" className="block rounded-2xl border-2 border-stone-200 bg-white p-6 hover:border-emerald-400 hover:bg-emerald-50 transition group">
+              <div className="flex items-start gap-4">
+                <span className="text-3xl">🎾</span>
+                <div>
+                  <h2 className="text-lg font-semibold text-stone-900 group-hover:text-emerald-800">I want to book as a guest</h2>
+                  <p className="mt-1 text-sm text-stone-500">Browse amenities open to the public near you.</p>
+                </div>
+              </div>
+            </a>
+          </div>
         </div>
       </main>
     )

@@ -139,7 +139,7 @@ export default function PricingPage() {
               </ul>
 
               <Link
-                href="/onboard"
+                href="/sign-up"
                 className={`mt-6 block w-full rounded-full py-3 text-center text-sm font-semibold transition ${
                   p.popular
                     ? 'bg-emerald-600 text-white hover:bg-emerald-500'
@@ -180,7 +180,7 @@ export default function PricingPage() {
           <h2 className="text-2xl font-bold text-stone-900">Ready to get started?</h2>
           <p className="mt-3 text-stone-500">Start your 30-day free trial. No credit card required.</p>
           <Link
-            href="/onboard"
+            href="/sign-up"
             className="mt-6 inline-block rounded-full bg-emerald-600 px-8 py-3.5 text-sm font-semibold text-white hover:bg-emerald-500 transition"
           >
             Start free trial

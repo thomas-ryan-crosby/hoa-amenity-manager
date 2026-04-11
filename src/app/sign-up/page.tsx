@@ -53,8 +53,8 @@ export default function SignUpPage() {
         console.error('Session creation failed:', sessionRes.status)
       }
 
-      // Redirect to join page so the user can enter an invite code
-      window.location.href = '/join'
+      // Redirect to get-started page so user can choose their path
+      window.location.href = '/get-started'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign up failed')
     } finally {

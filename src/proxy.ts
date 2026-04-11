@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const publicPaths = ['/', '/sign-in', '/sign-up', '/technology', '/join', '/onboard', '/features', '/pricing', '/terms', '/privacy', '/book']
+const publicPaths = ['/', '/sign-in', '/sign-up', '/technology', '/join', '/onboard', '/features', '/pricing', '/terms', '/privacy', '/get-started', '/browse']
 
 function isPublic(pathname: string) {
   if (publicPaths.includes(pathname)) return true
@@ -13,6 +13,7 @@ function isPublic(pathname: string) {
   if (pathname === '/api/calendar/events') return true
   if (pathname.startsWith('/api/communities')) return true
   if (pathname.startsWith('/api/book/')) return true
+  if (pathname.startsWith('/api/browse')) return true
   return false
 }
 

@@ -28,7 +28,7 @@ export default async function Home() {
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
             <Link
-              href="/onboard"
+              href="/sign-up"
               className="rounded-full bg-emerald-600 px-8 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 transition"
             >
               Start free trial
@@ -226,7 +226,7 @@ export default async function Home() {
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link
-              href="/onboard"
+              href="/sign-up"
               className="rounded-full bg-emerald-600 px-8 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 transition"
             >
               Start your 30-day free trial
