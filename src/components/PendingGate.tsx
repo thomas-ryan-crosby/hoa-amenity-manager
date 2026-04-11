@@ -29,7 +29,7 @@ function shouldBypass(pathname: string): boolean {
 
 export function PendingGate({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth()
-  const { activeCommunity, loading: communityLoading } = useCommunity()
+  const { activeCommunity, communities, loading: communityLoading } = useCommunity()
   const pathname = usePathname()
 
   // Bypass paths always show content
@@ -37,7 +37,7 @@ export function PendingGate({ children }: { children: React.ReactNode }) {
     return <>{children}</>
   }
 
-  // While auth or community is loading, show a blank screen (prevents flash)
+  // While auth or community is loading, show nothing (prevents flash)
   if (authLoading || communityLoading) {
     return <main className="min-h-screen bg-stone-50" />
   }
@@ -47,7 +47,13 @@ export function PendingGate({ children }: { children: React.ReactNode }) {
     return <>{children}</>
   }
 
-  // If user has no community, show the get-started choice screen
+  // If user has communities but no active one selected, just show content
+  // (this happens briefly during community switch or when cookie is being set)
+  if (!activeCommunity && communities.length > 0) {
+    return <>{children}</>
+  }
+
+  // If user truly has no communities, show the get-started choice screen
   if (!activeCommunity) {
     return (
       <main className="min-h-screen bg-stone-50 px-4 sm:px-6 py-12">
