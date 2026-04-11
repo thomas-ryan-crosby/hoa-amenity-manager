@@ -41,6 +41,7 @@ export default async function Home() {
             </Link>
           </div>
           <p className="mt-4 text-xs text-stone-400">No credit card required. Setup takes under 5 minutes.</p>
+          <p className="mt-2 text-xs text-stone-400">Residents join for free. Pricing is for communities managing their amenities.</p>
         </div>
       </section>
 
@@ -56,8 +57,8 @@ export default async function Home() {
             <p className="mt-1 text-sm text-stone-500">Online booking</p>
           </div>
           <div>
-            <p className="text-3xl font-bold text-stone-900">$0</p>
-            <p className="mt-1 text-sm text-stone-500">Setup fees</p>
+            <p className="text-3xl font-bold text-stone-900">Free</p>
+            <p className="mt-1 text-sm text-stone-500">For residents</p>
           </div>
           <div>
             <p className="text-3xl font-bold text-stone-900">30 days</p>

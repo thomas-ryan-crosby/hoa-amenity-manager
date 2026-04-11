@@ -97,6 +97,9 @@ export default function PricingPage() {
           <p className="mt-4 text-lg text-stone-500 max-w-xl mx-auto">
             All plans include a 30-day free trial. No credit card required. Cancel anytime.
           </p>
+          <p className="mt-2 text-sm text-stone-400">
+            Residents always join for free — pricing is for communities managing their amenities.
+          </p>
         </div>
       </section>
 
