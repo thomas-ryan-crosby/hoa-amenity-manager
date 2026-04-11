@@ -52,6 +52,9 @@ type Amenity = {
   rules: string | null
   hasAccessInstructions: boolean
   accessInstructions: string | null
+  allowExternalBooking: boolean
+  externalRentalFee: number
+  externalDepositAmount: number
 }
 
 type AmenityForm = {
@@ -81,6 +84,9 @@ type AmenityForm = {
   rules: string
   hasAccessInstructions: boolean
   accessInstructions: string
+  allowExternalBooking: boolean
+  externalRentalFee: number
+  externalDepositAmount: number
 }
 
 const emptyAmenityForm: AmenityForm = {
@@ -110,6 +116,9 @@ const emptyAmenityForm: AmenityForm = {
   rules: '',
   hasAccessInstructions: false,
   accessInstructions: '',
+  allowExternalBooking: false,
+  externalRentalFee: 0,
+  externalDepositAmount: 0,
 }
 
 function toAmenityForm(amenity: Amenity | null): AmenityForm {
@@ -141,6 +150,9 @@ function toAmenityForm(amenity: Amenity | null): AmenityForm {
     rules: amenity.rules ?? '',
     hasAccessInstructions: amenity.hasAccessInstructions ?? false,
     accessInstructions: amenity.accessInstructions ?? '',
+    allowExternalBooking: amenity.allowExternalBooking ?? false,
+    externalRentalFee: amenity.externalRentalFee ?? 0,
+    externalDepositAmount: amenity.externalDepositAmount ?? 0,
   }
 }
 
@@ -341,6 +353,9 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
       rules: f.hasRules ? (f.rules || null) : null,
       hasAccessInstructions: f.hasAccessInstructions,
       accessInstructions: f.hasAccessInstructions ? (f.accessInstructions || null) : null,
+      allowExternalBooking: f.allowExternalBooking,
+      externalRentalFee: f.allowExternalBooking ? Number(f.externalRentalFee) : 0,
+      externalDepositAmount: f.allowExternalBooking ? Number(f.externalDepositAmount) : 0,
     }
 
     const url = selectedAmenity ? `/api/admin/amenities/${selectedAmenity.id}` : '/api/admin/amenities'
@@ -660,6 +675,17 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
                       <p className="text-stone-700">{selectedAmenity.suggestedAmenityIds.map((id) => amenities.find((a) => a.id === id)?.name ?? id).join(', ')}</p>
                     </div>
                   )}
+                  {/* External booking */}
+                  {selectedAmenity.allowExternalBooking && (
+                    <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                      <p className="text-xs font-medium text-emerald-700 mb-1">External Bookings Enabled</p>
+                      <p className="text-sm text-emerald-800">
+                        {selectedAmenity.externalRentalFee > 0
+                          ? `$${selectedAmenity.externalRentalFee} rental${selectedAmenity.externalDepositAmount > 0 ? ` + $${selectedAmenity.externalDepositAmount} deposit` : ''}`
+                          : 'Same pricing as residents'}
+                      </p>
+                    </div>
+                  )}
                   {/* Blackout dates */}
                   {selectedAmenity.blackoutDates?.length > 0 && (
                     <div className="mt-4">
@@ -894,6 +920,28 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
                     Instructions
                     <textarea className="mt-2 min-h-32 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-stone-900" placeholder="Gate code, key location, WiFi password, etc." value={f.accessInstructions} onChange={(e) => set({ accessInstructions: e.target.value })} />
                   </label>
+                </div>
+              )}
+
+              {/* -- External booking toggle -- */}
+              <div className="border-t border-stone-200 pt-5">
+                <Toggle checked={f.allowExternalBooking} onChange={(v) => set({ allowExternalBooking: v })} label="Allow external bookings" tip="When enabled, non-residents can book this amenity through a public booking page. Great for generating revenue from pool day passes, event space rentals, or court time." />
+              </div>
+
+              {f.allowExternalBooking && (
+                <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 space-y-3">
+                  <p className="text-xs font-medium text-emerald-700">External guest pricing</p>
+                  <p className="text-xs text-emerald-600">Set different prices for non-residents. Leave at $0 to use the same price as residents.</p>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <label className="text-sm font-medium text-stone-700">
+                      External rental fee ($)
+                      <input className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-stone-900" type="number" min={0} step={0.01} value={f.externalRentalFee} onChange={(e) => set({ externalRentalFee: Number(e.target.value) })} />
+                    </label>
+                    <label className="text-sm font-medium text-stone-700">
+                      External deposit ($)
+                      <input className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-stone-900" type="number" min={0} step={0.01} value={f.externalDepositAmount} onChange={(e) => set({ externalDepositAmount: Number(e.target.value) })} />
+                    </label>
+                  </div>
                 </div>
               )}
 

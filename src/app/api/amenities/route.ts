@@ -30,6 +30,9 @@ export async function GET() {
           rules: a.rules ?? null,
           isDefault: a.isDefault ?? false,
           defaultTurnTimeHours: a.defaultTurnTimeHours ?? 0,
+          allowExternalBooking: a.allowExternalBooking ?? false,
+          externalRentalFee: a.externalRentalFee ?? 0,
+          externalDepositAmount: a.externalDepositAmount ?? 0,
           blackoutDates: blackouts.map((b) => ({
             start: b.startDate.toISOString(),
             end: b.endDate.toISOString(),

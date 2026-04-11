@@ -75,6 +75,7 @@ export async function getConflictingBookings(
         sendCommsToBookee: data.sendCommsToBookee ?? false,
         feeWaived: data.feeWaived ?? false,
         anonymous: data.anonymous ?? false,
+        isExternal: data.isExternal ?? false,
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
         updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
       })

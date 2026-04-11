@@ -73,6 +73,9 @@ export interface Amenity {
   rules: string | null             // rules text shown to residents
   hasAccessInstructions: boolean   // sends access info before booking
   accessInstructions: string | null // access info sent 1hr before event
+  allowExternalBooking: boolean    // allow non-residents to book
+  externalRentalFee: number        // fee for external guests (0 = same as resident)
+  externalDepositAmount: number    // deposit for external guests
 }
 
 export interface TurnWindow {
@@ -117,6 +120,8 @@ export interface Booking {
   bookedByStaffId: string | null    // PM who created the booking
   sendCommsToBookee: boolean        // whether to CC the bookee on emails
   feeWaived: boolean
+  // External booking
+  isExternal: boolean               // booked by a non-resident (3rd party)
   // Privacy
   anonymous: boolean                // masks resident info on public calendar
 }
@@ -333,6 +338,9 @@ export async function createAmenity(
     rules: data.rules ?? null,
     hasAccessInstructions: data.hasAccessInstructions ?? false,
     accessInstructions: data.accessInstructions ?? null,
+    allowExternalBooking: data.allowExternalBooking ?? false,
+    externalRentalFee: data.externalRentalFee ?? 0,
+    externalDepositAmount: data.externalDepositAmount ?? 0,
     areaId: data.areaId ?? null,
     sortOrder: data.sortOrder ?? 0,
   }
@@ -630,6 +638,7 @@ function bookingFromDoc(doc: FirebaseFirestore.DocumentSnapshot): Booking | null
     sendCommsToBookee: data.sendCommsToBookee ?? false,
     feeWaived: data.feeWaived ?? false,
     anonymous: data.anonymous ?? false,
+    isExternal: data.isExternal ?? false,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   }
@@ -655,6 +664,7 @@ function bookingFromQueryDoc(doc: FirebaseFirestore.QueryDocumentSnapshot): Book
     sendCommsToBookee: data.sendCommsToBookee ?? false,
     feeWaived: data.feeWaived ?? false,
     anonymous: data.anonymous ?? false,
+    isExternal: data.isExternal ?? false,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   }
@@ -941,7 +951,7 @@ export async function countRecentInspectionsByStaff(
 // ---------------------------------------------------------------------------
 
 export async function createBookingWithAuditLog(
-  bookingData: Omit<Booking, 'id' | 'createdAt' | 'updatedAt' | 'stripePaymentIntentId' | 'stripeDepositIntentId' | 'bookedByName' | 'bookedByEmail' | 'bookedByPhone' | 'bookedByStaffId' | 'sendCommsToBookee' | 'feeWaived' | 'anonymous'> & Partial<Pick<Booking, 'stripePaymentIntentId' | 'stripeDepositIntentId' | 'bookedByName' | 'bookedByEmail' | 'bookedByPhone' | 'bookedByStaffId' | 'sendCommsToBookee' | 'feeWaived' | 'anonymous'>>,
+  bookingData: Omit<Booking, 'id' | 'createdAt' | 'updatedAt' | 'stripePaymentIntentId' | 'stripeDepositIntentId' | 'bookedByName' | 'bookedByEmail' | 'bookedByPhone' | 'bookedByStaffId' | 'sendCommsToBookee' | 'feeWaived' | 'anonymous' | 'isExternal'> & Partial<Pick<Booking, 'stripePaymentIntentId' | 'stripeDepositIntentId' | 'bookedByName' | 'bookedByEmail' | 'bookedByPhone' | 'bookedByStaffId' | 'sendCommsToBookee' | 'feeWaived' | 'anonymous' | 'isExternal'>> & { communityId?: string },
   agent: string,
   event: string,
 ): Promise<Booking> {
@@ -961,6 +971,7 @@ export async function createBookingWithAuditLog(
     sendCommsToBookee: bookingData.sendCommsToBookee ?? false,
     feeWaived: bookingData.feeWaived ?? false,
     anonymous: bookingData.anonymous ?? false,
+    isExternal: bookingData.isExternal ?? false,
     startDatetime: Timestamp.fromDate(bookingData.startDatetime),
     endDatetime: Timestamp.fromDate(bookingData.endDatetime),
     createdAt: nowTs,
@@ -991,6 +1002,7 @@ export async function createBookingWithAuditLog(
     sendCommsToBookee: bookingData.sendCommsToBookee ?? false,
     feeWaived: bookingData.feeWaived ?? false,
     anonymous: bookingData.anonymous ?? false,
+    isExternal: bookingData.isExternal ?? false,
     createdAt: now,
     updatedAt: now,
   }
