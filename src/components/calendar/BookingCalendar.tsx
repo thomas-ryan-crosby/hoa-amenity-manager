@@ -173,7 +173,7 @@ const STATUS_BADGE_STYLES: Record<string, string> = {
 }
 
 export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string | null }) {
-  const { activeCommunity, switchVersion } = useCommunity()
+  const { activeCommunity } = useCommunity()
   const communityTz = activeCommunity?.timezone ?? 'America/Chicago'
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [amenities, setAmenities] = useState<Amenity[]>([])
@@ -308,8 +308,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
     }
 
     loadCalendar()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [switchVersion])
+  }, [])
 
   // Group amenities by area for tab rendering
   const amenityGroups = useMemo(() => {

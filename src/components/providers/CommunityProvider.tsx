@@ -17,8 +17,6 @@ type CommunityContextType = {
   communities: CommunityInfo[]
   switchCommunity: (communityId: string) => Promise<void>
   loading: boolean
-  /** Increments on every community switch — components can use this as a refetch trigger */
-  switchVersion: number
 }
 
 const CommunityContext = createContext<CommunityContextType>({
@@ -26,7 +24,6 @@ const CommunityContext = createContext<CommunityContextType>({
   communities: [],
   switchCommunity: async () => {},
   loading: true,
-  switchVersion: 0,
 })
 
 export function useCommunity() {
@@ -38,7 +35,6 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   const [communities, setCommunities] = useState<CommunityInfo[]>([])
   const [activeCommunity, setActiveCommunity] = useState<CommunityInfo | null>(null)
   const [loading, setLoading] = useState(true)
-  const [switchVersion, setSwitchVersion] = useState(0)
 
   useEffect(() => {
     if (!user) { setCommunities([]); setActiveCommunity(null); setLoading(false); return }
@@ -74,23 +70,23 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   }, [user])
 
   async function switchCommunity(communityId: string) {
-    // Set active community in state immediately so the UI updates
+    // Set active community in state immediately so the spinner shows the right name
     const target = communities.find((c) => c.id === communityId)
     setActiveCommunity(target ?? null)
 
-    // Set the cookie server-side
+    // Set the cookie server-side, then reload to refetch all page data
+    // The branded spinner in PendingGate covers the reload cleanly
     await fetch('/api/communities/switch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ communityId }),
     })
 
-    // Bump version so components refetch their data in-place
-    setSwitchVersion((v) => v + 1)
+    window.location.reload()
   }
 
   return (
-    <CommunityContext.Provider value={{ activeCommunity, communities, switchCommunity, loading, switchVersion }}>
+    <CommunityContext.Provider value={{ activeCommunity, communities, switchCommunity, loading }}>
       {children}
     </CommunityContext.Provider>
   )
