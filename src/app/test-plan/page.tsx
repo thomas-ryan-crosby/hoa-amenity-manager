@@ -124,9 +124,9 @@ export default function TestPlanPage() {
             It should take about <strong>45 minutes</strong> to complete. Your feedback is invaluable — please note
             any bugs, confusing moments, or ideas for improvement as you go.
           </p>
-          <div className="mt-4 rounded-xl bg-amber-50 border border-amber-300 px-5 py-4 text-sm text-amber-900">
+          <div className="mt-4 rounded-xl bg-red-50 border border-red-200 px-5 py-4 text-sm text-red-900">
             <p className="font-semibold">A note about payments during testing:</p>
-            <ul className="mt-2 space-y-1 text-amber-800">
+            <ul className="mt-2 space-y-1 text-red-800">
               <li>&bull; <strong>Subscriptions are fine</strong> — all plans have a 30-day free trial. Your trial will be cancelled after testing, so you won&apos;t be charged.</li>
               <li>&bull; <strong>Skip amenity payments</strong> — if a booking asks for payment via Stripe checkout, skip that step and note it in your feedback. Only book free amenities during testing.</li>
             </ul>
