@@ -70,6 +70,21 @@ export default function BillingPage() {
       })
   }, [])
 
+  const [openingPortal, setOpeningPortal] = useState(false)
+
+  async function openCustomerPortal() {
+    setOpeningPortal(true)
+    try {
+      const res = await fetch('/api/admin/billing/portal', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Unable to open billing portal')
+      window.location.href = data.url
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to open billing portal')
+      setOpeningPortal(false)
+    }
+  }
+
   async function saveStripeConfig(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
@@ -134,12 +149,12 @@ export default function BillingPage() {
         ) : billing && planInfo ? (
           <div className="space-y-6">
 
-            {/* Neighbri plan & pricing */}
+            {/* Subscription management */}
             <div className="rounded-2xl border border-stone-200 bg-white p-6">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-stone-400">
-                    Neighbri Plan
+                    Neighbri Subscription
                   </p>
                   <div className="mt-2 flex items-center gap-3">
                     <h2 className="text-2xl font-bold text-stone-900">{planInfo.label}</h2>
@@ -149,29 +164,17 @@ export default function BillingPage() {
                   </div>
                   <p className="mt-1 text-sm text-stone-500">{billing.communityName}</p>
                 </div>
-                <a
-                  href="mailto:support@neighbri.com?subject=Plan change request"
-                  className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
+                <button
+                  onClick={openCustomerPortal}
+                  disabled={openingPortal}
+                  className="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-stone-800 disabled:bg-stone-400"
                 >
-                  Change plan
-                </a>
+                  {openingPortal ? 'Opening...' : 'Manage subscription'}
+                </button>
               </div>
-
-              <div className="mt-5 border-t border-stone-100 pt-5">
-                <p className="text-xs font-medium uppercase tracking-wide text-stone-400 mb-3">
-                  What's Included
-                </p>
-                <ul className="space-y-2">
-                  {planInfo.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm text-stone-600">
-                      <svg className="h-4 w-4 flex-shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <p className="mt-4 text-xs text-stone-400">
+                Update your payment method, change plans, view invoices, or cancel your subscription through the Stripe Customer Portal.
+              </p>
             </div>
 
             {/* Usage */}
