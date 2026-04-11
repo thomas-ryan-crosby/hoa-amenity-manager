@@ -544,7 +544,14 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   }, [selectedAmenities])
 
   if (loading) {
-    return <div className="h-[640px] animate-pulse rounded-3xl bg-stone-100" />
+    return (
+      <div className="h-[640px] flex items-center justify-center rounded-3xl border border-stone-200 bg-white">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-stone-200 border-t-emerald-600" />
+          <p className="mt-3 text-xs text-stone-400">Loading calendar...</p>
+        </div>
+      </div>
+    )
   }
 
   // No amenities — prompt admin to create one, or inform resident

@@ -37,9 +37,16 @@ export function PendingGate({ children }: { children: React.ReactNode }) {
     return <>{children}</>
   }
 
-  // While auth or community is loading, show nothing (prevents flash)
+  // While auth or community is loading, show a branded loading screen
   if (authLoading || communityLoading) {
-    return <main className="min-h-screen bg-stone-50" />
+    return (
+      <main className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-stone-200 border-t-emerald-600" />
+          <p className="mt-4 text-xs font-medium uppercase tracking-[0.2em] text-stone-400">Neighbri</p>
+        </div>
+      </main>
+    )
   }
 
   // Not logged in — show content (middleware handles redirect to sign-in)
