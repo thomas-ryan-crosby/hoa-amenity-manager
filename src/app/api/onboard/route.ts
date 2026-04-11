@@ -47,8 +47,8 @@ export async function POST(req: NextRequest) {
 
   // Plan limits
   const planLimits: Record<string, { maxAmenities: number; maxMembers: number }> = {
-    standard: { maxAmenities: 5, maxMembers: 100 },
-    growth: { maxAmenities: 20, maxMembers: 1000 },
+    standard: { maxAmenities: 3, maxMembers: 50 },
+    growth: { maxAmenities: 10, maxMembers: 300 },
     premium: { maxAmenities: 999, maxMembers: 9999 },
   }
   const limits = planLimits[plan] ?? planLimits.free

@@ -27,13 +27,13 @@ const PLAN_PRICING: Record<string, { label: string; price: string; color: string
     label: 'Essentials',
     price: '$29/mo',
     color: 'bg-stone-100 text-stone-700',
-    features: ['Up to 5 amenities', 'Up to 100 members', 'Booking calendar', 'Email notifications', 'Approval workflows', 'Waitlist management', 'Stripe payments'],
+    features: ['Up to 3 amenities', 'Up to 50 members', 'Booking calendar', 'Email notifications', 'Approval workflows', 'Waitlist management', 'Stripe payments'],
   },
   growth: {
     label: 'Growth',
     price: '$99/mo',
     color: 'bg-emerald-100 text-emerald-700',
-    features: ['Up to 20 amenities', 'Up to 1,000 members', 'Outside/guest bookings', 'Revenue reporting', 'Janitorial scheduling', 'Access instructions', 'Booking insights', 'Up to 5 admins'],
+    features: ['Up to 10 amenities', 'Up to 300 members', 'Outside/guest bookings', 'Revenue reporting', 'Janitorial scheduling', 'Access instructions', 'Booking insights', 'Up to 5 admins'],
   },
   premium: {
     label: 'Enterprise',

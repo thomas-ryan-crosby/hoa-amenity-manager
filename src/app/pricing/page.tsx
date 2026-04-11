@@ -8,8 +8,8 @@ const PLANS = [
     annual: '$24/mo billed annually',
     desc: 'For small communities getting started with amenity booking.',
     features: [
-      { name: 'Up to 5 amenities', included: true },
-      { name: 'Up to 100 members', included: true },
+      { name: 'Up to 3 amenities', included: true },
+      { name: 'Up to 50 members', included: true },
       { name: 'Booking calendar', included: true },
       { name: 'Email notifications', included: true },
       { name: 'Approval workflows', included: true },
@@ -32,8 +32,8 @@ const PLANS = [
     popular: true,
     desc: 'For communities ready to monetize their amenities and streamline operations.',
     features: [
-      { name: 'Up to 20 amenities', included: true },
-      { name: 'Up to 1,000 members', included: true },
+      { name: 'Up to 10 amenities', included: true },
+      { name: 'Up to 300 members', included: true },
       { name: 'Booking calendar', included: true },
       { name: 'Email notifications', included: true },
       { name: 'Approval workflows', included: true },

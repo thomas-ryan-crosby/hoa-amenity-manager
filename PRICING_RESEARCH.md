@@ -101,8 +101,8 @@ All plans include a **30-day free trial**. No credit card required to start.
 |--|---------------|-----------|---------------|
 | **Price** | **$29/mo** | **$99/mo** | **$249/mo** |
 | Annual billing | $24/mo ($288/yr) | $83/mo ($996/yr) | $208/mo ($2,496/yr) |
-| Amenities | 5 | 20 | Unlimited |
-| Members | 100 | 1,000 | Unlimited |
+| Amenities | 3 | 10 | Unlimited |
+| Members | 50 | 300 | Unlimited |
 | Booking calendar | Yes | Yes | Yes |
 | Email notifications | Yes | Yes | Yes |
 | Approval workflows | Yes | Yes | Yes |

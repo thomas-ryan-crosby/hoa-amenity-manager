@@ -13,8 +13,8 @@ export const runtime = 'nodejs'
 // Map Stripe product/price to Neighbri plan + limits
 // Uses the product name from Stripe (e.g. "Neighbri Essentials", "Neighbri Growth", "Neighbri Enterprise")
 const PLAN_MAP: Record<string, { plan: 'standard' | 'growth' | 'premium'; maxAmenities: number; maxMembers: number }> = {
-  essentials: { plan: 'standard', maxAmenities: 5, maxMembers: 100 },
-  growth: { plan: 'growth', maxAmenities: 20, maxMembers: 1000 },
+  essentials: { plan: 'standard', maxAmenities: 3, maxMembers: 50 },
+  growth: { plan: 'growth', maxAmenities: 10, maxMembers: 300 },
   enterprise: { plan: 'premium', maxAmenities: 999, maxMembers: 9999 },
 }
 
