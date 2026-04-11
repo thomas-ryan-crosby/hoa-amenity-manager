@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const publicPaths = ['/', '/sign-in', '/sign-up', '/technology', '/join', '/onboard', '/features', '/pricing', '/terms', '/privacy', '/get-started', '/browse']
+const publicPaths = ['/', '/sign-in', '/sign-up', '/technology', '/join', '/onboard', '/features', '/pricing', '/how-it-works', '/terms', '/privacy', '/get-started', '/browse']
 
 function isPublic(pathname: string) {
   if (publicPaths.includes(pathname)) return true

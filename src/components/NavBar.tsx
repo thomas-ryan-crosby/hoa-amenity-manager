@@ -100,6 +100,7 @@ export function NavBar() {
           {!user && (
             <div className="hidden md:flex items-center gap-4 text-sm text-stone-600">
               <Link href="/features" className="hover:text-stone-900">Features</Link>
+              <Link href="/how-it-works" className="hover:text-stone-900">How It Works</Link>
               <Link href="/pricing" className="hover:text-stone-900">Pricing</Link>
             </div>
           )}
@@ -303,6 +304,13 @@ export function NavBar() {
                 onClick={closeMobile}
               >
                 Features
+              </Link>
+              <Link
+                href="/how-it-works"
+                className="block rounded-xl px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50"
+                onClick={closeMobile}
+              >
+                How It Works
               </Link>
               <Link
                 href="/pricing"

@@ -8,6 +8,7 @@ export function Footer() {
           <p>&copy; {new Date().getFullYear()} CrumbLabz LLC. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <Link href="/features" className="hover:text-stone-600">Features</Link>
+            <Link href="/how-it-works" className="hover:text-stone-600">How It Works</Link>
             <Link href="/pricing" className="hover:text-stone-600">Pricing</Link>
             <Link href="/terms" className="hover:text-stone-600">Terms</Link>
             <Link href="/privacy" className="hover:text-stone-600">Privacy</Link>

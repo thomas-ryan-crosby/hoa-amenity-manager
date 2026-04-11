@@ -15,6 +15,7 @@ const BYPASS_PATHS = [
   '/browse',
   '/get-started',
   '/features',
+  '/how-it-works',
   '/pricing',
   '/account',
   '/internal',
