@@ -59,7 +59,7 @@ function CommunitySwitcher() {
           ))}
           <div className="border-t border-stone-100 mt-1 pt-1">
             <Link
-              href="/communities/join"
+              href="/join"
               className="block px-3 py-2 text-sm text-emerald-600 hover:bg-emerald-50"
               onClick={() => setOpen(false)}
             >
@@ -366,7 +366,7 @@ function MobileCommunitySwitcher({ closeMobile }: { closeMobile: () => void }) {
         </button>
       ))}
       <Link
-        href="/communities/join"
+        href="/join"
         className="block px-4 py-2.5 text-sm text-emerald-600 hover:bg-emerald-50 border-t border-stone-100"
         onClick={closeMobile}
       >
