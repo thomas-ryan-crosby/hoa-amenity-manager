@@ -20,11 +20,11 @@ export default async function Home() {
             <span className="text-sm font-medium text-emerald-700">30-day free trial on all plans</span>
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight text-stone-900">
-            Turn your community amenities into a <span className="text-emerald-600">revenue stream</span>
+            The best amenity management software for <span className="text-emerald-600">your community</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-stone-500">
-            Neighbri is the amenity booking platform that helps HOAs manage reservations, collect payments,
-            and open amenities to outside guests — like ResortPass, but for your community.
+            An intuitive booking calendar, built-in janitorial and maintenance scheduling,
+            and tools to better manage and monetize your HOA&apos;s shared spaces — all in one platform.
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
             <Link
@@ -73,15 +73,15 @@ export default async function Home() {
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.24em] text-red-500">The problem</p>
               <h2 className="mt-3 text-2xl sm:text-3xl font-bold text-stone-900">
-                Your amenities are underutilized and unmonetized
+                Managing amenities shouldn&apos;t be this hard
               </h2>
               <div className="mt-6 space-y-4">
                 {[
                   'Residents book by calling the office or emailing spreadsheets',
-                  'No way for outside guests to discover or book your spaces',
+                  'No visibility into availability — double bookings happen',
                   'Cleaning schedules are managed on paper or whiteboard',
                   'Payment collection is manual and inconsistent',
-                  'No visibility into which amenities are popular or profitable',
+                  'No data on which amenities are popular or underused',
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-3">
                     <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 text-xs text-red-600">✕</span>
@@ -97,11 +97,11 @@ export default async function Home() {
               </h2>
               <div className="mt-6 space-y-4">
                 {[
-                  'Self-service booking calendar residents actually enjoy using',
-                  'Open amenities to outside guests and collect booking fees',
-                  'Automated cleaning windows with janitorial staff assignment',
+                  'Intuitive booking calendar residents actually enjoy using',
+                  'Built-in janitorial scheduling and post-event inspections',
+                  'Automated cleaning windows so spaces are always ready',
                   'Stripe payments, deposits, and refunds — fully automated',
-                  'Real-time insights into bookings, revenue, and utilization',
+                  'Real-time insights into bookings, utilization, and trends',
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-3">
                     <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs text-emerald-600">✓</span>
@@ -121,16 +121,16 @@ export default async function Home() {
             Platform highlights
           </p>
           <h2 className="mt-3 text-center text-2xl sm:text-3xl font-bold text-stone-900">
-            Built for communities that want to do more with their amenities
+            Everything your community needs in one platform
           </h2>
 
           <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {[
               { title: 'Live booking calendar', desc: 'Real-time availability with drag-to-book. Residents see what\'s open and reserve in seconds.' },
-              { title: 'Outside guest bookings', desc: 'Open your pool, clubhouse, or courts to non-residents for a fee — a new revenue stream for your HOA.' },
+              { title: 'Guest bookings', desc: 'Optionally open amenities to outside guests — perfect for event spaces, pools, and courts.' },
               { title: 'Stripe payments', desc: 'Collect rental fees and security deposits automatically. Funds go directly to your HOA.' },
               { title: 'Cleaning automation', desc: 'Turn windows appear automatically after bookings. Staff see their schedule and confirm completion.' },
-              { title: 'Revenue insights', desc: 'See which amenities generate the most revenue, busiest days, peak hours, and booking trends.' },
+              { title: 'Usage insights', desc: 'See which amenities are most popular, busiest days, peak hours, and booking trends.' },
               { title: 'Multi-community', desc: 'Management companies can run multiple communities from one platform with isolated settings.' },
             ].map((f) => (
               <div key={f.title} className="rounded-2xl border border-stone-200 bg-stone-50 p-6">
@@ -166,7 +166,7 @@ export default async function Home() {
               { step: '1', title: 'Create your community', desc: 'Enter your community name and address. Takes under 2 minutes.' },
               { step: '2', title: 'Add amenities', desc: 'Configure your clubhouse, pool, courts — set pricing, rules, and availability.' },
               { step: '3', title: 'Invite residents', desc: 'Residents sign up and join your community. You approve their access.' },
-              { step: '4', title: 'Start earning', desc: 'Residents book amenities. Open to outside guests for additional revenue.' },
+              { step: '4', title: 'You\'re live', desc: 'Residents start booking. Cleaning schedules run automatically. You have full visibility.' },
             ].map((item) => (
               <div key={item.step} className="text-center">
                 <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white">
@@ -219,10 +219,10 @@ export default async function Home() {
       <section className="border-t border-stone-200 px-4 sm:px-6 py-16 sm:py-20">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-stone-900">
-            Ready to monetize your amenities?
+            Ready to simplify amenity management?
           </h2>
           <p className="mt-4 text-stone-500">
-            Join communities already using Neighbri to manage bookings and generate revenue.
+            Join communities already using Neighbri to manage bookings, scheduling, and payments.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link
