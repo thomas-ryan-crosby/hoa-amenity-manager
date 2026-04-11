@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { stripe as getStripe } from '@/lib/integrations/stripe'
 import {
+  getCommunityById,
   getCommunityByStripeSubscription,
   getCommunityByStripeCustomer,
   updateCommunity,
@@ -75,6 +76,23 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (event.type) {
+      // ---- Checkout completed (links customer to community) ----
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session
+        const communityId = session.client_reference_id
+        const customerId = session.customer as string
+
+        if (communityId && customerId) {
+          // Link the Stripe customer to the community
+          const community = await getCommunityById(communityId)
+          if (community && !community.stripeCustomerId) {
+            await updateCommunity(communityId, { stripeCustomerId: customerId })
+            console.log(`[Stripe Webhook] Linked customer ${customerId} to community ${communityId}`)
+          }
+        }
+        break
+      }
+
       // ---- Subscription lifecycle (Neighbri platform billing) ----
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {

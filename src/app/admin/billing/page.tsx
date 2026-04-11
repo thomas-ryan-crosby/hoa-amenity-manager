@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Script from 'next/script'
+import { useAuth } from '@/components/providers/AuthProvider'
 
 type BillingInfo = {
   communityId: string
@@ -43,6 +44,7 @@ const PLAN_PRICING: Record<string, { label: string; price: string; color: string
 }
 
 export default function BillingPage() {
+  const { user } = useAuth()
   const [billing, setBilling] = useState<BillingInfo | null>(null)
   const [stripe, setStripe] = useState<StripeStatus | null>(null)
   const [loading, setLoading] = useState(true)
@@ -197,7 +199,7 @@ export default function BillingPage() {
                     />
                     <div
                       dangerouslySetInnerHTML={{
-                        __html: `<stripe-pricing-table pricing-table-id="prctbl_1TKlPEBBuISOmksbDQTkGmEh" publishable-key="pk_live_51RMEL2BBuISOmksbi0eTOMmSGCf1ZK7nqQnMAAmN6PYJn7SoyeIuJCEhiXQVaINCI99DZqEo3UeV4P56dXf7yriG00OGztty8j"></stripe-pricing-table>`,
+                        __html: `<stripe-pricing-table pricing-table-id="prctbl_1TKlPEBBuISOmksbDQTkGmEh" publishable-key="pk_live_51RMEL2BBuISOmksbi0eTOMmSGCf1ZK7nqQnMAAmN6PYJn7SoyeIuJCEhiXQVaINCI99DZqEo3UeV4P56dXf7yriG00OGztty8j" client-reference-id="${billing?.communityId ?? ''}" customer-email="${user?.email ?? ''}"></stripe-pricing-table>`,
                       }}
                     />
                   </div>
