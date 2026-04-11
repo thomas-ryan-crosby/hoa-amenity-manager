@@ -34,17 +34,26 @@ export async function POST() {
     )
   }
 
-  // Use the platform Stripe account (Neighbri's) for subscription billing
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  const secretKey = process.env.STRIPE_SECRET_KEY
+  if (!secretKey) {
+    return NextResponse.json({ error: 'Stripe is not configured on the server.' }, { status: 500 })
+  }
+
+  const stripe = new Stripe(secretKey, {
     apiVersion: '2025-02-24.acacia' as Stripe.LatestApiVersion,
   })
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://neighbri.com'
 
-  const session = await stripe.billingPortal.sessions.create({
-    customer: community.stripeCustomerId,
-    return_url: `${appUrl}/admin/billing`,
-  })
-
-  return NextResponse.json({ url: session.url })
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: community.stripeCustomerId,
+      return_url: `${appUrl}/admin/billing`,
+    })
+    return NextResponse.json({ url: session.url })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error(`[Billing Portal] Error creating session for ${community.stripeCustomerId}:`, message)
+    return NextResponse.json({ error: `Unable to open billing portal: ${message}` }, { status: 500 })
+  }
 }
