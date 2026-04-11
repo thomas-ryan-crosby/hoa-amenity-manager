@@ -17,6 +17,8 @@ type CommunityContextType = {
   communities: CommunityInfo[]
   switchCommunity: (communityId: string) => Promise<void>
   loading: boolean
+  /** Increments on every community switch — components can use this as a refetch trigger */
+  switchVersion: number
 }
 
 const CommunityContext = createContext<CommunityContextType>({
@@ -24,6 +26,7 @@ const CommunityContext = createContext<CommunityContextType>({
   communities: [],
   switchCommunity: async () => {},
   loading: true,
+  switchVersion: 0,
 })
 
 export function useCommunity() {
@@ -35,6 +38,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   const [communities, setCommunities] = useState<CommunityInfo[]>([])
   const [activeCommunity, setActiveCommunity] = useState<CommunityInfo | null>(null)
   const [loading, setLoading] = useState(true)
+  const [switchVersion, setSwitchVersion] = useState(0)
 
   useEffect(() => {
     if (!user) { setCommunities([]); setActiveCommunity(null); setLoading(false); return }
@@ -81,12 +85,12 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ communityId }),
     })
 
-    // Navigate to resident page — single clean load, no intermediate flash
-    window.location.href = '/resident'
+    // Bump version so components refetch their data in-place
+    setSwitchVersion((v) => v + 1)
   }
 
   return (
-    <CommunityContext.Provider value={{ activeCommunity, communities, switchCommunity, loading }}>
+    <CommunityContext.Provider value={{ activeCommunity, communities, switchCommunity, loading, switchVersion }}>
       {children}
     </CommunityContext.Provider>
   )
