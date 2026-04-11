@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Script from 'next/script'
 
 type BillingInfo = {
   communityId: string
@@ -187,12 +188,18 @@ export default function BillingPage() {
                       This community does not have an active Neighbri subscription.
                       Choose a plan to unlock all features.
                     </p>
-                    <a
-                      href="/pricing"
-                      className="mt-3 inline-block rounded-full bg-amber-600 px-5 py-2 text-sm font-medium text-white hover:bg-amber-500"
-                    >
-                      View plans
-                    </a>
+                  </div>
+                  <div className="mt-4">
+                    <Script
+                      async
+                      src="https://js.stripe.com/v3/pricing-table.js"
+                      strategy="afterInteractive"
+                    />
+                    <div
+                      dangerouslySetInnerHTML={{
+                        __html: `<stripe-pricing-table pricing-table-id="prctbl_1TKlPEBBuISOmksbDQTkGmEh" publishable-key="pk_live_51RMEL2BBuISOmksbi0eTOMmSGCf1ZK7nqQnMAAmN6PYJn7SoyeIuJCEhiXQVaINCI99DZqEo3UeV4P56dXf7yriG00OGztty8j"></stripe-pricing-table>`,
+                      }}
+                    />
                   </div>
                 </div>
               )}
