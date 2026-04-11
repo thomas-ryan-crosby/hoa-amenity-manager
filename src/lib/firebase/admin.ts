@@ -1,6 +1,7 @@
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app'
 import { getFirestore, Firestore } from 'firebase-admin/firestore'
 import { getAuth, Auth } from 'firebase-admin/auth'
+import { getStorage, Storage } from 'firebase-admin/storage'
 
 let app: App
 if (!getApps().length) {
@@ -19,3 +20,4 @@ if (!getApps().length) {
 
 export const adminDb: Firestore = getFirestore(app)
 export const adminAuth: Auth = getAuth(app)
+export const adminStorage: Storage = getStorage(app)

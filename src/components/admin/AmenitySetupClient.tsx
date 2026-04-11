@@ -55,6 +55,7 @@ type Amenity = {
   allowExternalBooking: boolean
   externalRentalFee: number
   externalDepositAmount: number
+  photos: string[]
 }
 
 type AmenityForm = {
@@ -259,6 +260,51 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
   const [areaFormName, setAreaFormName] = useState('')
   const [editingAreaId, setEditingAreaId] = useState<string | null>(null)
   const [editingAreaName, setEditingAreaName] = useState('')
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+
+  async function uploadPhoto(file: File) {
+    if (!selectedAmenity) return
+    setUploadingPhoto(true)
+    try {
+      const formData = new FormData()
+      formData.append('photo', file)
+      const res = await fetch(`/api/admin/amenities/${selectedAmenity.id}/photos`, {
+        method: 'POST',
+        body: formData,
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        showNotice(data.error ?? 'Failed to upload photo', 'error')
+        return
+      }
+      showNotice('Photo uploaded!')
+      await loadData()
+    } catch {
+      showNotice('Failed to upload photo', 'error')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
+  async function deletePhoto(url: string) {
+    if (!selectedAmenity) return
+    if (!confirm('Remove this photo?')) return
+    try {
+      const res = await fetch(`/api/admin/amenities/${selectedAmenity.id}/photos`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      if (!res.ok) {
+        showNotice('Failed to remove photo', 'error')
+        return
+      }
+      showNotice('Photo removed')
+      await loadData()
+    } catch {
+      showNotice('Failed to remove photo', 'error')
+    }
+  }
 
   const selectedAmenity = amenities.find((a) => a.id === selectedAmenityId) ?? null
   const f = amenityForm
@@ -614,6 +660,50 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
                   {selectedAmenity.description && (
                     <p className="text-sm text-stone-600 mb-4">{selectedAmenity.description}</p>
                   )}
+                  {/* Photos */}
+                  {selectedAmenity.photos?.length > 0 && (
+                    <div className="mb-4">
+                      <div className="flex gap-2 overflow-x-auto pb-2">
+                        {selectedAmenity.photos.map((url) => (
+                          <img key={url} src={url} alt={selectedAmenity.name} className="h-24 w-32 rounded-xl object-cover flex-shrink-0 border border-stone-200" />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Photo upload (admin) */}
+                  <div className="mb-4">
+                    <label className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-stone-300 px-4 py-3 cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 transition">
+                      <svg className="h-5 w-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                      <span className="text-sm text-stone-500">{uploadingPhoto ? 'Uploading...' : 'Add photo'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={uploadingPhoto}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) uploadPhoto(file)
+                          e.target.value = ''
+                        }}
+                      />
+                    </label>
+                    {selectedAmenity.photos?.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {selectedAmenity.photos.map((url) => (
+                          <div key={url} className="relative group">
+                            <img src={url} alt="" className="h-16 w-20 rounded-lg object-cover border border-stone-200" />
+                            <button
+                              type="button"
+                              onClick={() => deletePhoto(url)}
+                              className="absolute -top-1.5 -right-1.5 hidden group-hover:flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-xs"
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div className="rounded-2xl bg-stone-50 px-4 py-3">
                       <p className="text-xs text-stone-400">Capacity</p>

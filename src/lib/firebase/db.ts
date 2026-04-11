@@ -76,6 +76,7 @@ export interface Amenity {
   allowExternalBooking: boolean    // allow non-residents to book
   externalRentalFee: number        // fee for external guests (0 = same as resident)
   externalDepositAmount: number    // deposit for external guests
+  photos: string[]                 // Firebase Storage download URLs
 }
 
 export interface TurnWindow {
@@ -341,6 +342,7 @@ export async function createAmenity(
     allowExternalBooking: data.allowExternalBooking ?? false,
     externalRentalFee: data.externalRentalFee ?? 0,
     externalDepositAmount: data.externalDepositAmount ?? 0,
+    photos: data.photos ?? [],
     areaId: data.areaId ?? null,
     sortOrder: data.sortOrder ?? 0,
   }
