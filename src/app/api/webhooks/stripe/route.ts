@@ -10,6 +10,45 @@ import {
 
 export const runtime = 'nodejs'
 
+// Map Stripe product/price to Neighbri plan + limits
+// Uses the product name from Stripe (e.g. "Neighbri Essentials", "Neighbri Growth", "Neighbri Enterprise")
+const PLAN_MAP: Record<string, { plan: 'standard' | 'growth' | 'premium'; maxAmenities: number; maxMembers: number }> = {
+  essentials: { plan: 'standard', maxAmenities: 5, maxMembers: 100 },
+  growth: { plan: 'growth', maxAmenities: 20, maxMembers: 1000 },
+  enterprise: { plan: 'premium', maxAmenities: 999, maxMembers: 9999 },
+}
+
+function resolveStripePlan(subscription: Stripe.Subscription): Partial<{ plan: 'free' | 'standard' | 'growth' | 'premium'; maxAmenities: number; maxMembers: number }> {
+  // Get the first subscription item's price → product name
+  const item = subscription.items?.data?.[0]
+  if (!item) return {}
+
+  const price = item.price
+  const productName = typeof price.product === 'string'
+    ? price.product
+    : (price.product as Stripe.Product)?.name ?? ''
+
+  // Try matching by product name (case-insensitive)
+  const nameLC = (typeof productName === 'string' ? productName : '').toLowerCase()
+
+  for (const [key, value] of Object.entries(PLAN_MAP)) {
+    if (nameLC.includes(key)) {
+      return value
+    }
+  }
+
+  // Also try matching by price nickname
+  const nicknameLC = (price.nickname ?? '').toLowerCase()
+  for (const [key, value] of Object.entries(PLAN_MAP)) {
+    if (nicknameLC.includes(key)) {
+      return value
+    }
+  }
+
+  console.warn(`[Stripe Webhook] Could not resolve plan from product: "${productName}", nickname: "${price.nickname}"`)
+  return {}
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.text()
   const signature = req.headers.get('stripe-signature')
@@ -65,14 +104,18 @@ export async function POST(req: NextRequest) {
         const customerId = subscription.customer as string
         const status = subscription.status
 
+        // Resolve plan from Stripe product name
+        const planUpdate = resolveStripePlan(subscription)
+
         // Find community by customer ID
         const community = await getCommunityByStripeCustomer(customerId)
         if (community) {
           await updateCommunity(community.id, {
             stripeSubscriptionId: subscription.id,
             isActive: status === 'active' || status === 'trialing',
+            ...planUpdate,
           })
-          console.log(`[Stripe Webhook] Subscription ${status} for community ${community.id}`)
+          console.log(`[Stripe Webhook] Subscription ${status} for community ${community.id}, plan: ${planUpdate.plan ?? 'unchanged'}`)
         } else {
           console.log(`[Stripe Webhook] Subscription ${event.type} for unknown customer ${customerId} — will be linked on community creation`)
         }
