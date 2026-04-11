@@ -1,7 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import Link from 'next/link'
+
+const TZ_LABELS: Record<string, string> = {
+  'America/New_York': 'Eastern',
+  'America/Chicago': 'Central',
+  'America/Denver': 'Mountain',
+  'America/Los_Angeles': 'Pacific',
+  'America/Anchorage': 'Alaska',
+  'Pacific/Honolulu': 'Hawaii',
+}
 
 export default function OnboardPage() {
   const [name, setName] = useState('')
@@ -9,9 +18,39 @@ export default function OnboardPage() {
   const [city, setCity] = useState('')
   const [state, setState] = useState('')
   const [zip, setZip] = useState('')
-  const [timezone, setTimezone] = useState('America/Chicago')
+  const [timezone, setTimezone] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [lookingUp, setLookingUp] = useState(false)
+  const [lookupDone, setLookupDone] = useState(false)
+
+  const lookupZip = useCallback(async (zipCode: string) => {
+    if (zipCode.length < 5) return
+    setLookingUp(true)
+    try {
+      const res = await fetch(`/api/lookup/zip?zip=${zipCode}`)
+      if (res.ok) {
+        const data = await res.json()
+        setCity(data.city ?? '')
+        setState(data.state ?? '')
+        setTimezone(data.timezone ?? 'America/Chicago')
+        setLookupDone(true)
+      }
+    } catch {
+      // Ignore — user can fill manually
+    } finally {
+      setLookingUp(false)
+    }
+  }, [])
+
+  function handleZipChange(value: string) {
+    const clean = value.replace(/\D/g, '').slice(0, 5)
+    setZip(clean)
+    setLookupDone(false)
+    if (clean.length === 5) {
+      lookupZip(clean)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -22,7 +61,11 @@ export default function OnboardPage() {
       const res = await fetch('/api/onboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, address, city, state, zip, timezone, plan: 'standard' }),
+        body: JSON.stringify({
+          name, address, city, state, zip,
+          timezone: timezone || 'America/Chicago',
+          plan: 'standard',
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Unable to create community')
@@ -44,7 +87,7 @@ export default function OnboardPage() {
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">Neighbri</p>
           <h1 className="mt-3 text-3xl font-semibold text-stone-900">Set up your community</h1>
           <p className="mt-2 text-sm text-stone-500">
-            Tell us about your community. You'll be the admin and can update everything later.
+            Tell us about your community. You&apos;ll be the admin and can update everything later.
           </p>
         </div>
 
@@ -61,8 +104,9 @@ export default function OnboardPage() {
                 className="w-full rounded-xl border border-stone-300 px-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
               />
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Address</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Street Address</label>
               <input
                 type="text"
                 required
@@ -72,7 +116,30 @@ export default function OnboardPage() {
                 className="w-full rounded-xl border border-stone-300 px-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
               />
             </div>
-            <div className="grid grid-cols-3 gap-3">
+
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Zip Code</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  inputMode="numeric"
+                  value={zip}
+                  onChange={(e) => handleZipChange(e.target.value)}
+                  placeholder="Enter zip to auto-fill city, state, and timezone"
+                  className="w-full rounded-xl border border-stone-300 px-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
+                />
+                {lookingUp && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">Looking up...</span>
+                )}
+                {lookupDone && !lookingUp && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-emerald-600">Found</span>
+                )}
+              </div>
+            </div>
+
+            {/* Auto-filled fields — shown after zip lookup or manually editable */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-1">City</label>
                 <input
@@ -80,7 +147,8 @@ export default function OnboardPage() {
                   required
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  className="w-full rounded-xl border border-stone-300 px-4 py-2.5 text-sm text-stone-900 focus:border-emerald-500 focus:outline-none"
+                  placeholder="Auto-filled from zip"
+                  className={`w-full rounded-xl border px-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none ${lookupDone ? 'border-emerald-300 bg-emerald-50' : 'border-stone-300'}`}
                 />
               </div>
               <div>
@@ -92,28 +160,25 @@ export default function OnboardPage() {
                   onChange={(e) => setState(e.target.value)}
                   maxLength={2}
                   placeholder="TX"
-                  className="w-full rounded-xl border border-stone-300 px-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Zip</label>
-                <input
-                  type="text"
-                  required
-                  value={zip}
-                  onChange={(e) => setZip(e.target.value)}
-                  maxLength={10}
-                  className="w-full rounded-xl border border-stone-300 px-4 py-2.5 text-sm text-stone-900 focus:border-emerald-500 focus:outline-none"
+                  className={`w-full rounded-xl border px-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none ${lookupDone ? 'border-emerald-300 bg-emerald-50' : 'border-stone-300'}`}
                 />
               </div>
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Timezone</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">
+                Timezone
+                {lookupDone && timezone && (
+                  <span className="ml-2 text-xs font-normal text-emerald-600">
+                    Auto-detected: {TZ_LABELS[timezone] ?? timezone}
+                  </span>
+                )}
+              </label>
               <select
                 required
-                value={timezone}
+                value={timezone || 'America/Chicago'}
                 onChange={(e) => setTimezone(e.target.value)}
-                className="w-full rounded-xl border border-stone-300 px-4 py-2.5 text-sm text-stone-900 focus:border-emerald-500 focus:outline-none"
+                className={`w-full rounded-xl border px-4 py-2.5 text-sm text-stone-900 focus:border-emerald-500 focus:outline-none ${lookupDone ? 'border-emerald-300 bg-emerald-50' : 'border-stone-300'}`}
               >
                 <option value="America/New_York">Eastern</option>
                 <option value="America/Chicago">Central</option>
