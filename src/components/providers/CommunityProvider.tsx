@@ -70,15 +70,19 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   }, [user])
 
   async function switchCommunity(communityId: string) {
+    // Set active community in state immediately so the UI updates
+    const target = communities.find((c) => c.id === communityId)
+    setActiveCommunity(target ?? null)
+
+    // Set the cookie server-side
     await fetch('/api/communities/switch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ communityId }),
     })
-    const target = communities.find((c) => c.id === communityId)
-    setActiveCommunity(target ?? null)
-    // Reload to apply new community context
-    window.location.reload()
+
+    // Navigate to resident page — single clean load, no intermediate flash
+    window.location.href = '/resident'
   }
 
   return (
