@@ -9,6 +9,7 @@ import momentTimezonePlugin from '@fullcalendar/moment-timezone'
 import moment from 'moment-timezone'
 import { formatCurrency, formatDateTime, formatDateRange } from '@/lib/format'
 import { useCommunity } from '@/components/providers/CommunityProvider'
+import Link from 'next/link'
 
 /**
  * Convert a Date/ISO string to a `YYYY-MM-DDTHH:MM` string in the
@@ -543,6 +544,38 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
 
   if (loading) {
     return <div className="h-[640px] animate-pulse rounded-3xl bg-stone-100" />
+  }
+
+  // No amenities — prompt admin to create one, or inform resident
+  if (amenities.length === 0) {
+    const isAdminOrPM = activeCommunity?.role === 'admin' || activeCommunity?.role === 'property_manager'
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center max-w-md">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-stone-100">
+            <svg className="h-8 w-8 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-stone-900">
+            {isAdminOrPM ? 'Create your first amenity' : 'No amenities available yet'}
+          </h2>
+          <p className="mt-3 text-sm text-stone-500 leading-relaxed">
+            {isAdminOrPM
+              ? 'Your community doesn\'t have any amenities set up yet. Add your first amenity — like a clubhouse, pool, or tennis court — to start accepting bookings.'
+              : 'Your community administrator hasn\'t set up any amenities yet. Check back soon!'}
+          </p>
+          {isAdminOrPM && (
+            <Link
+              href="/admin/amenities"
+              className="mt-6 inline-block rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
+            >
+              Set up amenities
+            </Link>
+          )}
+        </div>
+      </div>
+    )
   }
 
   // Rules acceptance modal
