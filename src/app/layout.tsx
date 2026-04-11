@@ -9,6 +9,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Neighbri",
   description: "Amenity booking for your community",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
