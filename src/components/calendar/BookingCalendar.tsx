@@ -5,20 +5,26 @@ import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
+import momentTimezonePlugin from '@fullcalendar/moment-timezone'
+import moment from 'moment-timezone'
 import { formatCurrency, formatDateTime, formatDateRange } from '@/lib/format'
 import { useCommunity } from '@/components/providers/CommunityProvider'
 
-/** Convert a Date to a local `YYYY-MM-DDTHH:MM` string for datetime-local inputs */
-function toLocalDatetime(d: Date): string {
-  const pad = (n: number) => n.toString().padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+/**
+ * Convert a Date/ISO string to a `YYYY-MM-DDTHH:MM` string in the
+ * community timezone (for datetime-local inputs).
+ */
+function toTzDatetime(d: Date | string, tz: string): string {
+  return moment(d).tz(tz).format('YYYY-MM-DDTHH:mm')
 }
 
-/** Convert a datetime-local input value (no timezone) to a UTC ISO string.
- *  The browser interprets bare datetime strings as local time, so
- *  `new Date("2026-04-10T09:00")` gives the correct UTC timestamp. */
-function localInputToISO(localStr: string): string {
-  return new Date(localStr).toISOString()
+/**
+ * Convert a datetime-local input value (no offset) to a UTC ISO string,
+ * interpreting the bare string as being in the community timezone.
+ * "2026-04-10T14:00" in America/New_York → correct UTC.
+ */
+function tzInputToISO(localStr: string, tz: string): string {
+  return moment.tz(localStr, tz).toISOString()
 }
 
 function BookingSummary({
@@ -629,7 +635,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
           <button
             className="flex-1 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
             onClick={() => {
-              setSelection({ amenityId: primaryAmenityId, start: localInputToISO(quickBookStart), end: localInputToISO(quickBookEnd) })
+              setSelection({ amenityId: primaryAmenityId, start: tzInputToISO(quickBookStart, communityTz), end: tzInputToISO(quickBookEnd, communityTz) })
               setGuestCount(1)
               setNotes('')
               setShowQuickBook(false)
@@ -912,6 +918,10 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
           </span>
         </div>
 
+        <p className="mb-2 text-xs text-stone-400 text-right">
+          All times shown in {communityTz.replace('America/', '').replace('Pacific/', '').replace(/_/g, ' ')} time
+        </p>
+
         {viewMode === 'calendar' ? (
           <div ref={calendarWrapperRef} data-tutorial="calendar-grid" className="relative overflow-hidden rounded-3xl border border-stone-200 bg-white p-2 sm:p-4 shadow-sm group">
             {/* Edge navigation overlays — appear on hover */}
@@ -933,7 +943,8 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
             </button>
             <FullCalendar
               ref={calendarRef}
-              plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
+              plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin, momentTimezonePlugin]}
+              timeZone={communityTz}
               initialView={isMobile ? 'timeGridDay' : 'dayGridMonth'}
               eventDisplay="block"
               allDaySlot={false}
@@ -979,8 +990,8 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                   const endDate = new Date(clickDate.getTime() + 60 * 60 * 1000)
                   quickBookActiveRef.current = true
                   calendarRef.current?.getApi().select(clickDate, endDate)
-                  setQuickBookStart(toLocalDatetime(clickDate))
-                  setQuickBookEnd(toLocalDatetime(endDate))
+                  setQuickBookStart(toTzDatetime(clickDate, communityTz))
+                  setQuickBookEnd(toTzDatetime(endDate, communityTz))
                   setShowQuickBook(true)
                   return
                 }
@@ -1014,8 +1025,8 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                 calendarRef.current?.getApi().select(clickDate, endDate)
 
                 // Use local datetime strings for the picker inputs
-                setQuickBookStart(toLocalDatetime(clickDate))
-                setQuickBookEnd(toLocalDatetime(endDate))
+                setQuickBookStart(toTzDatetime(clickDate, communityTz))
+                setQuickBookEnd(toTzDatetime(endDate, communityTz))
                 setShowQuickBook(true)
               }}
               eventClick={(info) => {

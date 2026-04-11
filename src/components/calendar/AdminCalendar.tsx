@@ -5,6 +5,7 @@ import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
+import momentTimezonePlugin from '@fullcalendar/moment-timezone'
 import { formatDateRange } from '@/lib/format'
 import { useCommunity } from '@/components/providers/CommunityProvider'
 
@@ -549,6 +550,10 @@ export function AdminCalendar() {
           </span>
         </div>
 
+        <p className="mb-2 text-xs text-stone-400 text-right">
+          All times shown in {communityTz.replace('America/', '').replace('Pacific/', '').replace(/_/g, ' ')} time
+        </p>
+
         {viewMode === 'calendar' ? (
           <div ref={calendarWrapperRef} className="relative overflow-hidden rounded-3xl border border-stone-200 bg-white p-2 sm:p-4 shadow-sm group">
             <button
@@ -569,7 +574,8 @@ export function AdminCalendar() {
             </button>
             <FullCalendar
               ref={calendarRef}
-              plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
+              plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin, momentTimezonePlugin]}
+              timeZone={communityTz}
               initialView={isMobile ? 'timeGridDay' : 'dayGridMonth'}
               eventDisplay="block"
               allDaySlot={false}

@@ -34,9 +34,19 @@ function emailWrapper(communityName: string | null, content: string): string {
   `
 }
 
+const TZ_LABELS: Record<string, string> = {
+  'America/New_York': 'Eastern',
+  'America/Chicago': 'Central',
+  'America/Denver': 'Mountain',
+  'America/Los_Angeles': 'Pacific',
+  'America/Anchorage': 'Alaska',
+  'Pacific/Honolulu': 'Hawaii',
+}
+
 function bookingSummaryHtml(booking: Awaited<ReturnType<typeof getBooking>>) {
   const community = booking.communityName ?? 'your community'
   const tz = booking.communityTimezone ?? 'America/Chicago'
+  const tzLabel = TZ_LABELS[tz] ?? tz.replace('America/', '').replace(/_/g, ' ')
   return `
     <div style="margin: 16px 0; padding: 16px; background: #fafaf9; border-radius: 12px;">
       <p style="margin: 0 0 4px; color: #78716c; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Booking Details</p>
@@ -48,6 +58,7 @@ function bookingSummaryHtml(booking: Awaited<ReturnType<typeof getBooking>>) {
         ${booking.amenity.rentalFee > 0 ? `<tr><td style="padding: 4px 0; color: #78716c;">Rental fee</td><td style="padding: 4px 0;">${formatCurrency(booking.amenity.rentalFee)}</td></tr>` : ''}
         ${booking.amenity.depositAmount > 0 ? `<tr><td style="padding: 4px 0; color: #78716c;">Deposit</td><td style="padding: 4px 0;">${formatCurrency(booking.amenity.depositAmount)}</td></tr>` : ''}
       </table>
+      <p style="margin: 8px 0 0; color: #a8a29e; font-size: 11px;">All times are in ${tzLabel} time.</p>
     </div>
   `
 }
