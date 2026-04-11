@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 
 type BillingInfo = {
+  communityId: string
   communityName: string
   plan: string
   maxAmenities: number
@@ -255,8 +256,8 @@ export default function BillingPage() {
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-stone-200 text-xs font-bold text-stone-600">3</span>
                       <div className="text-sm text-stone-700">
                         <p>Go to <strong>Developers &gt; Webhooks &gt; Add endpoint</strong></p>
-                        <p className="mt-1 text-xs text-stone-500">Endpoint URL:</p>
-                        <p className="mt-0.5 rounded-lg bg-stone-100 px-3 py-1.5 font-mono text-xs text-stone-800 select-all">https://neighbri.com/api/webhooks/stripe</p>
+                        <p className="mt-1 text-xs text-stone-500">Endpoint URL (unique to your community):</p>
+                        <p className="mt-0.5 rounded-lg bg-stone-100 px-3 py-1.5 font-mono text-xs text-stone-800 select-all">https://neighbri.com/api/webhooks/stripe/community/{billing?.communityId}</p>
                         <p className="mt-1.5 text-xs text-stone-500">Events to listen for:</p>
                         <div className="mt-0.5 flex flex-wrap gap-1.5">
                           <span className="rounded bg-stone-100 px-2 py-0.5 font-mono text-xs text-stone-700">checkout.session.completed</span>

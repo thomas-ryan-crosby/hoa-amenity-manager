@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { stripe as getStripe } from '@/lib/integrations/stripe'
-import * as orchestrator from '@/lib/booking/workflow'
 import {
   getCommunityByStripeSubscription,
   getCommunityByStripeCustomer,
@@ -76,28 +75,7 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (event.type) {
-      // ---- Booking payments ----
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session
-        const bookingId = session.metadata?.bookingId
-        if (bookingId) {
-          await orchestrator.handlePaymentSuccess(bookingId)
-          console.log(`[Stripe Webhook] Payment success for booking: ${bookingId}`)
-        }
-        break
-      }
-
-      case 'checkout.session.expired': {
-        const session = event.data.object as Stripe.Checkout.Session
-        const bookingId = session.metadata?.bookingId
-        if (bookingId) {
-          await orchestrator.handlePaymentFailed(bookingId)
-          console.log(`[Stripe Webhook] Payment failed for booking: ${bookingId}`)
-        }
-        break
-      }
-
-      // ---- Subscription lifecycle ----
+      // ---- Subscription lifecycle (Neighbri platform billing) ----
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription

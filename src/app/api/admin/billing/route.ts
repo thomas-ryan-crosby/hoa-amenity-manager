@@ -41,6 +41,7 @@ export async function GET() {
 
   return NextResponse.json({
     billing: {
+      communityId,
       communityName: community.name,
       plan: community.plan,
       maxAmenities: community.maxAmenities,
