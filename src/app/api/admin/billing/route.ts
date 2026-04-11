@@ -48,6 +48,7 @@ export async function GET() {
       maxMembers: community.maxMembers,
       currentAmenities: amenitiesSnap.size,
       currentMembers: approvedMembers,
+      hasSubscription: !!community.stripeCustomerId,
     },
     stripe: {
       connected: settings.stripeConnected ?? false,

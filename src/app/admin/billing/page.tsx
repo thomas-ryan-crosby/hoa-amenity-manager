@@ -10,6 +10,7 @@ type BillingInfo = {
   maxMembers: number
   currentAmenities: number
   currentMembers: number
+  hasSubscription: boolean
 }
 
 type StripeStatus = {
@@ -151,30 +152,50 @@ export default function BillingPage() {
 
             {/* Subscription management */}
             <div className="rounded-2xl border border-stone-200 bg-white p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-stone-400">
-                    Neighbri Subscription
-                  </p>
-                  <div className="mt-2 flex items-center gap-3">
-                    <h2 className="text-2xl font-bold text-stone-900">{planInfo.label}</h2>
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${planInfo.color}`}>
-                      {planInfo.price}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-stone-500">{billing.communityName}</p>
-                </div>
-                <button
-                  onClick={openCustomerPortal}
-                  disabled={openingPortal}
-                  className="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-stone-800 disabled:bg-stone-400"
-                >
-                  {openingPortal ? 'Opening...' : 'Manage subscription'}
-                </button>
-              </div>
-              <p className="mt-4 text-xs text-stone-400">
-                Update your payment method, change plans, view invoices, or cancel your subscription through the Stripe Customer Portal.
+              <p className="text-xs font-medium uppercase tracking-wide text-stone-400">
+                Neighbri Subscription
               </p>
+              {billing.hasSubscription ? (
+                <>
+                  <div className="mt-2 flex items-start justify-between">
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <h2 className="text-2xl font-bold text-stone-900">{planInfo.label}</h2>
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${planInfo.color}`}>
+                          {planInfo.price}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-stone-500">{billing.communityName}</p>
+                    </div>
+                    <button
+                      onClick={openCustomerPortal}
+                      disabled={openingPortal}
+                      className="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-stone-800 disabled:bg-stone-400"
+                    >
+                      {openingPortal ? 'Opening...' : 'Manage subscription'}
+                    </button>
+                  </div>
+                  <p className="mt-4 text-xs text-stone-400">
+                    Update your payment method, change plans, view invoices, or cancel through the Stripe Customer Portal.
+                  </p>
+                </>
+              ) : (
+                <div className="mt-3">
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 p-4">
+                    <p className="text-sm font-medium text-amber-800">No active subscription</p>
+                    <p className="mt-1 text-sm text-amber-700">
+                      This community does not have an active Neighbri subscription.
+                      Choose a plan to unlock all features.
+                    </p>
+                    <a
+                      href="/pricing"
+                      className="mt-3 inline-block rounded-full bg-amber-600 px-5 py-2 text-sm font-medium text-white hover:bg-amber-500"
+                    >
+                      View plans
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Usage */}
