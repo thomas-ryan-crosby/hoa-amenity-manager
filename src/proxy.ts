@@ -3,8 +3,11 @@ import { NextRequest, NextResponse } from 'next/server'
 const publicPaths = ['/', '/sign-in', '/sign-up', '/technology', '/join', '/onboard', '/features', '/pricing', '/how-it-works', '/test-plan', '/terms', '/privacy', '/get-started', '/browse']
 
 function isPublic(pathname: string) {
-  if (publicPaths.includes(pathname)) return true
-  if (pathname.startsWith('/join')) return true
+  // Strip trailing slash for matching (except root)
+  const normalized = pathname !== '/' && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname
+  if (publicPaths.includes(normalized)) return true
+  if (publicPaths.some((p) => p !== '/' && normalized.startsWith(p + '/'))) return true
+  if (normalized.startsWith('/join')) return true
   if (pathname.startsWith('/api/webhooks/')) return true
   if (pathname.startsWith('/api/auth/')) return true
   if (pathname.startsWith('/api/cron')) return true
