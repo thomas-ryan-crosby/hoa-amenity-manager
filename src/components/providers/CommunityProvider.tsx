@@ -31,12 +31,14 @@ export function useCommunity() {
 }
 
 export function CommunityProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [communities, setCommunities] = useState<CommunityInfo[]>([])
   const [activeCommunity, setActiveCommunity] = useState<CommunityInfo | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Don't resolve community loading until auth is done
+    if (authLoading) return
     if (!user) { setCommunities([]); setActiveCommunity(null); setLoading(false); return }
 
     async function loadCommunities() {
@@ -67,7 +69,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       }
     }
     loadCommunities()
-  }, [user])
+  }, [user, authLoading])
 
   async function switchCommunity(communityId: string) {
     // Set active community in state immediately so the spinner shows the right name
