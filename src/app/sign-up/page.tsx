@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
 import { getClientAuth } from '@/lib/firebase/client'
+import { friendlyAuthError } from '@/lib/firebase/authErrors'
 import { markSessionHandled } from '@/components/providers/AuthProvider'
 import { PasswordInput } from '@/components/PasswordInput'
 
@@ -56,7 +57,7 @@ export default function SignUpPage() {
       // Redirect to get-started page so user can choose their path
       window.location.href = '/get-started'
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign up failed')
+      setError(friendlyAuthError(err, 'Sign up failed. Please try again.'))
     } finally {
       setLoading(false)
     }

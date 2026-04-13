@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { getClientAuth } from '@/lib/firebase/client'
+import { friendlyAuthError } from '@/lib/firebase/authErrors'
 import { markSessionHandled } from '@/components/providers/AuthProvider'
 import { PasswordInput } from '@/components/PasswordInput'
 
@@ -32,7 +33,7 @@ export default function SignInPage() {
 
       window.location.href = '/resident'
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign in failed')
+      setError(friendlyAuthError(err, 'Sign in failed. Please try again.'))
     } finally {
       setLoading(false)
     }
