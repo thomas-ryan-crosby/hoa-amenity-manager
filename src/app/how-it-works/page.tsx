@@ -419,13 +419,13 @@ export default function HowItWorksPage() {
               href="/sign-up"
               className="rounded-full bg-emerald-600 px-8 py-3.5 text-sm font-semibold text-white hover:bg-emerald-500 transition"
             >
-              Get started free
+              Sign up
             </Link>
             <Link
-              href="/pricing"
+              href="/sign-in"
               className="rounded-full border border-stone-300 px-8 py-3.5 text-sm font-semibold text-stone-700 hover:bg-stone-50 transition"
             >
-              View pricing
+              Sign in
             </Link>
           </div>
           <p className="mt-4 text-xs text-stone-400">

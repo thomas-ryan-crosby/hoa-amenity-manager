@@ -31,7 +31,7 @@ export default async function Home() {
               href="/sign-up"
               className="rounded-full bg-emerald-600 px-8 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 transition"
             >
-              Start free trial
+              Sign up
             </Link>
             <Link
               href="/sign-in"
@@ -230,13 +230,13 @@ export default async function Home() {
               href="/sign-up"
               className="rounded-full bg-emerald-600 px-8 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 transition"
             >
-              Start your 30-day free trial
+              Sign up
             </Link>
             <Link
-              href="/join"
+              href="/sign-in"
               className="rounded-full border border-stone-300 px-8 py-3.5 text-sm font-semibold text-stone-700 hover:bg-white transition"
             >
-              Join your community
+              Sign in
             </Link>
           </div>
           <p className="mt-4 text-xs text-stone-400">No credit card required. Cancel anytime.</p>

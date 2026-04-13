@@ -182,19 +182,27 @@ function JoinContent() {
           </div>
         )}
 
-        {/* Onboard CTA */}
+        {/* Escape hatches — shown after a zip search */}
         {searched && (
-          <div className="mt-6 rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-5 text-center">
-            <p className="text-sm font-medium text-stone-700">Don't see your community?</p>
-            <p className="mt-1 text-xs text-stone-500">
-              Set up your HOA on Neighbri and start managing amenity bookings today.
+          <div className="mt-6 rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-5">
+            <p className="text-sm font-medium text-stone-700 text-center">Don&apos;t see your community?</p>
+            <div className="mt-4 space-y-2">
+              <Link
+                href="/onboard"
+                className="block w-full rounded-full bg-stone-900 px-5 py-2.5 text-center text-sm font-semibold text-white hover:bg-stone-800"
+              >
+                Create a community
+              </Link>
+              <Link
+                href="/browse"
+                className="block w-full rounded-full border border-stone-300 px-5 py-2.5 text-center text-sm font-semibold text-stone-700 hover:bg-white"
+              >
+                Browse public amenities
+              </Link>
+            </div>
+            <p className="mt-3 text-center text-xs text-stone-500">
+              You can always come back and join a community later.
             </p>
-            <Link
-              href="/onboard"
-              className="mt-3 inline-block rounded-full bg-stone-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-stone-800"
-            >
-              Onboard your community
-            </Link>
           </div>
         )}
       </div>

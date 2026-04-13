@@ -149,7 +149,7 @@ export default function PricingPage() {
                     : 'border border-stone-300 text-stone-700 hover:bg-stone-50'
                 }`}
               >
-                Start free trial
+                Sign up
               </Link>
             </div>
           ))}
@@ -186,7 +186,7 @@ export default function PricingPage() {
             href="/sign-up"
             className="mt-6 inline-block rounded-full bg-emerald-600 px-8 py-3.5 text-sm font-semibold text-white hover:bg-emerald-500 transition"
           >
-            Start free trial
+            Sign up
           </Link>
         </div>
       </section>

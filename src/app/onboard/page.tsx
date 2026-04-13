@@ -81,9 +81,7 @@ export default function OnboardPage() {
   return (
     <main className="min-h-screen bg-stone-50 px-4 sm:px-6 py-12">
       <div className="mx-auto max-w-2xl">
-        <Link href="/pricing" className="text-sm text-emerald-700 hover:text-emerald-900">&larr; Back to pricing</Link>
-
-        <div className="mt-4">
+        <div>
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-700">Neighbri</p>
           <h1 className="mt-3 text-3xl font-semibold text-stone-900">Set up your community</h1>
           <p className="mt-2 text-sm text-stone-500">
@@ -206,6 +204,25 @@ export default function OnboardPage() {
             By creating a community you agree to the <a href="/terms" target="_blank" className="text-emerald-600 underline">Terms of Service</a> and <a href="/privacy" target="_blank" className="text-emerald-600 underline">Privacy Policy</a>.
           </p>
         </form>
+
+        {/* Escape hatches */}
+        <div className="mt-8 rounded-2xl border border-dashed border-stone-300 bg-white p-5">
+          <p className="text-sm font-medium text-stone-700 text-center">Not a property manager?</p>
+          <div className="mt-4 grid sm:grid-cols-2 gap-2">
+            <Link
+              href="/join"
+              className="block w-full rounded-full border border-stone-300 bg-white px-5 py-2.5 text-center text-sm font-semibold text-stone-700 hover:bg-stone-50"
+            >
+              Join an existing community
+            </Link>
+            <Link
+              href="/browse"
+              className="block w-full rounded-full border border-stone-300 bg-white px-5 py-2.5 text-center text-sm font-semibold text-stone-700 hover:bg-stone-50"
+            >
+              Browse public amenities
+            </Link>
+          </div>
+        </div>
       </div>
     </main>
   )
