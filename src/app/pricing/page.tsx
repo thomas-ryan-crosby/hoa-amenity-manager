@@ -182,12 +182,22 @@ export default function PricingPage() {
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-bold text-stone-900">Ready to get started?</h2>
           <p className="mt-3 text-stone-500">Start your 30-day free trial. Cancel anytime.</p>
-          <Link
-            href="/sign-up"
-            className="mt-6 inline-block rounded-full bg-emerald-600 px-8 py-3.5 text-sm font-semibold text-white hover:bg-emerald-500 transition"
-          >
-            Sign up
-          </Link>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Link
+              href="/sign-up"
+              className="inline-block rounded-full bg-emerald-600 px-8 py-3.5 text-sm font-semibold text-white hover:bg-emerald-500 transition"
+            >
+              Sign up
+            </Link>
+            <a
+              href="https://calendly.com/thomas-ryan-crosby/30min"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block rounded-full border border-stone-300 px-8 py-3.5 text-sm font-semibold text-stone-700 hover:bg-stone-50 transition"
+            >
+              Book a demo
+            </a>
+          </div>
         </div>
       </section>
     </main>

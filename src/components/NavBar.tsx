@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useCommunity } from '@/components/providers/CommunityProvider'
+import { FeedbackButton } from '@/components/FeedbackButton'
 
 function CommunitySwitcher() {
   const { activeCommunity, communities, switchCommunity, loading } = useCommunity()
@@ -160,6 +161,7 @@ export function NavBar() {
                   </p>
                 )}
               </Link>
+              <FeedbackButton />
               <button
                 onClick={signOut}
                 className="rounded-full border border-stone-300 px-3 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-50"
@@ -286,6 +288,7 @@ export function NavBar() {
               >
                 Account
               </Link>
+              <FeedbackButton compact />
 
               <div className="mt-2 pt-2 border-t border-stone-200">
                 <button

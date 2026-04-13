@@ -42,6 +42,17 @@ export default async function Home() {
           </div>
           <p className="mt-4 text-xs text-stone-400">Setup takes under 5 minutes.</p>
           <p className="mt-2 text-xs text-stone-400">Residents join for free. Pricing is for communities managing their amenities.</p>
+          <p className="mt-6 text-sm text-stone-500">
+            Want to see it live first?{' '}
+            <a
+              href="https://calendly.com/thomas-ryan-crosby/30min"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-emerald-700 hover:text-emerald-800 underline"
+            >
+              Book a 30-min demo
+            </a>
+          </p>
         </div>
       </section>
 
@@ -238,6 +249,14 @@ export default async function Home() {
             >
               Sign in
             </Link>
+            <a
+              href="https://calendly.com/thomas-ryan-crosby/30min"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full border border-stone-300 px-8 py-3.5 text-sm font-semibold text-stone-700 hover:bg-white transition"
+            >
+              Book a demo
+            </a>
           </div>
           <p className="mt-4 text-xs text-stone-400">Cancel anytime.</p>
         </div>
