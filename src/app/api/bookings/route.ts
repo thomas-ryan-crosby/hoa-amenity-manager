@@ -68,6 +68,24 @@ export async function POST(req: NextRequest) {
   }
 
   const { amenityId, additionalAmenityIds, startDatetime, endDatetime, guestCount, notes, anonymous } = parsed.data
+
+  // Block bookings that start in the past
+  const startMs = Date.parse(startDatetime)
+  const endMs = Date.parse(endDatetime)
+  const nowMs = Date.now()
+  if (startMs < nowMs) {
+    return NextResponse.json(
+      { error: 'Booking start time must be in the future.' },
+      { status: 400 },
+    )
+  }
+  if (endMs <= startMs) {
+    return NextResponse.json(
+      { error: 'Booking end time must be after the start time.' },
+      { status: 400 },
+    )
+  }
+
   const communityId = await getActiveCommunityId()
 
   // Create the primary booking

@@ -461,6 +461,12 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   async function doSubmit() {
     if (!selection) return
 
+    // Block bookings in the past
+    if (new Date(selection.start).getTime() < Date.now()) {
+      setError('Booking start time must be in the future.')
+      return
+    }
+
     setSubmitting(true)
     setError(null)
 
@@ -678,7 +684,17 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
           <button
             className="flex-1 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
             onClick={() => {
-              setSelection({ amenityId: primaryAmenityId, start: tzInputToISO(quickBookStart, communityTz), end: tzInputToISO(quickBookEnd, communityTz) })
+              const startIso = tzInputToISO(quickBookStart, communityTz)
+              const endIso = tzInputToISO(quickBookEnd, communityTz)
+              if (new Date(startIso).getTime() < Date.now()) {
+                alert('Booking start time must be in the future.')
+                return
+              }
+              if (new Date(endIso).getTime() <= new Date(startIso).getTime()) {
+                alert('Booking end time must be after the start time.')
+                return
+              }
+              setSelection({ amenityId: primaryAmenityId, start: startIso, end: endIso })
               setGuestCount(1)
               setNotes('')
               setShowQuickBook(false)
@@ -1084,12 +1100,21 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
               longPressDelay={isMobile ? 300 : 0}
               selectAllow={(info) => {
                 // Block all-day selections from month view — navigate to day instead
-                return !info.allDay
+                if (info.allDay) return false
+                // Block selections that start in the past
+                if (info.start.getTime() < Date.now()) return false
+                return true
               }}
               select={(info) => {
                 if (!primaryAmenityId) return
                 if (info.allDay) return
                 if (quickBookActiveRef.current) return // programmatic select — modal handles it
+
+                // Block bookings in the past
+                if (info.start.getTime() < Date.now()) {
+                  calendarRef.current?.getApi().unselect()
+                  return
+                }
 
                 // Check if this is a "click" (very short selection) vs a real drag
                 const startMs = new Date(info.startStr).getTime()
@@ -1133,6 +1158,11 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
                 // Single click: create 1-hour blue block on calendar + open time picker
                 const clickDate = new Date(info.dateStr)
                 const endDate = new Date(clickDate.getTime() + 60 * 60 * 1000)
+
+                // Block clicks on past time slots
+                if (clickDate.getTime() < Date.now()) {
+                  return
+                }
 
                 // Show the blue selection block on the calendar
                 calendarRef.current?.getApi().select(clickDate, endDate)
