@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { CommunityProvider } from "@/components/providers/CommunityProvider";
 import { PendingGate } from "@/components/PendingGate";
@@ -31,6 +32,7 @@ export default function RootLayout({
             <Footer />
           </CommunityProvider>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );
