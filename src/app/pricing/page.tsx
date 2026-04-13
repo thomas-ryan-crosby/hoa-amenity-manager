@@ -74,7 +74,7 @@ const PLANS = [
 ]
 
 const FAQS = [
-  { q: 'How does the 30-day free trial work?', a: 'Sign up, set up your community, and use all features for 30 days at no cost. No credit card required to start. If you love it, pick a plan. If not, no hard feelings.' },
+  { q: 'How does the 30-day free trial work?', a: 'Sign up, set up your community, and use all features for 30 days at no cost. If you love it, stay on your plan. If not, cancel anytime before the trial ends and you won\'t be charged.' },
   { q: 'Can I change plans later?', a: 'Yes, upgrade or downgrade anytime. Changes take effect on your next billing cycle. You\'ll be prorated for any mid-cycle changes.' },
   { q: 'Is payment processing included?', a: 'Yes, all plans include Stripe payment processing. Connect your own Stripe account so funds go directly to your HOA. Standard Stripe fees (2.9% + $0.30) apply per transaction.' },
   { q: 'What does "outside/guest bookings" mean?', a: 'Like ResortPass for hotels, your community can allow non-residents to book amenities (pool day passes, event spaces, court time) for a fee. It\'s a new revenue stream for your HOA — available on Growth and Enterprise plans.' },
@@ -95,7 +95,7 @@ export default function PricingPage() {
             Simple, transparent pricing
           </h1>
           <p className="mt-4 text-lg text-stone-500 max-w-xl mx-auto">
-            All plans include a 30-day free trial. No credit card required. Cancel anytime.
+            All plans include a 30-day free trial. Cancel anytime.
           </p>
           <p className="mt-2 text-sm text-stone-400">
             Residents always join for free — pricing is for communities managing their amenities.
@@ -181,7 +181,7 @@ export default function PricingPage() {
       <section className="border-t border-stone-200 bg-white px-4 sm:px-6 py-14 sm:py-16">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-bold text-stone-900">Ready to get started?</h2>
-          <p className="mt-3 text-stone-500">Start your 30-day free trial. No credit card required.</p>
+          <p className="mt-3 text-stone-500">Start your 30-day free trial. Cancel anytime.</p>
           <Link
             href="/sign-up"
             className="mt-6 inline-block rounded-full bg-emerald-600 px-8 py-3.5 text-sm font-semibold text-white hover:bg-emerald-500 transition"

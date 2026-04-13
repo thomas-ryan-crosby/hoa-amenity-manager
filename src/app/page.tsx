@@ -40,7 +40,7 @@ export default async function Home() {
               Sign in
             </Link>
           </div>
-          <p className="mt-4 text-xs text-stone-400">No credit card required. Setup takes under 5 minutes.</p>
+          <p className="mt-4 text-xs text-stone-400">Setup takes under 5 minutes.</p>
           <p className="mt-2 text-xs text-stone-400">Residents join for free. Pricing is for communities managing their amenities.</p>
         </div>
       </section>
@@ -189,7 +189,7 @@ export default async function Home() {
             Plans starting at $29/mo
           </h2>
           <p className="mt-3 text-stone-500 max-w-lg mx-auto">
-            All plans include a 30-day free trial. No credit card required. From small communities to large management companies.
+            All plans include a 30-day free trial. From small communities to large management companies.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-6 text-center">
             <div className="rounded-2xl border border-stone-200 bg-stone-50 px-8 py-5">
@@ -239,7 +239,7 @@ export default async function Home() {
               Sign in
             </Link>
           </div>
-          <p className="mt-4 text-xs text-stone-400">No credit card required. Cancel anytime.</p>
+          <p className="mt-4 text-xs text-stone-400">Cancel anytime.</p>
         </div>
       </section>
     </main>
