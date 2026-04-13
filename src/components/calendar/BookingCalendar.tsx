@@ -7,7 +7,7 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import momentTimezonePlugin from '@fullcalendar/moment-timezone'
 import moment from 'moment-timezone'
-import { formatCurrency, formatDateTime, formatDateRange } from '@/lib/format'
+import { formatCurrency, formatDateTime, formatDateRange, formatTimezoneLabel } from '@/lib/format'
 import { useCommunity } from '@/components/providers/CommunityProvider'
 import Link from 'next/link'
 
@@ -1048,7 +1048,7 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
         </div>
 
         <p className="mb-2 text-xs text-stone-400 text-right">
-          All times shown in {communityTz.replace('America/', '').replace('Pacific/', '').replace(/_/g, ' ')} time
+          All times shown in {formatTimezoneLabel(communityTz)} time
         </p>
 
         {viewMode === 'calendar' ? (

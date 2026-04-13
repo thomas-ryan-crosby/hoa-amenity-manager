@@ -6,7 +6,7 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import momentTimezonePlugin from '@fullcalendar/moment-timezone'
-import { formatDateRange } from '@/lib/format'
+import { formatDateRange, formatTimezoneLabel } from '@/lib/format'
 import { useCommunity } from '@/components/providers/CommunityProvider'
 
 type Area = {
@@ -551,7 +551,7 @@ export function AdminCalendar() {
         </div>
 
         <p className="mb-2 text-xs text-stone-400 text-right">
-          All times shown in {communityTz.replace('America/', '').replace('Pacific/', '').replace(/_/g, ' ')} time
+          All times shown in {formatTimezoneLabel(communityTz)} time
         </p>
 
         {viewMode === 'calendar' ? (
