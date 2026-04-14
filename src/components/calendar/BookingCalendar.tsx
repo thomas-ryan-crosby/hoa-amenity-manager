@@ -191,6 +191,12 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
   const [additionalAmenities, setAdditionalAmenities] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
   const [amenityDetail, setAmenityDetail] = useState<Amenity | null>(null)
+  const [photoIndex, setPhotoIndex] = useState(0)
+
+  useEffect(() => {
+    // Reset to first photo whenever a different amenity is opened
+    setPhotoIndex(0)
+  }, [amenityDetail?.id])
   const [eventDetail, setEventDetail] = useState<{
     bookingId: string
     title: string
@@ -843,58 +849,170 @@ export function BookingCalendar({ modifyBookingId }: { modifyBookingId?: string 
     {/* Event detail popup */}
     {/* Amenity detail modal */}
     {amenityDetail && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setAmenityDetail(null)}>
-        <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-          {/* Photo carousel */}
-          {amenityDetail.photos?.length > 0 && (
-            <div className="flex gap-1 overflow-x-auto">
-              {amenityDetail.photos.map((url, i) => (
-                <img key={url} src={url} alt={`${amenityDetail.name} photo ${i + 1}`} className={`${amenityDetail.photos.length === 1 ? 'w-full' : 'w-2/3 flex-shrink-0'} h-48 object-cover ${i === 0 ? 'rounded-tl-2xl' : ''} ${i === amenityDetail.photos.length - 1 ? 'rounded-tr-2xl' : ''}`} />
-              ))}
-            </div>
-          )}
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-stone-900">{amenityDetail.name}</h3>
-              <button onClick={() => setAmenityDetail(null)} className="rounded-full p-1 text-stone-400 hover:bg-stone-100">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
-            {amenityDetail.description && (
-              <p className="text-sm text-stone-500 mb-4">{amenityDetail.description}</p>
-            )}
-            <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-              <div className="rounded-xl bg-stone-50 px-3 py-2.5">
-                <p className="text-xs text-stone-400">Capacity</p>
-                <p className="font-semibold text-stone-900">{amenityDetail.capacity} guests</p>
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 sm:p-4" onClick={() => setAmenityDetail(null)}>
+        <div
+          className="w-full sm:max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Hero carousel */}
+          <div className="relative bg-stone-100">
+            {amenityDetail.photos?.length > 0 ? (
+              <div className="relative aspect-[4/3] sm:aspect-[16/10] w-full overflow-hidden sm:rounded-t-3xl">
+                {amenityDetail.photos.map((url, i) => (
+                  <img
+                    key={url}
+                    src={url}
+                    alt={`${amenityDetail.name} photo ${i + 1}`}
+                    className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${i === photoIndex ? 'opacity-100' : 'opacity-0'}`}
+                  />
+                ))}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-transparent" />
+
+                {amenityDetail.photos.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setPhotoIndex((i) => (i - 1 + amenityDetail.photos.length) % amenityDetail.photos.length)}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-800 shadow-md transition hover:bg-white"
+                      aria-label="Previous photo"
+                    >
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPhotoIndex((i) => (i + 1) % amenityDetail.photos.length)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-800 shadow-md transition hover:bg-white"
+                      aria-label="Next photo"
+                    >
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+
+                    {/* Dot indicators */}
+                    <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+                      {amenityDetail.photos.map((_, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setPhotoIndex(i) }}
+                          className={`h-1.5 rounded-full transition-all ${i === photoIndex ? 'w-5 bg-white' : 'w-1.5 bg-white/60 hover:bg-white/80'}`}
+                          aria-label={`Go to photo ${i + 1}`}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Counter */}
+                    <div className="absolute top-3 left-3 rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
+                      {photoIndex + 1} / {amenityDetail.photos.length}
+                    </div>
+                  </>
+                )}
               </div>
-              <div className="rounded-xl bg-stone-50 px-3 py-2.5">
-                <p className="text-xs text-stone-400">Pricing</p>
-                <p className="font-semibold text-stone-900">
-                  {amenityDetail.rentalFee > 0 ? `$${amenityDetail.rentalFee}` : 'Free'}
-                  {amenityDetail.depositAmount > 0 && ` + $${amenityDetail.depositAmount} deposit`}
+            ) : (
+              <div className="flex aspect-[16/10] w-full items-center justify-center bg-stone-100 sm:rounded-t-3xl">
+                <svg className="h-12 w-12 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                </svg>
+              </div>
+            )}
+
+            {/* Floating close button */}
+            <button
+              type="button"
+              onClick={() => setAmenityDetail(null)}
+              className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-800 shadow-md transition hover:bg-white"
+              aria-label="Close"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="p-5 sm:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-xl sm:text-2xl font-semibold text-stone-900 tracking-tight">{amenityDetail.name}</h3>
+                <p className="mt-1 text-sm text-stone-500">
+                  Up to {amenityDetail.capacity} guests &middot; {amenityDetail.rentalFee > 0 ? `$${amenityDetail.rentalFee}` : 'Free to book'}
                 </p>
               </div>
-              <div className="rounded-xl bg-stone-50 px-3 py-2.5">
-                <p className="text-xs text-stone-400">Approval</p>
-                <p className="font-semibold text-stone-900">{amenityDetail.requiresApproval ? 'Required' : 'Auto-approved'}</p>
+              {amenityDetail.rentalFee > 0 && (
+                <div className="text-right">
+                  <p className="text-2xl font-semibold text-stone-900">${amenityDetail.rentalFee}</p>
+                  <p className="text-xs text-stone-500">per booking</p>
+                </div>
+              )}
+            </div>
+
+            {amenityDetail.description && (
+              <p className="mt-4 text-sm leading-relaxed text-stone-600">{amenityDetail.description}</p>
+            )}
+
+            <div className="mt-5 h-px bg-stone-100" />
+
+            <div className="mt-5 space-y-3 text-sm">
+              <div className="flex items-start gap-3">
+                <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                </svg>
+                <div>
+                  <p className="text-stone-900 font-medium">Capacity</p>
+                  <p className="text-stone-500 text-xs">Up to {amenityDetail.capacity} guests</p>
+                </div>
               </div>
-              <div className="rounded-xl bg-stone-50 px-3 py-2.5">
-                <p className="text-xs text-stone-400">Max advance</p>
-                <p className="font-semibold text-stone-900">{amenityDetail.maxAdvanceBookingDays} days</p>
+
+              {amenityDetail.depositAmount > 0 && (
+                <div className="flex items-start gap-3">
+                  <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-2.21 0-4-1.79-4-4s1.79-4 4-4c1.105 0 2.105.448 2.829 1.172" />
+                  </svg>
+                  <div>
+                    <p className="text-stone-900 font-medium">Refundable deposit</p>
+                    <p className="text-stone-500 text-xs">${amenityDetail.depositAmount} &middot; returned after a clean inspection</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-start gap-3">
+                <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-stone-900 font-medium">{amenityDetail.requiresApproval ? 'Approval required' : 'Instant booking'}</p>
+                  <p className="text-stone-500 text-xs">
+                    {amenityDetail.requiresApproval
+                      ? 'A property manager reviews each request before confirming.'
+                      : 'Your booking is confirmed right away.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                </svg>
+                <div>
+                  <p className="text-stone-900 font-medium">Book up to {amenityDetail.maxAdvanceBookingDays} days ahead</p>
+                  <p className="text-stone-500 text-xs">Plan your event well in advance.</p>
+                </div>
               </div>
             </div>
+
             {amenityDetail.hasRules && amenityDetail.rules && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 mb-4">
-                <p className="text-xs font-medium text-amber-700 mb-1">Rules</p>
-                <p className="text-sm text-amber-800 whitespace-pre-wrap">{amenityDetail.rules}</p>
+              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 mb-1">Rules</p>
+                <p className="text-sm text-amber-900 whitespace-pre-wrap leading-relaxed">{amenityDetail.rules}</p>
               </div>
             )}
+
             <button
               onClick={() => { setAmenityDetail(null); setSelectedAmenities(new Set([amenityDetail.id])) }}
-              className="w-full rounded-full bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500"
+              className="mt-6 w-full rounded-full bg-emerald-600 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 transition"
             >
               Book this amenity
             </button>
