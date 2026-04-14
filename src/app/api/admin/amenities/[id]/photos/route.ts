@@ -60,6 +60,44 @@ export async function POST(
 }
 
 // ---------------------------------------------------------------------------
+// PATCH — reorder an amenity's photos
+// ---------------------------------------------------------------------------
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireRole(['property_manager'])
+  if (!auth.ok) return auth.response
+
+  const { id } = await params
+  const amenity = await getAmenityById(id)
+  if (!amenity) {
+    return NextResponse.json({ error: 'Amenity not found' }, { status: 404 })
+  }
+
+  const body = await req.json().catch(() => null)
+  const photos = body?.photos
+  if (!Array.isArray(photos) || photos.some((p) => typeof p !== 'string')) {
+    return NextResponse.json({ error: 'photos must be an array of URL strings' }, { status: 400 })
+  }
+
+  // Only allow reordering the same set — not adding or removing
+  const current = amenity.photos ?? []
+  const currentSet = new Set(current)
+  const nextSet = new Set(photos)
+  if (current.length !== photos.length || [...currentSet].some((p) => !nextSet.has(p))) {
+    return NextResponse.json(
+      { error: 'Reorder must include exactly the same photos as the current set.' },
+      { status: 400 },
+    )
+  }
+
+  await updateAmenity(id, { photos })
+  return NextResponse.json({ success: true, photos })
+}
+
+// ---------------------------------------------------------------------------
 // DELETE — remove a photo from an amenity
 // ---------------------------------------------------------------------------
 

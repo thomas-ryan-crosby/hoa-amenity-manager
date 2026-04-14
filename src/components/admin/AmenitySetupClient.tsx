@@ -261,26 +261,38 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
   const [editingAreaId, setEditingAreaId] = useState<string | null>(null)
   const [editingAreaName, setEditingAreaName] = useState('')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [isDropping, setIsDropping] = useState(false)
+  const [draggedPhotoIndex, setDraggedPhotoIndex] = useState<number | null>(null)
+  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
 
-  async function uploadPhoto(file: File) {
+  async function uploadPhotos(fileList: FileList | File[]) {
     if (!selectedAmenity) return
+    const files = Array.from(fileList).filter((f) => f.type.startsWith('image/'))
+    const rejected = Array.from(fileList).length - files.length
+    if (rejected > 0) showNotice(`Skipped ${rejected} non-image file${rejected > 1 ? 's' : ''}`, 'error')
+    if (files.length === 0) return
+
     setUploadingPhoto(true)
+    let uploaded = 0
+    let failed = 0
     try {
-      const formData = new FormData()
-      formData.append('photo', file)
-      const res = await fetch(`/api/admin/amenities/${selectedAmenity.id}/photos`, {
-        method: 'POST',
-        body: formData,
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        showNotice(data.error ?? 'Failed to upload photo', 'error')
-        return
+      for (const file of files) {
+        const formData = new FormData()
+        formData.append('photo', file)
+        const res = await fetch(`/api/admin/amenities/${selectedAmenity.id}/photos`, {
+          method: 'POST',
+          body: formData,
+        })
+        if (res.ok) uploaded++
+        else {
+          failed++
+          const data = await res.json().catch(() => ({}))
+          console.error('Photo upload failed:', data.error ?? res.statusText)
+        }
       }
-      showNotice('Photo uploaded!')
+      if (uploaded > 0) showNotice(`${uploaded} photo${uploaded > 1 ? 's' : ''} uploaded`)
+      if (failed > 0) showNotice(`${failed} photo${failed > 1 ? 's' : ''} failed to upload`, 'error')
       await loadData()
-    } catch {
-      showNotice('Failed to upload photo', 'error')
     } finally {
       setUploadingPhoto(false)
     }
@@ -304,6 +316,59 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
     } catch {
       showNotice('Failed to remove photo', 'error')
     }
+  }
+
+  async function reorderPhotos(reordered: string[]) {
+    if (!selectedAmenity) return
+    try {
+      const res = await fetch(`/api/admin/amenities/${selectedAmenity.id}/photos`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photos: reordered }),
+      })
+      if (!res.ok) {
+        showNotice('Failed to reorder photos', 'error')
+        return
+      }
+      await loadData()
+    } catch {
+      showNotice('Failed to reorder photos', 'error')
+    }
+  }
+
+  function handlePhotoDragStart(index: number) {
+    setDraggedPhotoIndex(index)
+  }
+
+  function handlePhotoDragOver(e: React.DragEvent, index: number) {
+    e.preventDefault()
+    if (draggedPhotoIndex === null || draggedPhotoIndex === index) return
+    setDropTargetIndex(index)
+  }
+
+  function handlePhotoDrop(e: React.DragEvent, targetIndex: number) {
+    e.preventDefault()
+    if (draggedPhotoIndex === null || !selectedAmenity) return
+    const photos = [...(selectedAmenity.photos ?? [])]
+    const [moved] = photos.splice(draggedPhotoIndex, 1)
+    photos.splice(targetIndex, 0, moved)
+    setDraggedPhotoIndex(null)
+    setDropTargetIndex(null)
+    reorderPhotos(photos)
+  }
+
+  function handlePhotoDragEnd() {
+    setDraggedPhotoIndex(null)
+    setDropTargetIndex(null)
+  }
+
+  function handleDropZoneDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setIsDropping(false)
+    // Ignore if this is a photo-reorder drag, not a file drop
+    if (draggedPhotoIndex !== null) return
+    const files = e.dataTransfer?.files
+    if (files && files.length > 0) uploadPhotos(files)
   }
 
   const selectedAmenity = amenities.find((a) => a.id === selectedAmenityId) ?? null
@@ -660,48 +725,77 @@ export function AmenitySetupClient({ initialAmenities, initialStaff, initialArea
                   {selectedAmenity.description && (
                     <p className="text-sm text-stone-600 mb-4">{selectedAmenity.description}</p>
                   )}
-                  {/* Photos */}
-                  {selectedAmenity.photos?.length > 0 && (
-                    <div className="mb-4">
-                      <div className="flex gap-2 overflow-x-auto pb-2">
-                        {selectedAmenity.photos.map((url) => (
-                          <img key={url} src={url} alt={selectedAmenity.name} className="h-24 w-32 rounded-xl object-cover flex-shrink-0 border border-stone-200" />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {/* Photo upload (admin) */}
+                  {/* Photo manager (admin) — drag & drop upload + reorder */}
                   <div className="mb-4">
-                    <label className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-stone-300 px-4 py-3 cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 transition">
-                      <svg className="h-5 w-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                      <span className="text-sm text-stone-500">{uploadingPhoto ? 'Uploading...' : 'Add photo'}</span>
+                    <label
+                      onDragOver={(e) => { e.preventDefault(); if (draggedPhotoIndex === null) setIsDropping(true) }}
+                      onDragLeave={() => setIsDropping(false)}
+                      onDrop={handleDropZoneDrop}
+                      className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed px-4 py-5 cursor-pointer transition ${
+                        isDropping
+                          ? 'border-emerald-500 bg-emerald-50'
+                          : 'border-stone-300 hover:border-emerald-400 hover:bg-emerald-50'
+                      }`}
+                    >
+                      <svg className="h-6 w-6 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                      </svg>
+                      <span className="text-sm font-medium text-stone-700">
+                        {uploadingPhoto ? 'Uploading...' : isDropping ? 'Drop to upload' : 'Drag & drop photos here'}
+                      </span>
+                      <span className="text-xs text-stone-500">or click to browse · up to 5MB each</span>
                       <input
                         type="file"
                         accept="image/*"
+                        multiple
                         className="hidden"
                         disabled={uploadingPhoto}
                         onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) uploadPhoto(file)
+                          const files = e.target.files
+                          if (files && files.length > 0) uploadPhotos(files)
                           e.target.value = ''
                         }}
                       />
                     </label>
+
                     {selectedAmenity.photos?.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {selectedAmenity.photos.map((url) => (
-                          <div key={url} className="relative group">
-                            <img src={url} alt="" className="h-16 w-20 rounded-lg object-cover border border-stone-200" />
-                            <button
-                              type="button"
-                              onClick={() => deletePhoto(url)}
-                              className="absolute -top-1.5 -right-1.5 hidden group-hover:flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-xs"
+                      <>
+                        <p className="mt-3 text-xs text-stone-500">Drag photos to reorder. First photo is shown as the cover.</p>
+                        <div className="mt-2 grid grid-cols-3 sm:grid-cols-4 gap-2">
+                          {selectedAmenity.photos.map((url, index) => (
+                            <div
+                              key={url}
+                              draggable
+                              onDragStart={() => handlePhotoDragStart(index)}
+                              onDragOver={(e) => handlePhotoDragOver(e, index)}
+                              onDrop={(e) => handlePhotoDrop(e, index)}
+                              onDragEnd={handlePhotoDragEnd}
+                              className={`relative group rounded-lg overflow-hidden border-2 transition ${
+                                dropTargetIndex === index && draggedPhotoIndex !== index
+                                  ? 'border-emerald-500 scale-105'
+                                  : draggedPhotoIndex === index
+                                    ? 'border-stone-300 opacity-40'
+                                    : 'border-stone-200'
+                              } cursor-move`}
                             >
-                              &times;
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+                              <img src={url} alt="" className="h-20 w-full object-cover pointer-events-none" />
+                              {index === 0 && (
+                                <span className="absolute top-1 left-1 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                                  Cover
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => deletePhoto(url)}
+                                className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-xs opacity-0 group-hover:opacity-100 transition"
+                                aria-label="Remove photo"
+                              >
+                                &times;
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-sm">
