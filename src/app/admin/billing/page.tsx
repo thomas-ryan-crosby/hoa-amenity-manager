@@ -128,7 +128,7 @@ export default function BillingPage() {
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      const filename = res.headers.get('x-filename') ?? 'ledger.csv'
+      const filename = res.headers.get('x-filename') ?? 'ledger.xlsx'
       link.download = filename
       document.body.appendChild(link)
       link.click()
@@ -370,7 +370,7 @@ export default function BillingPage() {
                     <div>
                       <p className="text-sm font-semibold text-stone-900">Export ledger</p>
                       <p className="mt-0.5 text-xs text-stone-500">
-                        Community-wide CSV grouped by month, with per-resident subtotals.
+                        Excel workbook with Transactions, Monthly Summary, and Resident Summary sheets.
                       </p>
                     </div>
                     <button
@@ -379,7 +379,7 @@ export default function BillingPage() {
                       disabled={exporting}
                       className="shrink-0 rounded-full bg-stone-900 px-4 py-2 text-xs font-semibold text-white hover:bg-stone-800 disabled:bg-stone-400"
                     >
-                      {exporting ? 'Preparing...' : 'Download CSV'}
+                      {exporting ? 'Preparing...' : 'Download Excel'}
                     </button>
                   </div>
                 </div>
