@@ -331,9 +331,9 @@ export default function BillingPage() {
                     <p className="mt-0.5 text-xs text-stone-500">
                       Charge residents directly when a booking is approved. Funds go straight to your Stripe account.
                     </p>
-                    {billing.billingMode !== 'stripe' && !stripe?.connected && (
+                    {billing.billingMode === 'stripe' && !stripe?.connected && (
                       <p className="mt-1 text-xs text-amber-700">
-                        Add your Stripe keys below before switching to this mode.
+                        Complete your Stripe setup below — paid bookings can&apos;t be approved until all three keys are saved.
                       </p>
                     )}
                   </div>

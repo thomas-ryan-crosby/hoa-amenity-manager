@@ -103,14 +103,6 @@ export async function PUT(req: NextRequest) {
   const wh = parsed.data.stripeWebhookSecret ?? settings.stripeWebhookSecret
   update.stripeConnected = !!(pk && sk && wh)
 
-  // Refuse to switch into Stripe mode without keys — keeps the UI truthful
-  if (parsed.data.billingMode === 'stripe' && !update.stripeConnected) {
-    return NextResponse.json(
-      { error: 'Add your Stripe keys before switching to Stripe billing mode.' },
-      { status: 400 },
-    )
-  }
-
   await updateSettings(update, communityId)
 
   return NextResponse.json({
