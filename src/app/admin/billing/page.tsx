@@ -386,7 +386,8 @@ export default function BillingPage() {
               )}
             </div>
 
-            {/* Stripe configuration */}
+            {/* Stripe configuration — only relevant when Stripe is the chosen billing mode */}
+            {billing.billingMode === 'stripe' && (
             <div className="rounded-2xl border border-stone-200 bg-white p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -568,6 +569,7 @@ export default function BillingPage() {
                 </button>
               </form>
             </div>
+            )}
 
             {/* Support */}
             <div className="rounded-2xl border border-stone-200 bg-white p-6">
