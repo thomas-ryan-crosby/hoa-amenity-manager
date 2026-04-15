@@ -42,30 +42,31 @@ function formatCurrency(amount: number): string {
 }
 
 export async function GET(req: NextRequest) {
-  const auth = await requireRole(['property_manager'])
-  if (!auth.ok) return auth.response
+  try {
+    const auth = await requireRole(['property_manager'])
+    if (!auth.ok) return auth.response
 
-  if (auth.role !== 'admin') {
-    return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-  }
+    if (auth.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    }
 
-  const communityId = await getActiveCommunityId()
-  if (!communityId) {
-    return NextResponse.json({ error: 'No active community' }, { status: 400 })
-  }
+    const communityId = await getActiveCommunityId()
+    if (!communityId) {
+      return NextResponse.json({ error: 'No active community' }, { status: 400 })
+    }
 
-  const community = await getCommunityById(communityId)
-  if (!community) {
-    return NextResponse.json({ error: 'Community not found' }, { status: 404 })
-  }
+    const community = await getCommunityById(communityId)
+    if (!community) {
+      return NextResponse.json({ error: 'Community not found' }, { status: 404 })
+    }
 
-  const url = new URL(req.url)
-  const fromStr = url.searchParams.get('from')
-  const toStr = url.searchParams.get('to')
-  const from = fromStr ? new Date(fromStr) : undefined
-  const to = toStr ? new Date(toStr) : undefined
+    const url = new URL(req.url)
+    const fromStr = url.searchParams.get('from')
+    const toStr = url.searchParams.get('to')
+    const from = fromStr ? new Date(fromStr) : undefined
+    const to = toStr ? new Date(toStr) : undefined
 
-  const entries = await getLedgerEntriesForCommunity(communityId, { from, to })
+    const entries = await getLedgerEntriesForCommunity(communityId, { from, to })
 
   // Group entries by YYYY-MM, ordered ascending
   const grouped = new Map<string, LedgerEntry[]>()
@@ -146,13 +147,20 @@ export async function GET(req: NextRequest) {
   const safeCommunity = community.slug || community.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()
   const filename = `ledger-${safeCommunity}-${today}.csv`
 
-  return new NextResponse(csv, {
-    status: 200,
-    headers: {
-      'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="${filename}"`,
-      'x-filename': filename,
-      'Cache-Control': 'no-store',
-    },
-  })
+    return new NextResponse(csv, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'x-filename': filename,
+        'Cache-Control': 'no-store',
+      },
+    })
+  } catch (err) {
+    console.error('[Ledger export] Failed:', err)
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Failed to export ledger.' },
+      { status: 500 },
+    )
+  }
 }

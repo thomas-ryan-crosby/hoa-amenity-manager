@@ -1521,11 +1521,11 @@ export async function getLedgerEntriesForCommunity(
   communityId: string,
   options?: { from?: Date; to?: Date },
 ): Promise<LedgerEntry[]> {
-  let query = ledgerEntriesCol().where('communityId', '==', communityId) as FirebaseFirestore.Query
-  if (options?.from) query = query.where('bookingStart', '>=', Timestamp.fromDate(options.from))
-  if (options?.to) query = query.where('bookingStart', '<=', Timestamp.fromDate(options.to))
-  const snap = await query.orderBy('bookingStart', 'asc').get()
-  return snap.docs.map((d) => {
+  // Single-field filter only — avoids needing a composite index. Date-range
+  // filtering and sort are done in memory. Volume per community is small
+  // (one community = one HOA's ledger) so this is fine.
+  const snap = await ledgerEntriesCol().where('communityId', '==', communityId).get()
+  const entries = snap.docs.map((d) => {
     const data = d.data()
     return {
       id: d.id,
@@ -1535,4 +1535,15 @@ export async function getLedgerEntriesForCommunity(
       createdAt: data.createdAt ? toDate(data.createdAt) : new Date(),
     } as LedgerEntry
   })
+
+  const fromMs = options?.from?.getTime()
+  const toMs = options?.to?.getTime()
+  const filtered = entries.filter((e) => {
+    const ts = e.bookingStart.getTime()
+    if (fromMs != null && ts < fromMs) return false
+    if (toMs != null && ts > toMs) return false
+    return true
+  })
+
+  return filtered.sort((a, b) => a.bookingStart.getTime() - b.bookingStart.getTime())
 }
