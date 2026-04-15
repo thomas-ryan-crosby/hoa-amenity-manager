@@ -7,6 +7,8 @@ import {
   createTurnWindow,
   getTurnWindowByBookingId,
   deleteTurnWindowByBookingId,
+  getSettings,
+  createLedgerEntry,
   type Amenity,
   type Booking,
 } from '@/lib/firebase/db'
@@ -40,6 +42,117 @@ async function ensureTurnWindow(booking: Booking, amenity: Amenity): Promise<voi
     status: 'PENDING',
     completedAt: null,
   })
+}
+
+// ---------------------------------------------------------------------------
+// handlePaidBooking — shared branch for Stripe vs ledger billing mode
+// ---------------------------------------------------------------------------
+/**
+ * Called after a paid booking has been approved (or auto-approved). Decides
+ * whether to send a Stripe checkout link, log a ledger entry, or bail out
+ * because billing isn't configured. Never throws — failures are logged and
+ * the PM is notified so nothing silently vanishes.
+ */
+async function handlePaidBooking(bookingId: string): Promise<void> {
+  const { booking, amenity, resident, communityId } = await getBookingWithRelations(bookingId)
+  const settings = await getSettings(communityId ?? undefined)
+  const mode = settings.billingMode
+
+  if (mode === 'ledger') {
+    try {
+      const now = new Date()
+      if (amenity.rentalFee > 0) {
+        await createLedgerEntry({
+          communityId: communityId ?? '',
+          residentId: resident.id,
+          residentName: resident.name,
+          residentEmail: resident.email,
+          bookingId,
+          amenityId: amenity.id,
+          amenityName: amenity.name,
+          amount: amenity.rentalFee,
+          type: 'rental',
+          bookingStart: booking.startDatetime,
+          bookingEnd: booking.endDatetime,
+          memo: `Rental fee — ${amenity.name}`,
+          createdAt: now,
+        })
+      }
+      if (amenity.depositAmount > 0) {
+        await createLedgerEntry({
+          communityId: communityId ?? '',
+          residentId: resident.id,
+          residentName: resident.name,
+          residentEmail: resident.email,
+          bookingId,
+          amenityId: amenity.id,
+          amenityName: amenity.name,
+          amount: amenity.depositAmount,
+          type: 'deposit',
+          bookingStart: booking.startDatetime,
+          bookingEnd: booking.endDatetime,
+          memo: `Refundable deposit — ${amenity.name}`,
+          createdAt: now,
+        })
+      }
+    } catch (err) {
+      console.error(`[Orchestrator] Ledger write failed for ${bookingId}:`, err)
+      pmAgent.notifyBillingIssue?.(bookingId, 'Ledger write failed — check logs').catch(() => {})
+    }
+
+    // With ledger mode the charge is deferred to an external system, so treat
+    // the booking as confirmed right away.
+    await transitionBookingStatus(bookingId, 'CONFIRMED', 'orchestrator', {
+      event: 'CONFIRMED_LEDGER',
+      from: booking.status,
+    })
+    await ensureTurnWindow(booking, amenity)
+    residentAgent.sendLedgerConfirmation(bookingId).catch((err) => {
+      console.error(`[Orchestrator] Failed to send ledger confirmation for ${bookingId}:`, err)
+    })
+    return
+  }
+
+  // Stripe mode (default). Move to PAYMENT_PENDING and try to create a link.
+  await transitionBookingStatus(bookingId, 'PAYMENT_PENDING', 'orchestrator', {
+    event: 'AWAITING_PAYMENT',
+    from: booking.status,
+  })
+
+  if (mode == null || !settings.stripeConnected) {
+    console.error(
+      `[Orchestrator] Paid booking ${bookingId} approved but billing mode is "${mode ?? 'unset'}" (stripeConnected=${settings.stripeConnected}).`,
+    )
+    pmAgent.notifyBillingIssue?.(
+      bookingId,
+      mode == null
+        ? 'Billing mode has not been set — configure Stripe or switch to ledger mode.'
+        : 'Stripe is selected but not fully connected — add the missing keys.',
+    ).catch(() => {})
+    return
+  }
+
+  try {
+    const customerId = await getOrCreateCustomer({
+      id: resident.id,
+      email: resident.email,
+      name: resident.name,
+      stripeCustomerId: resident.stripeCustomerId,
+    })
+    const paymentUrl = await createPaymentLink(
+      bookingId,
+      amenity.rentalFee,
+      amenity.depositAmount,
+      customerId,
+    )
+    await residentAgent.sendPaymentLink(bookingId, paymentUrl)
+  } catch (err) {
+    console.error(`[Orchestrator] Stripe/payment link failed for ${bookingId}:`, err)
+    pmAgent.notifyBillingIssue?.(
+      bookingId,
+      'Stripe payment link failed — the booking is in PAYMENT_PENDING but the resident did not get a link.',
+    ).catch(() => {})
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -143,28 +256,7 @@ export async function handleNewBooking(bookingId: string): Promise<void> {
       console.error(`[Orchestrator] Failed to send confirmation for ${bookingId}:`, err)
     })
   } else {
-    await transitionBookingStatus(bookingId, 'PAYMENT_PENDING', 'orchestrator', {
-      event: 'AUTO_APPROVED',
-      guestCount: booking.guestCount,
-    })
-
-    try {
-      const customerId = await getOrCreateCustomer({
-        id: resident.id,
-        email: resident.email,
-        name: resident.name,
-        stripeCustomerId: resident.stripeCustomerId,
-      })
-      const paymentUrl = await createPaymentLink(
-        bookingId,
-        amenity.rentalFee,
-        amenity.depositAmount,
-        customerId,
-      )
-      await residentAgent.sendPaymentLink(bookingId, paymentUrl)
-    } catch (err) {
-      console.error(`[Orchestrator] Stripe/payment link failed for ${bookingId}:`, err)
-    }
+    await handlePaidBooking(bookingId)
   }
 }
 
@@ -190,28 +282,7 @@ export async function handleApproval(bookingId: string): Promise<void> {
       console.error(`[Orchestrator] Failed to send confirmation for ${bookingId}:`, err)
     })
   } else {
-    await transitionBookingStatus(bookingId, 'PAYMENT_PENDING', 'orchestrator', {
-      event: 'APPROVED_BY_PM',
-      from: booking.status,
-    })
-
-    try {
-      const customerId = await getOrCreateCustomer({
-        id: resident.id,
-        email: resident.email,
-        name: resident.name,
-        stripeCustomerId: resident.stripeCustomerId,
-      })
-      const paymentUrl = await createPaymentLink(
-        bookingId,
-        amenity.rentalFee,
-        amenity.depositAmount,
-        customerId,
-      )
-      await residentAgent.sendPaymentLink(bookingId, paymentUrl)
-    } catch (err) {
-      console.error(`[Orchestrator] Stripe/payment failed for ${bookingId}:`, err)
-    }
+    await handlePaidBooking(bookingId)
   }
 }
 

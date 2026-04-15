@@ -235,6 +235,35 @@ export async function nudgePayment(bookingId: string): Promise<void> {
   )
 }
 
+export async function sendLedgerConfirmation(bookingId: string): Promise<void> {
+  const booking = await getBooking(bookingId)
+  const community = booking.communityName ?? 'your community'
+  const rental = booking.amenity.rentalFee ?? 0
+  const deposit = booking.amenity.depositAmount ?? 0
+  const total = rental + deposit
+  const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+  await sendToRecipients(booking,
+    `Booking confirmed — ${booking.amenity.name} at ${community}`,
+    emailWrapper(booking.communityName, `
+      <h1 style="color: #1c1917; font-size: 22px; margin-top: 8px;">Booking confirmed!</h1>
+      <p style="color: #57534e; font-size: 15px; line-height: 1.7;">
+        Hi ${booking.resident.name}, your booking for <strong>${booking.amenity.name}</strong>
+        at <strong>${community}</strong> is confirmed.
+      </p>
+      <div style="margin: 16px 0; padding: 14px 16px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px;">
+        <p style="margin: 0; color: #92400e; font-size: 14px; font-weight: 600;">
+          ${total > 0 ? `A charge of ${currencyFormatter.format(total)} will appear on your next account statement.` : 'Any applicable charges will appear on your next account statement.'}
+        </p>
+        <p style="margin: 6px 0 0; color: #a16207; font-size: 12px;">
+          ${rental > 0 ? `Rental fee: ${currencyFormatter.format(rental)}` : ''}${rental > 0 && deposit > 0 ? ' · ' : ''}${deposit > 0 ? `Refundable deposit: ${currencyFormatter.format(deposit)}` : ''}
+        </p>
+      </div>
+      ${bookingSummaryHtml(booking)}
+      ${accessNoticeHtml(booking.amenity)}
+    `),
+  )
+}
+
 export async function sendConfirmation(bookingId: string): Promise<void> {
   const booking = await getBooking(bookingId)
   const community = booking.communityName ?? 'your community'

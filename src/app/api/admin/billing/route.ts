@@ -49,6 +49,7 @@ export async function GET() {
       currentAmenities: amenitiesSnap.size,
       currentMembers: approvedMembers,
       hasSubscription: !!community.stripeCustomerId,
+      billingMode: settings.billingMode ?? null,
     },
     stripe: {
       connected: settings.stripeConnected ?? false,
@@ -67,6 +68,7 @@ const UpdateStripeSchema = z.object({
   stripePublishableKey: z.string().optional(),
   stripeSecretKey: z.string().optional(),
   stripeWebhookSecret: z.string().optional(),
+  billingMode: z.enum(['stripe', 'ledger']).nullable().optional(),
 })
 
 export async function PUT(req: NextRequest) {
@@ -92,6 +94,7 @@ export async function PUT(req: NextRequest) {
   if (parsed.data.stripePublishableKey !== undefined) update.stripePublishableKey = parsed.data.stripePublishableKey
   if (parsed.data.stripeSecretKey !== undefined) update.stripeSecretKey = parsed.data.stripeSecretKey
   if (parsed.data.stripeWebhookSecret !== undefined) update.stripeWebhookSecret = parsed.data.stripeWebhookSecret
+  if (parsed.data.billingMode !== undefined) update.billingMode = parsed.data.billingMode
 
   // Mark as connected if all three keys are present
   const settings = await getSettings(communityId)
@@ -100,7 +103,19 @@ export async function PUT(req: NextRequest) {
   const wh = parsed.data.stripeWebhookSecret ?? settings.stripeWebhookSecret
   update.stripeConnected = !!(pk && sk && wh)
 
+  // Refuse to switch into Stripe mode without keys — keeps the UI truthful
+  if (parsed.data.billingMode === 'stripe' && !update.stripeConnected) {
+    return NextResponse.json(
+      { error: 'Add your Stripe keys before switching to Stripe billing mode.' },
+      { status: 400 },
+    )
+  }
+
   await updateSettings(update, communityId)
 
-  return NextResponse.json({ success: true, stripeConnected: update.stripeConnected })
+  return NextResponse.json({
+    success: true,
+    stripeConnected: update.stripeConnected,
+    billingMode: update.billingMode ?? settings.billingMode ?? null,
+  })
 }

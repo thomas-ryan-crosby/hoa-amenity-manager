@@ -679,7 +679,7 @@ export async function getBookingById(id: string): Promise<Booking | null> {
 
 export async function getBookingWithRelations(
   id: string,
-): Promise<{ booking: Booking; amenity: Amenity; resident: Resident; communityName: string | null; communityTimezone: string }> {
+): Promise<{ booking: Booking; amenity: Amenity; resident: Resident; communityId: string | null; communityName: string | null; communityTimezone: string }> {
   const booking = await getBookingById(id)
   if (!booking) throw new Error(`Booking ${id} not found`)
 
@@ -711,6 +711,7 @@ export async function getBookingWithRelations(
     booking,
     amenity,
     resident: resolvedResident,
+    communityId: rawCommunityId ?? null,
     communityName: community?.name ?? null,
     communityTimezone: community?.timezone ?? 'America/Chicago',
   }
@@ -1328,6 +1329,8 @@ export async function deactivateInvite(inviteId: string): Promise<void> {
 // SYSTEM SETTINGS (singleton document at /settings/global)
 // ---------------------------------------------------------------------------
 
+export type BillingMode = 'stripe' | 'ledger' | null
+
 export interface SystemSettings {
   pmEmail: string
   approvalJwtSecret: string
@@ -1337,6 +1340,13 @@ export interface SystemSettings {
   stripeSecretKey: string
   stripeWebhookSecret: string
   stripeConnected: boolean
+  /**
+   * How this community handles paid amenity bookings:
+   *   - 'stripe' — Stripe Checkout (requires stripeConnected === true)
+   *   - 'ledger' — record charge on an offline statement ledger; no Stripe
+   *   - null     — not yet configured; approvals for paid bookings are blocked
+   */
+  billingMode: BillingMode
 }
 
 const DEFAULT_SETTINGS: SystemSettings = {
@@ -1348,6 +1358,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
   stripeSecretKey: '',
   stripeWebhookSecret: '',
   stripeConnected: false,
+  billingMode: null,
 }
 
 export async function getSettings(communityId?: string): Promise<SystemSettings> {
@@ -1465,5 +1476,63 @@ export async function updateSupportTicket(id: string, data: Partial<Pick<Support
   await supportTicketsCol().doc(id).update({
     ...data,
     updatedAt: Timestamp.fromDate(new Date()),
+  })
+}
+
+// ---------------------------------------------------------------------------
+// LEDGER ENTRIES (offline billing mode — booking charges recorded on a
+// statement rather than charged via Stripe)
+// ---------------------------------------------------------------------------
+
+export type LedgerEntryType = 'rental' | 'deposit'
+
+export interface LedgerEntry {
+  id: string
+  communityId: string
+  residentId: string
+  residentName: string
+  residentEmail: string
+  bookingId: string
+  amenityId: string
+  amenityName: string
+  amount: number
+  type: LedgerEntryType
+  bookingStart: Date
+  bookingEnd: Date
+  memo: string
+  createdAt: Date
+}
+
+function ledgerEntriesCol() {
+  return adminDb.collection('ledgerEntries')
+}
+
+export async function createLedgerEntry(data: Omit<LedgerEntry, 'id'>): Promise<LedgerEntry> {
+  const ref = await ledgerEntriesCol().add({
+    ...data,
+    bookingStart: Timestamp.fromDate(data.bookingStart),
+    bookingEnd: Timestamp.fromDate(data.bookingEnd),
+    createdAt: Timestamp.fromDate(data.createdAt),
+  })
+  return { id: ref.id, ...data }
+}
+
+export async function getLedgerEntriesForCommunity(
+  communityId: string,
+  options?: { from?: Date; to?: Date },
+): Promise<LedgerEntry[]> {
+  let query = ledgerEntriesCol().where('communityId', '==', communityId) as FirebaseFirestore.Query
+  if (options?.from) query = query.where('bookingStart', '>=', Timestamp.fromDate(options.from))
+  if (options?.to) query = query.where('bookingStart', '<=', Timestamp.fromDate(options.to))
+  const snap = await query.orderBy('bookingStart', 'asc').get()
+  return snap.docs.map((d) => {
+    const data = d.data()
+    return {
+      id: d.id,
+      ...data,
+      bookingStart: data.bookingStart ? toDate(data.bookingStart) : new Date(),
+      bookingEnd: data.bookingEnd ? toDate(data.bookingEnd) : new Date(),
+      createdAt: data.createdAt ? toDate(data.createdAt) : new Date(),
+    } as LedgerEntry
   })
 }

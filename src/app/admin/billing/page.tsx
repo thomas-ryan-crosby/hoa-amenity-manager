@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import Script from 'next/script'
 import { useAuth } from '@/components/providers/AuthProvider'
 
+type BillingMode = 'stripe' | 'ledger' | null
+
 type BillingInfo = {
   communityId: string
   communityName: string
@@ -13,6 +15,7 @@ type BillingInfo = {
   currentAmenities: number
   currentMembers: number
   hasSubscription: boolean
+  billingMode: BillingMode
 }
 
 type StripeStatus = {
@@ -55,6 +58,8 @@ export default function BillingPage() {
   const [secretKey, setSecretKey] = useState('')
   const [webhookSecret, setWebhookSecret] = useState('')
   const [saving, setSaving] = useState(false)
+  const [savingMode, setSavingMode] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
@@ -86,6 +91,53 @@ export default function BillingPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to open billing portal')
       setOpeningPortal(false)
+    }
+  }
+
+  async function saveBillingMode(mode: 'stripe' | 'ledger') {
+    setSavingMode(true)
+    setNotice(null)
+    setError(null)
+    try {
+      const res = await fetch('/api/admin/billing', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ billingMode: mode }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed to save billing mode')
+      setBilling((b) => (b ? { ...b, billingMode: mode } : b))
+      setNotice(mode === 'stripe' ? 'Switched to Stripe payments.' : 'Switched to offline ledger.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save billing mode')
+    } finally {
+      setSavingMode(false)
+    }
+  }
+
+  async function downloadLedger() {
+    setExporting(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/admin/ledger/export')
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error ?? 'Unable to export ledger')
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      const filename = res.headers.get('x-filename') ?? 'ledger.csv'
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to export ledger')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -236,14 +288,112 @@ export default function BillingPage() {
               </div>
             </div>
 
+            {/* Billing mode selector */}
+            <div className="rounded-2xl border border-stone-200 bg-white p-6">
+              <div className="mb-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-stone-400">
+                  Payment Processing
+                </p>
+                <h3 className="mt-1 text-lg font-semibold text-stone-900">How do you want to collect booking fees?</h3>
+                <p className="mt-1 text-sm text-stone-500">
+                  Pick the option that fits how your community handles resident charges. You can change this later.
+                </p>
+              </div>
+
+              {billing.billingMode == null && (
+                <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <p className="text-sm font-semibold text-amber-800">Billing mode required</p>
+                  <p className="mt-1 text-xs text-amber-700">
+                    You won&apos;t be able to approve bookings with fees or deposits until a billing mode is selected.
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <label
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition ${
+                    billing.billingMode === 'stripe'
+                      ? 'border-emerald-500 bg-emerald-50'
+                      : 'border-stone-200 hover:border-stone-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="billing-mode"
+                    value="stripe"
+                    checked={billing.billingMode === 'stripe'}
+                    onChange={() => saveBillingMode('stripe')}
+                    disabled={savingMode}
+                    className="mt-1 accent-emerald-600"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-stone-900">Stripe payments</p>
+                    <p className="mt-0.5 text-xs text-stone-500">
+                      Charge residents directly when a booking is approved. Funds go straight to your Stripe account.
+                    </p>
+                    {billing.billingMode !== 'stripe' && !stripe?.connected && (
+                      <p className="mt-1 text-xs text-amber-700">
+                        Add your Stripe keys below before switching to this mode.
+                      </p>
+                    )}
+                  </div>
+                </label>
+
+                <label
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition ${
+                    billing.billingMode === 'ledger'
+                      ? 'border-emerald-500 bg-emerald-50'
+                      : 'border-stone-200 hover:border-stone-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="billing-mode"
+                    value="ledger"
+                    checked={billing.billingMode === 'ledger'}
+                    onChange={() => saveBillingMode('ledger')}
+                    disabled={savingMode}
+                    className="mt-1 accent-emerald-600"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-stone-900">Offline ledger</p>
+                    <p className="mt-0.5 text-xs text-stone-500">
+                      Skip Stripe checkout. Each booking charge is logged to a ledger you can export as CSV and upload into your property-management or accounting software.
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {billing.billingMode === 'ledger' && (
+                <div className="mt-5 rounded-xl border border-stone-200 bg-stone-50 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-stone-900">Export ledger</p>
+                      <p className="mt-0.5 text-xs text-stone-500">
+                        Community-wide CSV grouped by month, with per-resident subtotals.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={downloadLedger}
+                      disabled={exporting}
+                      className="shrink-0 rounded-full bg-stone-900 px-4 py-2 text-xs font-semibold text-white hover:bg-stone-800 disabled:bg-stone-400"
+                    >
+                      {exporting ? 'Preparing...' : 'Download CSV'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Stripe configuration */}
             <div className="rounded-2xl border border-stone-200 bg-white p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-stone-400">
-                    Payment Processing
+                    Stripe configuration
                   </p>
-                  <h3 className="mt-1 text-lg font-semibold text-stone-900">Stripe</h3>
+                  <h3 className="mt-1 text-lg font-semibold text-stone-900">Connect your Stripe account</h3>
                 </div>
                 {stripe?.connected ? (
                   <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Connected</span>
